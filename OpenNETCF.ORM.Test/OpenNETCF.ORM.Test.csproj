@@ -68,6 +68,7 @@
     <Compile Include="SqlCeDirectTest.cs" />
     <Compile Include="SqlCeStoreTest.cs" />
     <Compile Include="SqlCeTest.cs" />
+    <Compile Include="XmlStoreTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OpenNETCF.ORM.SqlCe\OpenNETCF.ORM.SqlCe.csproj">
