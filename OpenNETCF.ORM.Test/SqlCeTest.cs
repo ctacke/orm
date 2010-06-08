@@ -1,0 +1,224 @@
+﻿using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.Text;
+using System.Diagnostics;
+using System.Reflection;
+using OpenNETCF.ORM.Test.Entities;
+using System.Data.SqlServerCe;
+using System.IO;
+
+namespace OpenNETCF.ORM.Test
+{
+    class SqlCeTest
+    {
+        private const int IterationsPerTest = 50;
+
+        public void ShowAuthorsPaged(SqlCeDataStore store)
+        {
+            Author[] authors;
+
+            int offset = 0;
+            int page = 0;
+            int authorsPerPage = 10;
+
+            do
+            {
+                authors = store.Fetch<Author>("Name", authorsPerPage, offset);
+                offset += authors.Length;
+
+                Debug.WriteLine(string.Format("Authors page {0}", page));
+                for (int a = 0; a < authors.Length; a++)
+                {
+                    Debug.WriteLine(string.Format("  ID: {0}  Name: {1}", authors[a].AuthorID, authors[a].Name));
+                }
+
+                page++;
+            }
+            while (authors.Length > 0);
+        }
+
+
+        public void RunTests()
+        {
+            List<ITestClass> tests = new List<ITestClass>();
+
+            // create the sqlce store (we'll use it to populate sample data)
+            SqlCeStoreTest store = new SqlCeStoreTest();
+            store.Initialize();
+            tests.Add(store);
+
+            Debug.WriteLine(string.Format("Data set has {0} Books and {1} Authors", store.LastBookID + 1, store.LastAuthorID + 1));
+
+            var test = new SqlCeDirectTest();
+            test.Initialize();
+            tests.Add(test);
+
+            var r = new Random(Environment.TickCount);
+
+            // now run the tests
+            TestGetAllBooks(tests);
+            TestGetBookById(tests, r.Next(store.LastBookID));
+            TestGetBooksByType(tests);
+
+            // get a random author name
+            var author = store.GetAuthorById(r.Next(store.LastAuthorID));
+
+            TestGetAuthorByName(tests, author.Name);
+
+            TestGetAuthorsByPage(tests, 10);
+        }
+
+        private void TestGetAllBooks(List<ITestClass> tests)
+        {
+            Stopwatch sw = new Stopwatch();
+
+            foreach (var t in tests)
+            {
+                sw.Reset();
+
+                for (int i = 0; i < IterationsPerTest; i++)
+                {
+                    sw.Start();
+                    var books = t.GetAllBooks();
+                    sw.Stop();
+
+                    if (i == 0)
+                    {
+                        Debug.WriteLine(string.Format("{0} GetAllBooks (pass 1):\t{1} s",
+                            t.GetType().Name,
+                            sw.Elapsed.TotalSeconds));
+                        sw.Reset();
+                    }
+                }
+                Debug.WriteLine(string.Format("{0} GetAllBooks (mean):\t{1} s",
+                    t.GetType().Name,
+                    sw.Elapsed.TotalSeconds / (IterationsPerTest - 1)));
+            }
+        }
+
+        private void TestGetBookById(List<ITestClass> tests, int id)
+        {
+            Stopwatch sw = new Stopwatch();
+
+            foreach (var t in tests)
+            {
+                sw.Reset();
+                for (int i = 0; i < IterationsPerTest; i++)
+                {
+                    sw.Start();
+
+                    var books = t.GetBookById(id);
+                    sw.Stop();
+
+                    if (i == 0)
+                    {
+                        Debug.WriteLine(string.Format("{0} GetBookById (pass 1):\t{1} s",
+                            t.GetType().Name,
+                            sw.Elapsed.TotalSeconds));
+                        sw.Reset();
+                    }
+                }
+                Debug.WriteLine(string.Format("{0} GetBookById (mean):\t{1} s",
+                    t.GetType().Name,
+                    sw.Elapsed.TotalSeconds / (IterationsPerTest - 1)));
+            }
+        }
+
+        private void TestGetBooksByType(List<ITestClass> tests)
+        {
+            Stopwatch sw = new Stopwatch();
+
+            foreach (var t in tests)
+            {
+                sw.Reset();
+             
+                for (int i = 0; i < IterationsPerTest; i++)
+                {
+                    sw.Start();
+
+                    var books = t.GetBooksOfType(BookType.NonFiction);
+                    sw.Stop();
+
+                    if (i == 0)
+                    {
+                        Debug.WriteLine(string.Format("{0} GetBooksOfType (pass 1):\t{1} s",
+                            t.GetType().Name,
+                            sw.Elapsed.TotalSeconds));
+                        sw.Reset();
+                    }
+                }
+                Debug.WriteLine(string.Format("{0} GetBooksOfType (mean):\t{1} s",
+                    t.GetType().Name,
+                    sw.Elapsed.TotalSeconds / (IterationsPerTest - 1)));
+            }
+        }
+
+        private void TestGetAuthorByName(List<ITestClass> tests, string name)
+        {
+            Stopwatch sw = new Stopwatch();
+
+            foreach (var t in tests)
+            {
+                sw.Reset();
+
+                for (int i = 0; i < IterationsPerTest; i++)
+                {
+                    sw.Start();
+
+                    var author = t.GetAuthorByName(name);
+                    sw.Stop();
+
+                    if (i == 0)
+                    {
+                        Debug.WriteLine(string.Format("{0} GetAuthorByName (pass 1):\t{1} s",
+                            t.GetType().Name,
+                            sw.Elapsed.TotalSeconds));
+                        sw.Reset();
+                    }
+                }
+                Debug.WriteLine(string.Format("{0} GetAuthorByName (mean):\t{1} s",
+                    t.GetType().Name,
+                    sw.Elapsed.TotalSeconds / (IterationsPerTest - 1)));
+            }
+        }
+
+        private void TestGetAuthorsByPage(List<ITestClass> tests, int authorsPerPage)
+        {
+            Stopwatch sw = new Stopwatch();
+
+            foreach (var t in tests)
+            {
+                int count = 0;
+                sw.Reset();
+
+                for (int i = 0; i < IterationsPerTest; i++)
+                {
+
+                    int offset = 0;
+                    int page = 0;
+
+                    Author[] authors;
+
+                    do
+                    {
+                        sw.Start();
+                        authors = t.GetAuthors(authorsPerPage, offset);
+                        sw.Stop();
+                        count++;
+                        if (authors == null) break;
+
+                        offset += authors.Length;
+
+                        page++;
+                    }
+                    while (authors.Length > 0);
+                }
+
+                Debug.WriteLine(string.Format("{0} TestGetAuthorsByPage (per page):\t{1} s",
+                    t.GetType().Name,
+                    sw.Elapsed.TotalSeconds / (count)));
+            }
+        }
+    }
+}
