@@ -27,6 +27,7 @@ namespace OpenNETCF.ORM
         public abstract T[] Fetch<T>(int fetchCount, int firstRowOffset) where T : new();
         public abstract T[] Fetch<T>(string searchFieldName, int fetchCount, int firstRowOffset) where T : new();
         public abstract int Count<T>();
+        public abstract void Delete<T>();
 
         public DataStore()
         {

@@ -205,6 +205,36 @@ namespace OpenNETCF.ORM
         }
 
         /// <summary>
+        /// Deletes all entity instances of the specified type from the DataStore
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        public override void Delete<T>()
+        {
+            var t = typeof(T);
+            string entityName = m_entities.GetNameForType(t);
+
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(t);
+            }
+
+            SqlCeConnection connection = GetConnection(true);
+            try
+            {
+                using (var command = new SqlCeCommand())
+                {
+                    command.Connection = connection;
+                    command.CommandText = string.Format("DELETE FROM {0}", entityName);
+                    command.ExecuteNonQuery();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
+        /// <summary>
         /// Deletes the specified entity instance from the DataStore
         /// </summary>
         /// <param name="item"></param>
@@ -539,20 +569,13 @@ namespace OpenNETCF.ORM
                 using (var command = new SqlCeCommand())
                 {
                     command.Connection = connection;
-                    command.CommandText = string.Format("UPDATE STATISTICS ON {0} WITH FULLSCAN", entityName);
-                    command.ExecuteNonQuery();
-
-                    command.CommandText = string.Format("sp_show_statistics '{0}'", entityName);
-                    using (var results = command.ExecuteReader())
-                    {
-                        results.Read();
-                        return results.GetInt32(results.GetOrdinal("ROWS"));
-                    }
+                    command.CommandText = string.Format("SELECT COUNT(*) FROM {0}", entityName);
+                    return (int)command.ExecuteScalar();
                 }
             }
             finally
             {
-                DoneWithConnection(connection, false);
+                DoneWithConnection(connection, true);
             }
         }
 

@@ -131,5 +131,10 @@ namespace OpenNETCF.ORM.Test
         {
             return Store.Fetch<Author>("Name", count, offset);
         }
+
+        public void TruncateBooks()
+        {
+            Store.Delete<Book>();
+        }
     }
 }

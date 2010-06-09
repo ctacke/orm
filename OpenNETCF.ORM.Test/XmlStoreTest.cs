@@ -69,5 +69,10 @@ namespace OpenNETCF.ORM.Test
         {
             throw new NotImplementedException();
         }
+
+        public void TruncateBooks()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
