@@ -130,7 +130,7 @@ namespace OpenNETCF.ORM.Xml
         {
             throw new NotImplementedException();
         }
-
+        
         public override T Select<T>(object primaryKey)
         {
             throw new NotImplementedException();
@@ -152,6 +152,11 @@ namespace OpenNETCF.ORM.Xml
         }
 
         public override void Delete<T>(object primaryKey)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Delete<T>()
         {
             throw new NotImplementedException();
         }

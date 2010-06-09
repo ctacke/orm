@@ -50,6 +50,10 @@ namespace OpenNETCF.ORM.Test
 
             Debug.WriteLine(string.Format("Data set has {0} Books and {1} Authors", store.GetBookCount(), store.GetAuthorCount()));
 
+            // uncomment to test truncation
+            // store.TruncateBooks();
+            // Debug.WriteLine(string.Format("Data set has now has {0} Books", store.GetBookCount()));
+
             var test = new SqlCeDirectTest();
             test.Initialize();
             tests.Add(test);
@@ -57,6 +61,8 @@ namespace OpenNETCF.ORM.Test
             var r = new Random(Environment.TickCount);
 
             // now run the tests
+            TestGetEntityCount(tests);
+
             TestGetAllBooks(tests);
             TestGetBookById(tests, r.Next(store.LastBookID));
             TestGetBooksByType(tests);
@@ -220,5 +226,35 @@ namespace OpenNETCF.ORM.Test
                     sw.Elapsed.TotalSeconds / (count)));
             }
         }
+
+        private void TestGetEntityCount(List<ITestClass> tests)
+        {
+            Stopwatch sw = new Stopwatch();
+
+            foreach (var t in tests)
+            {
+                sw.Reset();
+
+                for (int i = 0; i < IterationsPerTest; i++)
+                {
+                    sw.Start();
+
+                    var count = t.GetBookCount();
+                    sw.Stop();
+
+                    if (i == 0)
+                    {
+                        Debug.WriteLine(string.Format("{0} GetBookCount (pass 1):\t{1} s",
+                            t.GetType().Name,
+                            sw.Elapsed.TotalSeconds));
+                        sw.Reset();
+                    }
+                }
+                Debug.WriteLine(string.Format("{0} GetBookCount (mean):\t{1} s",
+                    t.GetType().Name,
+                    sw.Elapsed.TotalSeconds / (IterationsPerTest - 1)));
+            }
+        }
+        
     }
 }

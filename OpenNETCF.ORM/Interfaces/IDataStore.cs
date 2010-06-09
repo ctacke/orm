@@ -27,6 +27,7 @@ namespace OpenNETCF.ORM
 
         void Delete(object item);
         void Delete<T>(object primaryKey);
+        void Delete<T>();
 
         T[] Fetch<T>(int fetchCount) where T : new();
         T[] Fetch<T>(int fetchCount, int firstRowOffset) where T : new();

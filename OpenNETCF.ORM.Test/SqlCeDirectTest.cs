@@ -74,10 +74,25 @@ namespace OpenNETCF.ORM.Test
 
         public int GetAuthorCount()
         {
-            throw new NotImplementedException();
+            return GetRowCount("Author");
         }
 
         public int GetBookCount()
+        {
+            return GetRowCount("Book");
+        }
+
+        private int GetRowCount(string tableName)
+        {
+            var books = new List<Book>();
+
+            using (SqlCeCommand cmd = new SqlCeCommand(string.Format("SELECT COUNT(*) FROM {0}", tableName), Connection))
+            {
+                return (int)cmd.ExecuteScalar();
+            }
+        }
+
+        public void TruncateBooks()
         {
             throw new NotImplementedException();
         }
