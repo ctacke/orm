@@ -32,6 +32,8 @@ namespace OpenNETCF.ORM
         T[] Fetch<T>(int fetchCount, int firstRowOffset) where T : new();
         T[] Fetch<T>(string searchFieldName, int fetchCount, int firstRowOffset) where T : new();
 
+        int Count<T>();
+
         void FillReferences(object instance);
     }
 }

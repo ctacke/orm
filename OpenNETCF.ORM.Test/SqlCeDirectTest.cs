@@ -72,6 +72,16 @@ namespace OpenNETCF.ORM.Test
             return books.ToArray();
         }
 
+        public int GetAuthorCount()
+        {
+            throw new NotImplementedException();
+        }
+
+        public int GetBookCount()
+        {
+            throw new NotImplementedException();
+        }
+
         public Book[] GetBooksOfType(BookType type)
         {
             var books = new List<Book>();

@@ -518,6 +518,44 @@ namespace OpenNETCF.ORM
             return items.Cast<T>().ToArray();
         }
 
+        /// <summary>
+        /// Returns the number of instances of the given type in the DataStore
+        /// </summary>
+        /// <typeparam name="T">Entity type to count</typeparam>
+        /// <returns>The number of instances in the store</returns>
+        public override int Count<T>()
+        {
+            var t = typeof(T);
+            string entityName = m_entities.GetNameForType(t);
+
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(t);
+            }
+
+            SqlCeConnection connection = GetConnection(true);
+            try
+            {
+                using (var command = new SqlCeCommand())
+                {
+                    command.Connection = connection;
+                    command.CommandText = string.Format("UPDATE STATISTICS ON {0} WITH FULLSCAN", entityName);
+                    command.ExecuteNonQuery();
+
+                    command.CommandText = string.Format("sp_show_statistics '{0}'", entityName);
+                    using (var results = command.ExecuteReader())
+                    {
+                        results.Read();
+                        return results.GetInt32(results.GetOrdinal("ROWS"));
+                    }
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, false);
+            }
+        }
+
         private object[] Select(Type objectType, string searchFieldName, object matchValue, int fetchCount, int firstRowOffset)
         {
             string entityName = m_entities.GetNameForType(objectType);

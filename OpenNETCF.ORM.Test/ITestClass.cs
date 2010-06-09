@@ -17,5 +17,8 @@ namespace OpenNETCF.ORM.Test
         Author GetAuthorById(int id);
 
         Author[] GetAuthors(int count, int offset);
+
+        int GetAuthorCount();
+        int GetBookCount();
     }
 }
