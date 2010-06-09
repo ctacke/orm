@@ -75,6 +75,16 @@ namespace OpenNETCF.ORM.Test
             }
         }
 
+        public int GetAuthorCount()
+        {
+            return Store.Count<Author>();
+        }
+
+        public int GetBookCount()
+        {
+            return Store.Count<Book>();
+        }
+
         private void DiscoverTypes(SqlCeDataStore store)
         {
             store.DiscoverTypes(Assembly.GetExecutingAssembly());

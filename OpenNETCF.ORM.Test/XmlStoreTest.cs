@@ -7,8 +7,6 @@ namespace OpenNETCF.ORM.Test
 {
     public class XmlStoreTest : ITestClass
     {
-        #region ITestClass Members
-
         public void Initialize()
         {
             //XmlDataStore store = new XmlDataStore("\\data.xml");
@@ -62,6 +60,14 @@ namespace OpenNETCF.ORM.Test
             throw new NotImplementedException();
         }
 
-        #endregion
+        public int GetAuthorCount()
+        {
+            throw new NotImplementedException();
+        }
+
+        public int GetBookCount()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

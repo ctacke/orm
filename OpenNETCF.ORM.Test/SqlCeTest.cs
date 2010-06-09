@@ -48,7 +48,7 @@ namespace OpenNETCF.ORM.Test
             store.Initialize();
             tests.Add(store);
 
-            Debug.WriteLine(string.Format("Data set has {0} Books and {1} Authors", store.LastBookID + 1, store.LastAuthorID + 1));
+            Debug.WriteLine(string.Format("Data set has {0} Books and {1} Authors", store.GetBookCount(), store.GetAuthorCount()));
 
             var test = new SqlCeDirectTest();
             test.Initialize();

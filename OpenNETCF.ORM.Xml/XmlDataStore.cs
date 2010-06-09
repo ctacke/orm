@@ -126,6 +126,11 @@ namespace OpenNETCF.ORM.Xml
             return instances.ToArray();
         }
 
+        public override int Count<T>()
+        {
+            throw new NotImplementedException();
+        }
+
         public override T Select<T>(object primaryKey)
         {
             throw new NotImplementedException();
