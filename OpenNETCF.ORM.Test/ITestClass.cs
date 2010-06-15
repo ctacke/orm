@@ -20,5 +20,7 @@ namespace OpenNETCF.ORM.Test
 
         int GetAuthorCount();
         int GetBookCount();
+
+        void Insert(Author author);
     }
 }

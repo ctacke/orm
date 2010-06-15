@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
+using OpenNETCF.ORM.Test.Entities;
 
 namespace OpenNETCF.ORM.Test
 {
@@ -71,6 +72,11 @@ namespace OpenNETCF.ORM.Test
         }
 
         public void TruncateBooks()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Insert(Author author)
         {
             throw new NotImplementedException();
         }

@@ -15,7 +15,7 @@ namespace OpenNETCF.ORM
         public abstract void CreateStore();
         public abstract void DeleteStore();
         public abstract bool StoreExists { get; }
-        public abstract void Insert(object item);
+        public abstract void Insert(object item, bool insertReferences);
         public abstract T[] Select<T>() where T : new();
         public abstract T Select<T>(object primaryKey) where T : new();
         public abstract T[] Select<T>(string searchFieldName, object matchValue) where T : new();
@@ -104,6 +104,12 @@ namespace OpenNETCF.ORM
 
                     if (reference != null)
                     {
+                        if (!prop.PropertyType.IsArray)
+                        {
+                            throw new InvalidReferenceTypeException(reference.ReferenceEntityType, reference.ReferenceField,
+                                "Reference fields must be arrays");
+                        }
+
                         map.References.Add(reference);
                         reference.PropertyInfo = prop;
                     }
@@ -126,6 +132,13 @@ namespace OpenNETCF.ORM
                 // the interface has already been verified by our LINQ
                 AddType(entity, false);
             }
+        }
+
+        public void Insert(object item)
+        {
+            // TODO: should this default to true or false?
+            // right now it is false since we don't look for duplicate references
+            Insert(item, false);
         }
     }
 }

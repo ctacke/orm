@@ -84,7 +84,7 @@ namespace OpenNETCF.ORM.Xml
             return serializer;
         }
 
-        public override void Insert(object item)
+        public override void Insert(object item, bool insertReferences)
         {          
             XmlSerializer serializer = GetSerializer(item.GetType());
 
@@ -98,6 +98,11 @@ namespace OpenNETCF.ORM.Xml
 
             var element = XElement.Parse(sb.ToString());
             Entities[name].EntityNode.Add(element);
+
+            if (insertReferences)
+            {
+                // TODO:
+            }
 
             // TODO: see if this is required.  If so, maybe add an attribute or method to delay flushing
             m_doc.Save(FileName);

@@ -68,4 +68,17 @@ namespace OpenNETCF.ORM
         {
         }
     }
+
+    public class InvalidReferenceTypeException : Exception
+    {
+        public Type ReferenceType { get; private set; }
+        public string ReferenceField { get; private set; }
+
+        public InvalidReferenceTypeException(Type referenceType, string referenceField, string message)
+            : base(message)
+        {
+            ReferenceType = referenceType;
+            ReferenceField = referenceField;
+        }
+    }
 }

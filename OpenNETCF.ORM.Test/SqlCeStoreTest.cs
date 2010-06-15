@@ -136,5 +136,10 @@ namespace OpenNETCF.ORM.Test
         {
             Store.Delete<Book>();
         }
+
+        public void Insert(Author author)
+        {
+            Store.Insert(author);
+        }
     }
 }
