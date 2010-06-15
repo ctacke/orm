@@ -54,6 +54,8 @@ namespace OpenNETCF.ORM.Test
             // store.TruncateBooks();
             // Debug.WriteLine(string.Format("Data set has now has {0} Books", store.GetBookCount()));
 
+            TestCascadingInsert(tests);
+
             var test = new SqlCeDirectTest();
             test.Initialize();
             tests.Add(test);
@@ -73,6 +75,43 @@ namespace OpenNETCF.ORM.Test
             TestGetAuthorByName(tests, author.Name);
 
             TestGetAuthorsByPage(tests, 10);
+        }
+
+        private void TestCascadingInsert(List<ITestClass> tests)
+        {
+            // ensures that the entity *and its references* get inserted
+            Author a = new Author
+            {
+                 Name = "David McFarland",
+                 
+                 Books = new Book[]
+                 {
+                     new Book
+                     {
+                          Title = "CSS: The Missing Manual",
+                          BookType = BookType.NonFiction
+                     },
+
+                     new Book
+                     {
+                          Title = "JavaScript: The Missing Manual",
+                          BookType = BookType.NonFiction
+                     },
+
+                     new Book
+                     {
+                          Title = "Dreamweaver: The Missing Manual",
+                          BookType = BookType.NonFiction
+                     },
+                 }
+            };
+
+            foreach (var t in tests)
+            {
+                t.Insert(a);
+
+                var author = t.GetAuthorById(a.AuthorID);                
+            }
         }
 
         private void TestGetAllBooks(List<ITestClass> tests)

@@ -246,7 +246,14 @@ namespace OpenNETCF.ORM.Test
 
         public Author[] GetAuthors(int count, int offset)
         {
+            // TODO:
             return new Author[] { };
+        }
+
+        public void Insert(Author author)
+        {
+            // TODO:
+            return;
         }
     }
 }

@@ -619,7 +619,7 @@ namespace OpenNETCF.ORM
                             if (matchValue != null)
                             {
                                 // convert enums to an int, else the .Equals later check will fail
-                                // these feels a bit kludgey, but for now it's all I can think of
+                                // this feels a bit kludgey, but for now it's all I can think of
                                 if (matchValue.GetType().IsEnum)
                                 {
                                     matchValue = (int)matchValue;
@@ -706,7 +706,7 @@ namespace OpenNETCF.ORM
         /// <remarks>
         /// If the entity has an identity field, calling Insert will populate that field with the identity vale vefore returning
         /// </remarks>
-        public override void Insert(object item)
+        public override void Insert(object item, bool insertReferences)
         {
             string entityName = m_entities.GetNameForType(item.GetType());
 
@@ -753,6 +753,33 @@ namespace OpenNETCF.ORM
                         {
                             var id = GetIdentity(connection);
                             identity.PropertyInfo.SetValue(item, id, null);
+                        }
+
+                        if (insertReferences)
+                        {
+                            // cascade insert any References
+                            // do this last because we need the PK from above
+                            foreach (var reference in Entities[entityName].References)
+                            {
+                                var valueArray = reference.PropertyInfo.GetValue(item, null);
+                                if (valueArray == null) continue;
+
+                                var fk = Entities[entityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(item, null);
+
+                                // we've already enforced this to be an array when creating the store
+                                foreach (var element in valueArray as Array)
+                                {
+                                    // TODO: only do an insert if the value is new (i.e. need to look for existing reference items)
+                                    // not certain how this will work right now, so for now we ask the caller to know what they're doing
+
+                                    // ctacke: I *think* we need to have a way to mark an entity as "not store originated", i.e. an invalid PK value
+                                    //         right now a numeric PK will default to 0, which is, in fact valid, so we need something else.  This is
+                                    //         certainly open for discussion
+                                    var et = m_entities.GetNameForType(element.GetType());
+                                    Entities[et].Fields[reference.ReferenceField].PropertyInfo.SetValue(element, fk, null);
+                                    Insert(element);
+                                }
+                            }
                         }
                     }
 
