@@ -139,7 +139,7 @@ namespace OpenNETCF.ORM.Test
 
         public void Insert(Author author)
         {
-            Store.Insert(author);
+            Store.Insert(author, true);
         }
     }
 }

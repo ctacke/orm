@@ -9,16 +9,30 @@ namespace OpenNETCF.ORM
     [AttributeUsage(AttributeTargets.Property)]
     public class ReferenceAttribute : Attribute, IEquatable<ReferenceAttribute>
     {
-        public Type ReferenceEntityType { get; set; }
+        private Type m_entityType = null;
+
         public string ReferenceField { get; set; }
         public bool Autofill { get; set; }
         public PropertyInfo PropertyInfo { get; internal set; }
 
-        public ReferenceAttribute(Type referenceEntityType, string referenceField)
+        public ReferenceAttribute(string referenceField)
         {
-            ReferenceEntityType = referenceEntityType;
             ReferenceField = referenceField;
             Autofill = false;
+        }
+
+        public Type ReferenceEntityType
+        {
+            get
+            {
+                if (m_entityType == null)
+                {
+                    m_entityType = PropertyInfo.PropertyType.GetGenericArguments()[0];
+
+                }
+
+                return m_entityType;
+            }
         }
 
         public bool Equals(ReferenceAttribute other)

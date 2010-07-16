@@ -11,10 +11,10 @@ namespace OpenNETCF.ORM.Test.Entities
         NonFiction
     }
 
-    [Entity]
+    [Entity(KeyScheme.Identity)]
     public class Book
     {
-        [Field(IsIdentity=true, IsPrimaryKey=true)]
+        [Field(IsPrimaryKey=true)]
         public int BookID { get; set; }
 
         [Field]

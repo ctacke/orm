@@ -5,7 +5,7 @@ using System.Text;
 
 namespace OpenNETCF.ORM
 {
-    public partial class EntityInfo
+    public class EntityInfo
     {
         protected EntityInfo()
         {
@@ -13,17 +13,26 @@ namespace OpenNETCF.ORM
             References = new ReferenceAttributeCollection();
         }
 
-        internal void Initialize(string entityName, Type entityType)
+        internal void Initialize(EntityAttribute entityAttribute, Type entityType)
         {
-            EntityName = entityName;
+            EntityAttribute = entityAttribute;
             EntityType = entityType;
         }
 
-        public string EntityName { get; protected set; }
         public Type EntityType { get; protected set; }
 
         public FieldAttributeCollection Fields { get; private set; }
         public ReferenceAttributeCollection References { get; private set; }
+
+        public EntityAttribute EntityAttribute { get; internal set; }
+
+        public string EntityName 
+        {
+            get
+            {
+                return EntityAttribute.NameInStore;
+            }
+        }
 
         public override string ToString()
         {

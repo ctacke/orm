@@ -36,7 +36,6 @@ namespace OpenNETCF.ORM
         public bool IsPrimaryKey { get; set; }
         public bool RequireUniqueValue { get; set; }
         public int Ordinal { get; set; }
-        public bool IsIdentity { get; set; }
         public FieldSearchOrder SearchOrder { get; set; }
  
         public PropertyInfo PropertyInfo { get; internal set; }

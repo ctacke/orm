@@ -7,6 +7,7 @@ using System.Reflection;
 using System.Data;
 using System.Data.SqlServerCe;
 using System.IO;
+using System.Collections;
 
 namespace OpenNETCF.ORM
 {
@@ -14,6 +15,7 @@ namespace OpenNETCF.ORM
     {
         private string m_connectionString;
         private SqlCeConnection m_connection;
+
         private Dictionary<Type, object[]> m_referenceCache = new Dictionary<Type, object[]>();
 
         private string Password { get; set; }
@@ -313,8 +315,8 @@ namespace OpenNETCF.ORM
                         // update the values
                         foreach (var field in Entities[entityName].Fields)
                         {
-                            // do not update PK or identity fields
-                            if (field.IsIdentity | field.IsPrimaryKey) continue;
+                            // do not update PK fields
+                            if (field.IsPrimaryKey) continue;
 
                             var value = field.PropertyInfo.GetValue(item, null);
 
@@ -450,14 +452,16 @@ namespace OpenNETCF.ORM
                     object[] refData;
                     if (cacheReferenceTable)
                     {
-                        if (!m_referenceCache.ContainsKey(type))
+                        // TODO: ref cache needs to be type->reftype->ref's, not type->refs
+
+                        if (!m_referenceCache.ContainsKey(reference.ReferenceEntityType))
                         {
                             refData = Select(reference.ReferenceEntityType, null, null, -1, 0);
-                            m_referenceCache.Add(type, refData);
+                            m_referenceCache.Add(reference.ReferenceEntityType, refData);
                         }
                         else
                         {
-                            refData = m_referenceCache[type];
+                            refData = m_referenceCache[reference.ReferenceEntityType];
                         }
                     }
                     else
@@ -477,13 +481,25 @@ namespace OpenNETCF.ORM
                 foreach (var child in referenceItems[reference])
                 {
                     var childKey = m_entities[childEntityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(child, null);
-                    if (childKey.Equals(keyValue))
+
+                    // this seems "backward" because childKey may turn out null, 
+                    // so doing it backwards (keyValue.Equals instead of childKey.Equals) prevents a null referenceexception
+                    if (keyValue.Equals(childKey))
                     {
                         children.Add(child);
                     }
                 }
+
+                var refCollectionType = typeof(ReferenceCollection<>);
+                var genericType = refCollectionType.MakeGenericType(new Type[] { reference.ReferenceEntityType });
+                var refCollection = Activator.CreateInstance(genericType);
+
+                var addRange = genericType.GetMethod("AddRange");
+
+                addRange.Invoke(refCollection, new object[] { children.ToArray(reference.ReferenceEntityType) });
+
                 //var carr = children.ToArray(reference.ReferenceEntityType);
-                reference.PropertyInfo.SetValue(instance, children.ToArray(reference.ReferenceEntityType), null);
+                reference.PropertyInfo.SetValue(instance, refCollection, null);
             }
         }
 
@@ -588,6 +604,8 @@ namespace OpenNETCF.ORM
                 throw new EntityNotFoundException(objectType);
             }
 
+            UpdateIndexCacheForType(entityName);
+
             var items = new List<object>();
 
             SqlCeConnection connection = GetConnection(false);
@@ -603,8 +621,16 @@ namespace OpenNETCF.ORM
 
                     if (searchFieldName != null)
                     {
-                        command.IndexName = string.Format("ORM_IDX_{0}_{1}", entityName, searchFieldName);
+                        string indexName = string.Format("ORM_IDX_{0}_{1}", entityName, searchFieldName);
+                        // check for index name to see if it exists
+                        if (!Entities[entityName].IndexNames.Contains(indexName))
+                        {
+                            throw new SearchOrderRequiredException(entityName, searchFieldName);
+                        }
+
+                        command.IndexName = indexName;
                     }
+
 
                     int searchOrdinal = -1;
 
@@ -733,9 +759,11 @@ namespace OpenNETCF.ORM
                     {
                         var record = results.CreateRecord();
 
+                        var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
+
                         foreach (var field in Entities[entityName].Fields)
                         {
-                            if (field.IsIdentity)
+                            if((keyScheme == KeyScheme.Identity) && field.IsPrimaryKey)
                             {
                                 identity = field;
                             }
@@ -766,19 +794,34 @@ namespace OpenNETCF.ORM
 
                                 var fk = Entities[entityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(item, null);
 
-                                // we've already enforced this to be an array when creating the store
-                                foreach (var element in valueArray as Array)
-                                {
-                                    // TODO: only do an insert if the value is new (i.e. need to look for existing reference items)
-                                    // not certain how this will work right now, so for now we ask the caller to know what they're doing
+                                var referenceCollection = valueArray as IReferenceCollection;
 
-                                    // ctacke: I *think* we need to have a way to mark an entity as "not store originated", i.e. an invalid PK value
-                                    //         right now a numeric PK will default to 0, which is, in fact valid, so we need something else.  This is
-                                    //         certainly open for discussion
+                                // we've already enforced this to be an array when creating the store
+                                foreach (var element in referenceCollection.GetNewItems())
+                                {
+                                    bool isNew = false;
+
+                                    // only do an insert if the value is new (i.e. need to look for existing reference items)
+                                    // not certain how this will work right now, so for now we ask the caller to know what they're doing
+                                    switch (keyScheme)
+                                    {
+                                        case KeyScheme.Identity:
+                                            // TODO: see if PK field value == -1
+                                            break;
+                                        case KeyScheme.GUID:
+                                            // TODO: see if PK field value == null
+                                            break;
+                                    }
+
+                                    if (isNew)
+                                    {
                                     var et = m_entities.GetNameForType(element.GetType());
                                     Entities[et].Fields[reference.ReferenceField].PropertyInfo.SetValue(element, fk, null);
                                     Insert(element);
+}
                                 }
+
+                                referenceCollection.ClearNewItems();
                             }
                         }
                     }
@@ -825,6 +868,36 @@ namespace OpenNETCF.ORM
                     }
 
                     command.Dispose();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
+        private void UpdateIndexCacheForType(string entityName)
+        {
+            // have we already cached this?
+            if (Entities[entityName].IndexNames != null) return;
+
+            // get all iindex names for the type
+            SqlCeConnection connection = GetConnection(true);
+            try
+            {
+                string sql = string.Format("SELECT INDEX_NAME FROM information_schema.indexes WHERE (TABLE_NAME = '{0}')", entityName);
+
+                using (SqlCeCommand command = new SqlCeCommand(sql, connection))
+                using(var reader = command.ExecuteReader())
+                {
+                    List<string> nameList = new List<string>();
+
+                    while (reader.Read())
+                    {
+                        nameList.Add(reader.GetString(0));
+                    }
+
+                    Entities[entityName].IndexNames = nameList;
                 }
             }
             finally
@@ -904,7 +977,7 @@ namespace OpenNETCF.ORM
                 sql.AppendFormat("[{0}] {1} {2}",
                     field.FieldName,
                     field.DataType.ToSqlTypeString(),
-                    GetFieldCreationAttributes(field));
+                    GetFieldCreationAttributes(entity.EntityAttribute, field));
 
                 if (--count > 0) sql.Append(", ");
             }
@@ -938,7 +1011,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        private string GetFieldCreationAttributes(FieldAttribute field)
+        private string GetFieldCreationAttributes(EntityAttribute attribute, FieldAttribute field)
         {
             StringBuilder sb = new StringBuilder();
 
@@ -959,6 +1032,11 @@ namespace OpenNETCF.ORM
             if (field.IsPrimaryKey)
             {
                 sb.Append("PRIMARY KEY ");
+
+                if (attribute.KeyScheme == KeyScheme.Identity)
+                {
+                    sb.Append("IDENTITY ");
+                }
             }
 
             if (!field.AllowsNulls)
@@ -969,11 +1047,6 @@ namespace OpenNETCF.ORM
             if (field.RequireUniqueValue)
             {
                 sb.Append("UNIQUE ");
-            }
-
-            if (field.IsIdentity)
-            {
-                sb.Append("IDENTITY ");
             }
 
             return sb.ToString();
