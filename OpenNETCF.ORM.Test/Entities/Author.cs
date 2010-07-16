@@ -5,14 +5,14 @@ using System.Text;
 
 namespace OpenNETCF.ORM.Test.Entities
 {
-    [Entity]
+    [Entity(KeyScheme.Identity)]
     public class Author
     {
-        [Field(IsIdentity = true, IsPrimaryKey = true)]
+        [Field(IsPrimaryKey = true)]
         public int AuthorID { get; set; }
 
-        [Reference(typeof(Book), "AuthorID", Autofill=false)]
-        public Book[] Books { get; set; }
+        [Reference("AuthorID", Autofill=true)]
+        public ReferenceCollection<Book> Books { get; set; }
 
         [Field(SearchOrder = FieldSearchOrder.Ascending)]
         public string Name { get; set; }

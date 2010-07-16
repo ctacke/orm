@@ -64,7 +64,15 @@ namespace OpenNETCF.ORM
     public class ReferenceFieldNotFoundException : Exception
     {
         public ReferenceFieldNotFoundException(Type referenceType, string referenceField)
-            : base(string.Format("The refefrence type '{0}' doesn't contain a reference field named '{1}'.", referenceType.Name, referenceField))
+            : base(string.Format("The reference type '{0}' doesn't contain a reference field named '{1}'.", referenceType.Name, referenceField))
+        {
+        }
+    }
+
+    public class ReferenceFieldNameMissingException : Exception
+    {
+        public ReferenceFieldNameMissingException(string referencePropertyName)
+            : base(string.Format("The reference Property '{0}' doesn't contain a reference field name."))
         {
         }
     }
@@ -79,6 +87,14 @@ namespace OpenNETCF.ORM
         {
             ReferenceType = referenceType;
             ReferenceField = referenceField;
+        }
+    }
+
+    public class SearchOrderRequiredException : Exception
+    {
+        public SearchOrderRequiredException(string entityName, string fieldName)
+            : base(string.Format("The Entity '{0}' requires a SearchOrder attribute on the Field '{1}'.", entityName, fieldName))
+        {
         }
     }
 }

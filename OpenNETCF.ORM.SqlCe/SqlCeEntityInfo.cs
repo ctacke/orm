@@ -13,5 +13,6 @@ namespace OpenNETCF.ORM
         }
 
         internal string PrimaryKeyIndexName { get; set; }
+        internal List<string> IndexNames { get; set; }
     }
 }

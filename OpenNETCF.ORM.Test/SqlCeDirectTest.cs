@@ -191,7 +191,7 @@ namespace OpenNETCF.ORM.Test
                 }
             }
 
-            author.Books = books.ToArray();
+            author.Books.AddRange(books);
 
             return author;
         }
@@ -214,7 +214,8 @@ namespace OpenNETCF.ORM.Test
                         author = new Author
                         {
                             AuthorID = results.GetInt32(m_authorOrdinals["AuthorID"]),
-                            Name = results.GetString(m_authorOrdinals["Name"])
+                            Name = results.GetString(m_authorOrdinals["Name"]),
+                            Books = new ReferenceCollection<Book>()
                         };
 
                         sql = string.Format("SELECT * FROM Book WHERE AuthorID = {0}", author.AuthorID);
@@ -239,7 +240,7 @@ namespace OpenNETCF.ORM.Test
                 }
             }
 
-            author.Books = books.ToArray();
+            author.Books.AddRange(books);
 
             return author;
         }

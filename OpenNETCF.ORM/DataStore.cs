@@ -64,14 +64,16 @@ namespace OpenNETCF.ORM
             }
 
             var map = new TEntityInfo();
+
+            // store the NameInStore if  not explicitly set
             if (attr.NameInStore == null)
             {
-                map.Initialize(entityType.Name, entityType);
+                attr.NameInStore = entityType.Name;
             }
-            else
-            {
-                map.Initialize(attr.NameInStore, entityType);
-            }
+
+            //TODO: validate NameInStore
+
+            map.Initialize(attr, entityType);
 
             // see if we have any entity 
             // get all field definitions
@@ -104,14 +106,14 @@ namespace OpenNETCF.ORM
 
                     if (reference != null)
                     {
-                        if (!prop.PropertyType.IsArray)
+                        if (!prop.PropertyType.IsSubclassOfRawGeneric(typeof(ReferenceCollection<>)))
                         {
                             throw new InvalidReferenceTypeException(reference.ReferenceEntityType, reference.ReferenceField,
-                                "Reference fields must be arrays");
+                                "Reference fields must be of type ReferenceCollection<T>");
                         }
 
-                        map.References.Add(reference);
                         reference.PropertyInfo = prop;
+                        map.References.Add(reference);
                     }
                 }
             }

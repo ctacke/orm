@@ -79,39 +79,60 @@ namespace OpenNETCF.ORM.Test
 
         private void TestCascadingInsert(List<ITestClass> tests)
         {
+            var testBooks = new ReferenceCollection<Book>()
+                {
+                    new Book
+                    {
+                      Title = "CSS: The Missing Manual",
+                      BookType = BookType.NonFiction
+                    },
+
+                    new Book
+                    {
+                        Title = "JavaScript: The Missing Manual",
+                        BookType = BookType.NonFiction
+                    },
+
+                    new Book
+                    {
+                        Title = "Dreamweaver: The Missing Manual",
+                        BookType = BookType.NonFiction
+                    },
+                };
+
             // ensures that the entity *and its references* get inserted
             Author a = new Author
             {
-                 Name = "David McFarland",
-                 
-                 Books = new Book[]
-                 {
-                     new Book
-                     {
-                          Title = "CSS: The Missing Manual",
-                          BookType = BookType.NonFiction
-                     },
+                Name = "David McFarland",
 
-                     new Book
-                     {
-                          Title = "JavaScript: The Missing Manual",
-                          BookType = BookType.NonFiction
-                     },
-
-                     new Book
-                     {
-                          Title = "Dreamweaver: The Missing Manual",
-                          BookType = BookType.NonFiction
-                     },
-                 }
+                Books = testBooks
             };
 
             foreach (var t in tests)
             {
                 t.Insert(a);
 
-                var author = t.GetAuthorById(a.AuthorID);                
+                var author = t.GetAuthorById(a.AuthorID);
+                var count = t.GetBookCount();
             }
+
+            // create a new author with the same books - the books should *not* get re-inserted
+            Author a2 = new Author
+            {
+                Name = "Test CoAuthor",
+
+                Books = testBooks
+            };
+
+            foreach (var t in tests)
+            {
+                t.Insert(a2);
+
+                var author = t.GetAuthorById(a.AuthorID);
+                var count = t.GetBookCount();
+            }
+
+
         }
 
         private void TestGetAllBooks(List<ITestClass> tests)
