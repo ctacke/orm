@@ -5,4 +5,4 @@ using System.Reflection;
 
 // see http://modland.nascom.nasa.gov/browse/calendar.html
 
-[assembly: AssemblyVersion("1.0.10159.0")]
+[assembly: AssemblyVersion("1.0.10229.0")]
