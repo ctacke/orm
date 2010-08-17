@@ -8,7 +8,7 @@ namespace OpenNETCF.ORM
 {
     public class ReferenceAttributeCollection : IEnumerable<ReferenceAttribute>
     {
-        private Dictionary<string, ReferenceAttribute> m_references = new Dictionary<string, ReferenceAttribute>();
+        private Dictionary<int, ReferenceAttribute> m_references = new Dictionary<int, ReferenceAttribute>();
 
         internal ReferenceAttributeCollection()
         {
@@ -16,7 +16,7 @@ namespace OpenNETCF.ORM
 
         internal void Add(ReferenceAttribute reference)
         {
-            m_references.Add(reference.ReferenceField.ToLower(), reference);
+            m_references.Add(reference.GetHashCode(), reference);
         }
 
         public int Count
@@ -24,9 +24,13 @@ namespace OpenNETCF.ORM
             get { return m_references.Count; }
         }
 
-        public ReferenceAttribute this[string referenceName]
+        public ReferenceAttribute this[Type referenceType, string referenceFieldName]
         {
-            get { return m_references[referenceName.ToLower()]; }
+            get 
+            {
+                int hash = referenceType.Name.GetHashCode() | referenceFieldName.GetHashCode();
+                return m_references[hash]; 
+            }
         }
 
         public IEnumerator<ReferenceAttribute> GetEnumerator()

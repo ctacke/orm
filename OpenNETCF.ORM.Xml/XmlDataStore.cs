@@ -185,5 +185,10 @@ namespace OpenNETCF.ORM.Xml
         {
             throw new NotImplementedException();
         }
+
+        public override void Delete<T>(string fieldName, object matchValue)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

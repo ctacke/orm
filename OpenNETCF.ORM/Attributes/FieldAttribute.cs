@@ -32,6 +32,7 @@ namespace OpenNETCF.ORM
         public string FieldName { get; set; }
         public int Length { get; set; }
         public int Precision { get; set; }
+        public int Scale { get; set; }
         public bool AllowsNulls { get; set; }
         public bool IsPrimaryKey { get; set; }
         public bool RequireUniqueValue { get; set; }

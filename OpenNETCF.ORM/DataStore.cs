@@ -28,6 +28,7 @@ namespace OpenNETCF.ORM
         public abstract T[] Fetch<T>(string searchFieldName, int fetchCount, int firstRowOffset) where T : new();
         public abstract int Count<T>();
         public abstract void Delete<T>();
+        public abstract void Delete<T>(string fieldName, object matchValue);
 
         public DataStore()
         {
@@ -106,10 +107,10 @@ namespace OpenNETCF.ORM
 
                     if (reference != null)
                     {
-                        if (!prop.PropertyType.IsSubclassOfRawGeneric(typeof(ReferenceCollection<>)))
+                        if (!prop.PropertyType.IsArray)
                         {
                             throw new InvalidReferenceTypeException(reference.ReferenceEntityType, reference.ReferenceField,
-                                "Reference fields must be of type ReferenceCollection<T>");
+                                "Reference fields must be arrays");
                         }
 
                         reference.PropertyInfo = prop;

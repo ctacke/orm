@@ -8,20 +8,6 @@ namespace OpenNETCF.ORM
 {
     public static class Extensions
     {
-        internal static bool IsSubclassOfRawGeneric(this Type generic, Type toCheck)
-        {
-            while (toCheck != typeof(object))
-            {
-                var cur = toCheck.IsGenericType ? toCheck.GetGenericTypeDefinition() : toCheck;
-                if (cur.IsGenericType && generic.GetGenericTypeDefinition() == cur.GetGenericTypeDefinition())
-                {
-                    return true;
-                }
-                toCheck = toCheck.BaseType;
-            }
-            return false;
-        }
-        
         internal static bool IsNullable(this Type type)
         {
             if (!type.IsGenericType) return false;
@@ -55,14 +41,29 @@ namespace OpenNETCF.ORM
                     return DbType.UInt32;
                 case "System.DateTime":
                     return DbType.DateTime;
+
+                case "System.Decimal":
+                    return DbType.Decimal;
+                case "System.Double":
+                    return DbType.Double;
+                case "System.Int64":
+                    return DbType.Int64;
+                case "System.UInt64":
+                    return DbType.UInt64;
+                case "System.Byte":
+                    return DbType.Byte;
+                case "System.Char":
+                    return DbType.Byte;
+                case "System.Guid":
+                    return DbType.Guid;
                 default:
                     if (type.IsEnum)
                     {
                         return DbType.Int32;
                     }
 
-                    throw new NotSupportedException(
-                        string.Format("Unable to determine DB type for Type '{0}'", type.Name));
+                    // everything else is an "object" and requires a custom serializer/deserializer
+                    return DbType.Object;
             }
         }
 
@@ -70,7 +71,7 @@ namespace OpenNETCF.ORM
         {
             switch (type)
             {
-                case DbType.DateTime: 
+                case DbType.DateTime:
                     return "datetime";
                 case DbType.Int32:
                 case DbType.UInt32:
@@ -86,6 +87,20 @@ namespace OpenNETCF.ORM
                     return "bit";
                 case DbType.Object:
                     return "image";
+                case DbType.Int64:
+                    return "bigint";
+                case DbType.UInt64:
+                    return "bigint";
+                case DbType.Byte:
+                    return "tinyint";
+
+                case DbType.Decimal:
+                    return "numeric";
+                case DbType.Double:
+                    return "float";
+                case DbType.Guid:
+                    return "uniqueidentifier";
+
                 default:
                     throw new NotSupportedException(
                         string.Format("Unable to determine convert DbType '{0}' to string", type.ToString()));

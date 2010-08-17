@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Data;
 using System.Data.SqlServerCe;
 using System.IO;
-using System.Collections;
+using System.Runtime.InteropServices;
 
 namespace OpenNETCF.ORM
 {
@@ -17,11 +17,14 @@ namespace OpenNETCF.ORM
         private SqlCeConnection m_connection;
 
         private Dictionary<Type, object[]> m_referenceCache = new Dictionary<Type, object[]>();
+        private Dictionary<Type, MethodInfo> m_serializerCache = new Dictionary<Type, MethodInfo>();
+        private Dictionary<Type, MethodInfo> m_deserializerCache = new Dictionary<Type, MethodInfo>();
 
         private string Password { get; set; }
 
         public string FileName { get; private set; }
         public int DefaultStringFieldSize { get; set; }
+        public int DefaultNumericFieldPrecision { get; set; }
         public ConnectionBehavior ConnectionBehavior { get; set; }
 
         public SqlCeDataStore(string fileName)
@@ -34,6 +37,7 @@ namespace OpenNETCF.ORM
             FileName = fileName;
             Password = password;
             DefaultStringFieldSize = 200;
+            DefaultNumericFieldPrecision = 16;
         }
 
         ~SqlCeDataStore()
@@ -147,6 +151,38 @@ namespace OpenNETCF.ORM
             }
         }
 
+        public override void Delete<T>(string fieldName, object matchValue)
+        {
+            Delete(typeof(T), fieldName, matchValue);
+        }
+
+        /// <summary>
+        /// Deletes entities of a given type where the specified field name matches a specified value
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="indexName"></param>
+        /// <param name="matchValue"></param>
+        private void Delete(Type entityType, string fieldName, object matchValue)
+        {
+            string entityName = m_entities.GetNameForType(entityType);
+
+            SqlCeConnection connection = GetConnection(true);
+            try
+            {
+                using (var command = new SqlCeCommand())
+                {
+                    command.Connection = connection;
+                    command.CommandText = string.Format("DELETE FROM {0} WHERE {1} = ?", entityName, fieldName);
+                    command.Parameters.Add("@val", matchValue);
+                    command.ExecuteNonQuery();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
         private void Delete(Type t, object primaryKey)
         {
             string entityName = m_entities.GetNameForType(t);
@@ -159,6 +195,14 @@ namespace OpenNETCF.ORM
             if (Entities[entityName].Fields.KeyField == null)
             {
                 throw new PrimaryKeyRequiredException("A primary key is required on an Entity in order to perform a Delete");
+            }
+            
+            // handle cascade deletes
+            foreach (var reference in Entities[entityName].References)
+            {
+                if (!reference.CascadeDelete) continue;
+
+                Delete(reference.ReferenceEntityType, reference.ReferenceField, primaryKey);
             }
 
             SqlCeConnection connection = GetConnection(false);
@@ -220,6 +264,8 @@ namespace OpenNETCF.ORM
                 throw new EntityNotFoundException(t);
             }
 
+            // TODO: handle cascade deletes?
+
             SqlCeConnection connection = GetConnection(true);
             try
             {
@@ -262,6 +308,36 @@ namespace OpenNETCF.ORM
             Delete(type, keyValue);
         }
 
+        private MethodInfo GetSerializer(Type itemType)
+        {
+            if (m_serializerCache.ContainsKey(itemType))
+            {
+                return m_serializerCache[itemType];
+            }
+
+            var serializer = itemType.GetMethod("Serialize", BindingFlags.Public | BindingFlags.Instance);
+
+            if (serializer == null) return null;
+
+            m_serializerCache.Add(itemType, serializer);
+            return serializer;
+        }
+
+        private MethodInfo GetDeserializer(Type itemType)
+        {
+            if (m_deserializerCache.ContainsKey(itemType))
+            {
+                return m_deserializerCache[itemType];
+            }
+
+            var deserializer = itemType.GetMethod("Deserialize", BindingFlags.Public | BindingFlags.Instance);
+
+            if (deserializer == null) return null;
+
+            m_deserializerCache.Add(itemType, deserializer);
+            return deserializer;
+        }
+
         /// <summary>
         /// Updates the backing DataStore with the values in the specified entity instance
         /// </summary>
@@ -271,12 +347,12 @@ namespace OpenNETCF.ORM
         /// </remarks>
         public override void Update(object item)
         {
-            var type = item.GetType();
-            string entityName = m_entities.GetNameForType(type);
+            var itemType = item.GetType();
+            string entityName = m_entities.GetNameForType(itemType);
 
             if (entityName == null)
             {
-                throw new EntityNotFoundException(type);
+                throw new EntityNotFoundException(itemType);
             }
 
             if (Entities[entityName].Fields.KeyField == null)
@@ -316,12 +392,31 @@ namespace OpenNETCF.ORM
                         foreach (var field in Entities[entityName].Fields)
                         {
                             // do not update PK fields
-                            if (field.IsPrimaryKey) continue;
+                            if (field.IsPrimaryKey)
+                            {
+                                continue;
+                            }
+                            else if (field.DataType == DbType.Object)
+                            {
+                                // get serializer
+                                var serializer = GetSerializer(itemType);
 
-                            var value = field.PropertyInfo.GetValue(item, null);
+                                if (serializer == null)
+                                {
+                                    throw new MissingMethodException(
+                                        string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
+                                        field.FieldName, entityName));
+                                }
+                                var value = serializer.Invoke(item, new object[] { field.FieldName });
+                                results.SetValue(field.Ordinal, value);
+                            }
+                            else
+                            {
+                                var value = field.PropertyInfo.GetValue(item, null);
 
-                            // TODO: should we update only if it's changed?  Does it really matter at this point?
-                            results.SetValue(field.Ordinal, value);
+                                // TODO: should we update only if it's changed?  Does it really matter at this point?
+                                results.SetValue(field.Ordinal, value);
+                            }
                         }
 
                         results.Update();
@@ -342,63 +437,7 @@ namespace OpenNETCF.ORM
         /// <returns></returns>
         public override T Select<T>(object primaryKey)
         {
-            var type = typeof(T);
-            string entityName = m_entities.GetNameForType(type);
-
-            if (entityName == null)
-            {
-                throw new EntityNotFoundException(type);
-            }
-
-            if (Entities[entityName].Fields.KeyField == null)
-            {
-                throw new PrimaryKeyRequiredException("A primary key is required on an Entity in order to perform a single-row Select");
-            }
-
-            SqlCeConnection connection = GetConnection(false);
-            try
-            {
-                CheckOrdinals(entityName);
-                CheckPrimaryKeyIndex(entityName);
-
-                using (var command = new SqlCeCommand())
-                {
-                    command.Connection = connection;
-                    command.CommandText = entityName;
-                    command.CommandType = CommandType.TableDirect;
-                    command.IndexName = Entities[entityName].PrimaryKeyIndexName;
-
-                    using (var results = command.ExecuteResultSet(ResultSetOptions.Scrollable))
-                    {
-                        // seek on the PK
-                        var found = results.Seek(DbSeekOptions.BeforeEqual, new object[] { primaryKey });
-
-                        if (!found)
-                        {
-                            return default(T);
-                        }
-
-                        results.Read();
-
-                        T item = new T();
-
-                        foreach (var field in Entities[entityName].Fields)
-                        {
-                            var value = results[field.Ordinal];
-                            if (value != DBNull.Value)
-                            {
-                                field.PropertyInfo.SetValue(item, value, null);
-                            }
-                        }
-
-                        return item;
-                    }
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, false);
-            }
+            return (T)Select(typeof(T), null, primaryKey, -1, -1).FirstOrDefault();
         }
 
         /// <summary>
@@ -489,17 +528,8 @@ namespace OpenNETCF.ORM
                         children.Add(child);
                     }
                 }
-
-                var refCollectionType = typeof(ReferenceCollection<>);
-                var genericType = refCollectionType.MakeGenericType(new Type[] { reference.ReferenceEntityType });
-                var refCollection = Activator.CreateInstance(genericType);
-
-                var addRange = genericType.GetMethod("AddRange");
-
-                addRange.Invoke(refCollection, new object[] { children.ToArray(reference.ReferenceEntityType) });
-
                 //var carr = children.ToArray(reference.ReferenceEntityType);
-                reference.PropertyInfo.SetValue(instance, refCollection, null);
+                reference.PropertyInfo.SetValue(instance, children.ToArray(reference.ReferenceEntityType), null);
             }
         }
 
@@ -619,6 +649,8 @@ namespace OpenNETCF.ORM
                     command.CommandText = entityName;
                     command.CommandType = CommandType.TableDirect;
 
+                    int searchOrdinal = -1;
+
                     if (searchFieldName != null)
                     {
                         string indexName = string.Format("ORM_IDX_{0}_{1}", entityName, searchFieldName);
@@ -630,9 +662,12 @@ namespace OpenNETCF.ORM
 
                         command.IndexName = indexName;
                     }
-
-
-                    int searchOrdinal = -1;
+                    else
+                    {
+                        CheckPrimaryKeyIndex(entityName);
+                        command.IndexName = Entities[entityName].PrimaryKeyIndexName;
+                        searchOrdinal = Entities[entityName].PrimaryKeyOrdinal;
+                    }
 
                     using (var results = command.ExecuteResultSet(ResultSetOptions.None))
                     {
@@ -686,7 +721,26 @@ namespace OpenNETCF.ORM
                                     var value = results[field.Ordinal];
                                     if (value != DBNull.Value)
                                     {
-                                        field.PropertyInfo.SetValue(item, value, null);
+                                        if (field.DataType == DbType.Object)
+                                        {
+                                            // get serializer
+                                            var itemType = item.GetType();
+                                            var deserializer = GetDeserializer(itemType);
+
+                                            if (deserializer == null)
+                                            {
+                                                throw new MissingMethodException(
+                                                    string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
+                                                    field.FieldName, entityName));
+                                            }
+
+                                            var @object = deserializer.Invoke(item, new object[] { field.FieldName, value });
+                                            field.PropertyInfo.SetValue(item, @object, null);
+                                        }
+                                        else
+                                        {
+                                            field.PropertyInfo.SetValue(item, value, null);
+                                        }
                                     }
                                     if (field.IsPrimaryKey)
                                     {
@@ -734,7 +788,8 @@ namespace OpenNETCF.ORM
         /// </remarks>
         public override void Insert(object item, bool insertReferences)
         {
-            string entityName = m_entities.GetNameForType(item.GetType());
+            var itemType = item.GetType();
+            string entityName = m_entities.GetNameForType(itemType);
 
             if (entityName == null)
             {
@@ -767,6 +822,20 @@ namespace OpenNETCF.ORM
                             {
                                 identity = field;
                             }
+                            else if (field.DataType == DbType.Object)
+                            {
+                                // get serializer
+                                var serializer = GetSerializer(itemType);
+
+                                if (serializer == null)
+                                {
+                                    throw new MissingMethodException(
+                                        string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
+                                        field.FieldName, entityName));
+                                }
+                                var value = serializer.Invoke(item, new object[] { field.FieldName });
+                                record.SetValue(field.Ordinal, value);
+                            }
                             else
                             {
                                 var value = field.PropertyInfo.GetValue(item, null);
@@ -794,10 +863,8 @@ namespace OpenNETCF.ORM
 
                                 var fk = Entities[entityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(item, null);
 
-                                var referenceCollection = valueArray as IReferenceCollection;
-
                                 // we've already enforced this to be an array when creating the store
-                                foreach (var element in referenceCollection.GetNewItems())
+                                foreach (var element in valueArray as Array)
                                 {
                                     bool isNew = false;
 
@@ -815,13 +882,11 @@ namespace OpenNETCF.ORM
 
                                     if (isNew)
                                     {
-                                    var et = m_entities.GetNameForType(element.GetType());
-                                    Entities[et].Fields[reference.ReferenceField].PropertyInfo.SetValue(element, fk, null);
-                                    Insert(element);
-}
+                                        var et = m_entities.GetNameForType(element.GetType());
+                                        Entities[et].Fields[reference.ReferenceField].PropertyInfo.SetValue(element, fk, null);
+                                        Insert(element);
+                                    }
                                 }
-
-                                referenceCollection.ClearNewItems();
                             }
                         }
                     }
@@ -1027,6 +1092,10 @@ namespace OpenNETCF.ORM
                         sb.AppendFormat("({0}) ", DefaultStringFieldSize);
                     }
                     break;
+                case DbType.Decimal:
+                    int p = field.Precision == 0 ? DefaultNumericFieldPrecision : field.Precision;
+                    sb.AppendFormat("({0},{1}) ", p, field.Scale);
+                    break;
             }
 
             if (field.IsPrimaryKey)
@@ -1035,7 +1104,19 @@ namespace OpenNETCF.ORM
 
                 if (attribute.KeyScheme == KeyScheme.Identity)
                 {
-                    sb.Append("IDENTITY ");
+                    switch(field.DataType)
+                    {
+                        case DbType.Int32:
+                        case DbType.UInt32:
+                            sb.Append("IDENTITY ");
+                            break;
+                        case DbType.Guid:
+                            sb.Append("ROWGUIDCOL ");
+                            break;
+                        default:
+                            throw new FieldDefinitionException(attribute.NameInStore, field.FieldName,
+                                string.Format("Data Type '{0}' cannot be marked as an Identity field", field.DataType));
+                    }
                 }
             }
 
