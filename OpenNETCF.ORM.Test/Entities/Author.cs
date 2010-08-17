@@ -11,7 +11,7 @@ namespace OpenNETCF.ORM.Test.Entities
         [Field(IsPrimaryKey = true)]
         public int AuthorID { get; set; }
 
-        [Reference("AuthorID", Autofill=true)]
+        [Reference(typeof(Book), "AuthorID", Autofill=true)]
         public ReferenceCollection<Book> Books { get; set; }
 
         [Field(SearchOrder = FieldSearchOrder.Ascending)]
