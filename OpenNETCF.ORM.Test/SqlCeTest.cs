@@ -79,7 +79,7 @@ namespace OpenNETCF.ORM.Test
 
         private void TestCascadingInsert(List<ITestClass> tests)
         {
-            var testBooks = new ReferenceCollection<Book>()
+            var testBooks = new Book[]
                 {
                     new Book
                     {

@@ -191,7 +191,7 @@ namespace OpenNETCF.ORM.Test
                 }
             }
 
-            author.Books.AddRange(books);
+            author.Books = books.ToArray();
 
             return author;
         }
@@ -202,25 +202,24 @@ namespace OpenNETCF.ORM.Test
             List<Book> books = new List<Book>();
 
             string sql = string.Format("SELECT * FROM Author where Name = '{0}'", name);
-            using (SqlCeCommand cmd = new SqlCeCommand(sql, 
+            using (SqlCeCommand cmd = new SqlCeCommand(sql,
                 Connection))
             {
                 using (var results = cmd.ExecuteResultSet(ResultSetOptions.Insensitive))
                 {
-                    if(results.Read())
+                    if (results.Read())
                     {
                         CheckAuthorOrdinals(results);
 
                         author = new Author
                         {
                             AuthorID = results.GetInt32(m_authorOrdinals["AuthorID"]),
-                            Name = results.GetString(m_authorOrdinals["Name"]),
-                            Books = new ReferenceCollection<Book>()
+                            Name = results.GetString(m_authorOrdinals["Name"])
                         };
 
                         sql = string.Format("SELECT * FROM Book WHERE AuthorID = {0}", author.AuthorID);
 
-                        using(var bookcmd = new SqlCeCommand(sql, Connection))
+                        using (var bookcmd = new SqlCeCommand(sql, Connection))
                         using (var bookresults = bookcmd.ExecuteResultSet(ResultSetOptions.Insensitive))
                         {
                             CheckOrdinals(bookresults);
@@ -228,19 +227,19 @@ namespace OpenNETCF.ORM.Test
                             while (bookresults.Read())
                             {
                                 books.Add(new Book
-                                    {
-                                        BookID = bookresults.GetInt32(m_bookOrdinals["BookID"]),
-                                        Title = bookresults.GetString(m_bookOrdinals["Title"]),
-                                        BookType = (BookType)bookresults.GetInt32(m_bookOrdinals["BookType"]),
-                                        AuthorID = author.AuthorID
-                                    });
+                                {
+                                    BookID = bookresults.GetInt32(m_bookOrdinals["BookID"]),
+                                    Title = bookresults.GetString(m_bookOrdinals["Title"]),
+                                    BookType = (BookType)bookresults.GetInt32(m_bookOrdinals["BookType"]),
+                                    AuthorID = author.AuthorID
+                                });
                             }
                         }
                     }
                 }
             }
 
-            author.Books.AddRange(books);
+            author.Books = books.ToArray();
 
             return author;
         }

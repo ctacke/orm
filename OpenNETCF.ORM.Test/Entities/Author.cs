@@ -12,7 +12,7 @@ namespace OpenNETCF.ORM.Test.Entities
         public int AuthorID { get; set; }
 
         [Reference(typeof(Book), "AuthorID", Autofill=true)]
-        public ReferenceCollection<Book> Books { get; set; }
+        public Book[] Books { get; set; }
 
         [Field(SearchOrder = FieldSearchOrder.Ascending)]
         public string Name { get; set; }
