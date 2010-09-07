@@ -14,6 +14,12 @@ namespace OpenNETCF.ORM.Test.Entities
     [Entity(KeyScheme.Identity)]
     public class Book
     {
+        public Book()
+        {
+            // this is required for cascading inserts to work
+            BookID = -1;
+        }
+
         [Field(IsPrimaryKey=true)]
         public int BookID { get; set; }
 

@@ -863,10 +863,21 @@ namespace OpenNETCF.ORM
 
                                 var fk = Entities[entityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(item, null);
 
+                                string et = null;
+
                                 // we've already enforced this to be an array when creating the store
                                 foreach (var element in valueArray as Array)
                                 {
+                                    if (et == null)
+                                    {
+                                        et = m_entities.GetNameForType(element.GetType());
+                                    }
+
+                                    // get the FK value
+                                    var keyValue = Entities[et].Fields.KeyField.PropertyInfo.GetValue(element, null);
+
                                     bool isNew = false;
+
 
                                     // only do an insert if the value is new (i.e. need to look for existing reference items)
                                     // not certain how this will work right now, so for now we ask the caller to know what they're doing
@@ -874,15 +885,16 @@ namespace OpenNETCF.ORM
                                     {
                                         case KeyScheme.Identity:
                                             // TODO: see if PK field value == -1
+                                            isNew = keyValue.Equals(-1);
                                             break;
                                         case KeyScheme.GUID:
                                             // TODO: see if PK field value == null
+                                            isNew = keyValue.Equals(null);
                                             break;
                                     }
 
                                     if (isNew)
                                     {
-                                        var et = m_entities.GetNameForType(element.GetType());
                                         Entities[et].Fields[reference.ReferenceField].PropertyInfo.SetValue(element, fk, null);
                                         Insert(element);
                                     }
