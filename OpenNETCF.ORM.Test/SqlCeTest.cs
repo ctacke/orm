@@ -108,28 +108,50 @@ namespace OpenNETCF.ORM.Test
                 Books = testBooks
             };
 
+
             foreach (var t in tests)
             {
+                var initialCount = t.GetBookCount();
+
                 t.Insert(a);
 
                 var author = t.GetAuthorById(a.AuthorID);
                 var count = t.GetBookCount();
+
+                var diff = count - initialCount;
+                // diff should == 3
+                if (diff != 3) Debugger.Break();
             }
 
-            // create a new author with the same books - the books should *not* get re-inserted
+            // create a new author with the same books - the books should *not* get re-inserted - plus one new book
+            List<Book> newList = new List<Book>(testBooks);
+            newList.Add(
+                new Book
+                    {
+                        Title = "My Coauthors Book",
+                        BookType = BookType.NonFiction
+                    }
+                    );
+
             Author a2 = new Author
             {
                 Name = "Test CoAuthor",
 
-                Books = testBooks
+                Books = newList.ToArray()
             };
 
             foreach (var t in tests)
             {
+                var initialCount = t.GetBookCount();
+
                 t.Insert(a2);
 
                 var author = t.GetAuthorById(a.AuthorID);
                 var count = t.GetBookCount();
+                var diff = count - initialCount;
+
+                // diff should == 1
+                if (diff != 1) Debugger.Break();
             }
 
 
