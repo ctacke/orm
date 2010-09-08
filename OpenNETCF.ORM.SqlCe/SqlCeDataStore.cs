@@ -410,6 +410,10 @@ namespace OpenNETCF.ORM
                                 var value = serializer.Invoke(item, new object[] { field.FieldName });
                                 results.SetValue(field.Ordinal, value);
                             }
+                            else if (field.IsRowVersion)
+                            {
+                                // read-only, so do nothing
+                            }
                             else
                             {
                                 var value = field.PropertyInfo.GetValue(item, null);
@@ -737,6 +741,11 @@ namespace OpenNETCF.ORM
                                             var @object = deserializer.Invoke(item, new object[] { field.FieldName, value });
                                             field.PropertyInfo.SetValue(item, @object, null);
                                         }
+                                        else if (field.IsRowVersion)
+                                        {
+                                            // sql stores this an 8-byte array
+                                            field.PropertyInfo.SetValue(item, BitConverter.ToInt64((byte[])value, 0), null);
+                                        }
                                         else
                                         {
                                             field.PropertyInfo.SetValue(item, value, null);
@@ -835,6 +844,10 @@ namespace OpenNETCF.ORM
                                 }
                                 var value = serializer.Invoke(item, new object[] { field.FieldName });
                                 record.SetValue(field.Ordinal, value);
+                            }
+                            else if (field.IsRowVersion)
+                            {
+                                // read-only, so do nothing
                             }
                             else
                             {
@@ -1053,7 +1066,7 @@ namespace OpenNETCF.ORM
 
                 sql.AppendFormat("[{0}] {1} {2}",
                     field.FieldName,
-                    field.DataType.ToSqlTypeString(),
+                    GetFieldDataTypeString(entity.EntityName, field),
                     GetFieldCreationAttributes(entity.EntityAttribute, field));
 
                 if (--count > 0) sql.Append(", ");
@@ -1086,6 +1099,27 @@ namespace OpenNETCF.ORM
                     }
                 }
             }
+        }
+
+        private string GetFieldDataTypeString(string entityName, FieldAttribute field)
+        {
+            // the SQL RowVersion is a special case
+            if(field.IsRowVersion)
+            {
+                switch(field.DataType)
+                {
+                    case DbType.UInt64:
+                    case DbType.Int64:
+                        // no error
+                        break;
+                    default:
+                        throw new FieldDefinitionException(entityName, field.FieldName, "rowversion fields must be an 8-byte data type (In64 or UInt64)");
+                }
+
+                return "rowversion";
+            }
+
+            return field.DataType.ToSqlTypeString();
         }
 
         private string GetFieldCreationAttributes(EntityAttribute attribute, FieldAttribute field)

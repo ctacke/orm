@@ -15,7 +15,7 @@ namespace OpenNETCF.ORM
     }
 
     [AttributeUsage(AttributeTargets.Property)]
-    public class FieldAttribute : Attribute
+    public partial class FieldAttribute : Attribute
     {
         private DbType m_type;
 
@@ -27,6 +27,7 @@ namespace OpenNETCF.ORM
             SearchOrder = FieldSearchOrder.NotSearchable;
             RequireUniqueValue = false;
             Ordinal = -1;
+            IsRowVersion = false;
         }
 
         public string FieldName { get; set; }
@@ -38,6 +39,11 @@ namespace OpenNETCF.ORM
         public bool RequireUniqueValue { get; set; }
         public int Ordinal { get; set; }
         public FieldSearchOrder SearchOrder { get; set; }
+
+        /// <summary>
+        /// rowversion or timestamp time for Sql Server
+        /// </summary>
+        public bool IsRowVersion { get; set; }
  
         public PropertyInfo PropertyInfo { get; internal set; }
         internal bool DataTypeIsValid { get; private set; }

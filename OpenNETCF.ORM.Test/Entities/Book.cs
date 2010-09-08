@@ -28,8 +28,12 @@ namespace OpenNETCF.ORM.Test.Entities
 
         [Field]
         public string Title { get; set; }
+        
 
         [Field(SearchOrder=FieldSearchOrder.Ascending)]
         public BookType BookType { get; set; }
+
+        [Field(IsRowVersion=true)]
+        public long RowVersion { get; set; }
     }
 }

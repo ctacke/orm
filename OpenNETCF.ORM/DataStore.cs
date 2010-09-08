@@ -80,7 +80,10 @@ namespace OpenNETCF.ORM
             // get all field definitions
             foreach (var prop in entityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
             {
-                var attribute = prop.GetCustomAttributes(true).Where(a => a.GetType().Equals(typeof(FieldAttribute))).FirstOrDefault() as FieldAttribute;
+                var attribute = prop.GetCustomAttributes(true)
+                    .Where(a => 
+                        (a.GetType().Equals(typeof(FieldAttribute)))
+                        ).FirstOrDefault() as FieldAttribute;
 
                 if (attribute != null)
                 {
@@ -121,8 +124,6 @@ namespace OpenNETCF.ORM
 
             m_entities.Add(map);
         }
-
-
 
         public void DiscoverTypes(Assembly containingAssembly)
         {
