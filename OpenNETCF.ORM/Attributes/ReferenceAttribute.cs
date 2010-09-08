@@ -25,7 +25,7 @@ namespace OpenNETCF.ORM
         public bool Equals(ReferenceAttribute other)
         {
             if (!this.ReferenceEntityType.Equals(other.ReferenceEntityType)) return false;
-            return string.Compare(this.ReferenceField, other.ReferenceField, true) == 0;
+            return string.Compare(this.ReferenceField, other.ReferenceField, StringComparison.InvariantCultureIgnoreCase) == 0;
         }
 
         public override int GetHashCode()
