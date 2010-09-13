@@ -15,10 +15,10 @@ namespace OpenNETCF.ORM
     }
 
     [AttributeUsage(AttributeTargets.Property)]
-    public partial class FieldAttribute : Attribute
+    public class FieldAttribute : Attribute
     {
         private DbType m_type;
-
+        
         public FieldAttribute()
         {
             // set up defaults

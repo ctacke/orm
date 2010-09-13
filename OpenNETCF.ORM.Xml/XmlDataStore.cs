@@ -190,5 +190,15 @@ namespace OpenNETCF.ORM.Xml
         {
             throw new NotImplementedException();
         }
+
+        public override bool Contains(object item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Update(object item, bool cascadeUpdates)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
