@@ -141,5 +141,10 @@ namespace OpenNETCF.ORM.Test
         {
             Store.Insert(author, true);
         }
+
+        public void Update(Author author)
+        {
+            Store.Update(author);
+        }
     }
 }

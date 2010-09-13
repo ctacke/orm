@@ -255,5 +255,11 @@ namespace OpenNETCF.ORM.Test
             // TODO:
             return;
         }
+
+        public void Update(Author author)
+        {
+            // TODO:
+            return;
+        }
     }
 }

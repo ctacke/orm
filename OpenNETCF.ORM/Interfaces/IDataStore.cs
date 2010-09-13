@@ -24,6 +24,7 @@ namespace OpenNETCF.ORM
         T[] Select<T>(string searchFieldName, object matchValue) where T : new();
 
         void Update(object item);
+        void Update(object item, bool cascadeUpdates);
 
         void Delete(object item);
         void Delete<T>(object primaryKey);
@@ -35,6 +36,8 @@ namespace OpenNETCF.ORM
         T[] Fetch<T>(string searchFieldName, int fetchCount, int firstRowOffset) where T : new();
 
         int Count<T>();
+
+        bool Contains(object item);
 
         void FillReferences(object instance);
     }

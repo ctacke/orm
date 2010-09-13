@@ -55,6 +55,7 @@ namespace OpenNETCF.ORM.Test
             // Debug.WriteLine(string.Format("Data set has now has {0} Books", store.GetBookCount()));
 
             TestCascadingInsert(tests);
+            TestCascadingUpdates(tests);
 
             var test = new SqlCeDirectTest();
             test.Initialize();
@@ -75,6 +76,39 @@ namespace OpenNETCF.ORM.Test
             TestGetAuthorByName(tests, author.Name);
 
             TestGetAuthorsByPage(tests, 10);
+        }
+
+        private void TestCascadingUpdates(List<ITestClass> tests)
+        {
+            var author = new Author
+            {
+                Name = "Theodore Geisel"
+            };
+
+            foreach (var t in tests)
+            {
+                t.Insert(author);
+
+                var book = new Book
+                {
+                    BookType = BookType.Fiction,
+                    Title = "Fox in Sox"
+                };
+
+                author.Books = new Book[] { book };
+
+                t.Update(author);
+
+                var existing = t.GetAuthorById(author.AuthorID);
+
+                // the book should have been inserted, so it will be at index 0 now
+                existing.Books[0].Title = "Green Eggs and Ham";
+
+                // this should cascade update the book title
+                t.Update(existing);
+
+                existing = t.GetAuthorById(author.AuthorID);
+            }
         }
 
         private void TestCascadingInsert(List<ITestClass> tests)

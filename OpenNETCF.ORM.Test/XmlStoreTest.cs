@@ -80,5 +80,15 @@ namespace OpenNETCF.ORM.Test
         {
             throw new NotImplementedException();
         }
+
+        #region ITestClass Members
+
+
+        public void Update(Author author)
+        {
+            throw new NotImplementedException();
+        }
+
+        #endregion
     }
 }

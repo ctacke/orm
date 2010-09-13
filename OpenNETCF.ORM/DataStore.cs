@@ -20,6 +20,7 @@ namespace OpenNETCF.ORM
         public abstract T Select<T>(object primaryKey) where T : new();
         public abstract T[] Select<T>(string searchFieldName, object matchValue) where T : new();
         public abstract void Update(object item);
+        public abstract void Update(object item, bool cascadeUpdates);
         public abstract void Delete(object item);
         public abstract void Delete<T>(object primaryKey);
         public abstract void FillReferences(object instance);
@@ -29,6 +30,7 @@ namespace OpenNETCF.ORM
         public abstract int Count<T>();
         public abstract void Delete<T>();
         public abstract void Delete<T>(string fieldName, object matchValue);
+        public abstract bool Contains(object item);
 
         public DataStore()
         {

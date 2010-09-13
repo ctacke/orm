@@ -23,7 +23,7 @@ namespace OpenNETCF.ORM
         private string Password { get; set; }
 
         public string FileName { get; private set; }
-        public int DefaultStringFieldSize { get; set; }
+        public int DefaultStringFieldSize { get; set; } 
         public int DefaultNumericFieldPrecision { get; set; }
         public ConnectionBehavior ConnectionBehavior { get; set; }
 
@@ -347,6 +347,13 @@ namespace OpenNETCF.ORM
         /// </remarks>
         public override void Update(object item)
         {
+            //TODO: is a cascading default of true a good idea?
+            Update(item, true);
+        }
+
+        public override void Update(object item, bool cascadeUpdates)
+        {
+            object keyValue;
             var itemType = item.GetType();
             string entityName = m_entities.GetNameForType(itemType);
 
@@ -375,7 +382,7 @@ namespace OpenNETCF.ORM
 
                     using (var results = command.ExecuteResultSet(ResultSetOptions.Scrollable | ResultSetOptions.Updatable))
                     {
-                        var keyValue = Entities[entityName].Fields.KeyField.PropertyInfo.GetValue(item, null);
+                        keyValue = Entities[entityName].Fields.KeyField.PropertyInfo.GetValue(item, null);
 
                         // seek on the PK
                         var found = results.Seek(DbSeekOptions.BeforeEqual, new object[] { keyValue });
@@ -431,6 +438,44 @@ namespace OpenNETCF.ORM
             {
                 DoneWithConnection(connection, false);
             }
+
+            if(cascadeUpdates)
+            {
+                // TODO: move this into the base DataStore class as it's not SqlCe-specific
+                foreach (var reference in Entities[entityName].References)
+                {
+                    foreach (var refItem in reference.PropertyInfo.GetValue(item, null) as Array)
+                    {
+                        if (!this.Contains(refItem))
+                        {
+                            var foreignKey = refItem.GetType().GetProperty(reference.ReferenceField, BindingFlags.Instance | BindingFlags.Public);
+                            foreignKey.SetValue(refItem, keyValue, null);
+                            Insert(refItem, false);
+                        }
+                        else
+                        {
+                            Update(refItem, true);
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Determines if the specified object already exists in the Store (by primary key value)
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        public override bool Contains(object item)
+        {
+            var itemType = item.GetType();
+            string entityName = m_entities.GetNameForType(itemType);
+
+            var keyValue = this.Entities[entityName].Fields.KeyField.PropertyInfo.GetValue(item, null);
+
+            var existing = Select(itemType, null, keyValue, -1, -1).FirstOrDefault();
+
+            return existing != null;
         }
 
         /// <summary>
