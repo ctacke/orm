@@ -19,6 +19,8 @@ namespace OpenNETCF.ORM
         public abstract T[] Select<T>() where T : new();
         public abstract T Select<T>(object primaryKey) where T : new();
         public abstract T[] Select<T>(string searchFieldName, object matchValue) where T : new();
+        public abstract T[] Select<T>(IEnumerable<FilterCondition> filters)where T : new();
+        public abstract object[] Select(Type entityType);
         public abstract void Update(object item);
         public abstract void Update(object item, bool cascadeUpdates);
         public abstract void Delete(object item);
@@ -146,5 +148,6 @@ namespace OpenNETCF.ORM
             // right now it is false since we don't look for duplicate references
             Insert(item, false);
         }
+
     }
 }

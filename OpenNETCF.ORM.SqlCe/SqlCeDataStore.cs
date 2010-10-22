@@ -554,7 +554,7 @@ namespace OpenNETCF.ORM
                     }
                     else
                     {
-                        refData = Select(reference.ReferenceEntityType, null, null, -1, 0);
+                        refData = Select(reference.ReferenceEntityType, reference.ReferenceField, keyValue, -1, 0);
                     }
 
                     referenceItems.Add(reference, refData);
@@ -592,6 +592,17 @@ namespace OpenNETCF.ORM
             var type = typeof(T);
             var items = Select(type, null, null, -1, 0);
             return items.Cast<T>().ToArray();
+        }
+
+        /// <summary>
+        /// Retrieves all entity instances of the specified type from the DataStore
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <returns></returns>
+        public override object[] Select(Type entityType)
+        {
+            var items = Select(entityType, null, null, -1, 0);
+            return items.ToArray();
         }
 
         public override T[] Select<T>(string searchFieldName, object matchValue)
@@ -674,7 +685,265 @@ namespace OpenNETCF.ORM
             }
         }
 
+        public override T[] Select<T>(IEnumerable<FilterCondition> filters)
+        {
+            var objectType = typeof(T);
+            return Select(objectType, filters, -1, 0).Cast<T>().ToArray();
+        }
+
         private object[] Select(Type objectType, string searchFieldName, object matchValue, int fetchCount, int firstRowOffset)
+        {
+            string entityName = m_entities.GetNameForType(objectType);
+            FilterCondition filter = null;
+
+            if (searchFieldName == null)
+            {
+                if (matchValue != null)
+                {
+                    CheckPrimaryKeyIndex(entityName);
+
+                    // searching on primary key
+                    filter = new SqlFilterCondition
+                        {
+                            FieldName = Entities[entityName].PrimaryKeyIndexName,
+                            Operator = FilterCondition.FilterOperator.Equals,
+                            Value = matchValue,
+                            PrimaryKey = true
+                        };
+                }
+            }
+            else
+            {
+                filter = new FilterCondition
+                {
+                    FieldName = searchFieldName,
+                    Operator = FilterCondition.FilterOperator.Equals,
+                    Value = matchValue
+                };
+            }
+
+            return Select(
+                objectType,
+                (filter == null) ? null :
+                    new FilterCondition[]
+                    {
+                        filter
+                    },
+                fetchCount,
+                firstRowOffset);
+        }
+
+        private SqlCeCommand GetSelectCommand(string entityName, IEnumerable<FilterCondition> filters, out bool tableDirect)
+        {
+            tableDirect = true;
+            var buildFilter = false;
+            string indexName = null;
+
+            if (filters != null)
+            {
+                if (filters.Count() == 1)
+                {
+                    var filter = filters.First();
+
+                    if (!(filter is SqlFilterCondition))
+                    {
+                        var field = Entities[entityName].Fields[filter.FieldName];
+
+                        if (!field.IsPrimaryKey)                            
+                        {
+                            if (field.SearchOrder == FieldSearchOrder.NotSearchable)
+                            {
+                                buildFilter = true;
+                            }
+                            else
+                            {
+                                indexName = string.Format("ORM_IDX_{0}_{1}", entityName, filter.FieldName);
+                            }
+                        }
+                    }
+                }
+                else if (filters.Count() >= 1)
+                {
+                    var filter = filters.First() as SqlFilterCondition;
+
+                    if (filter == null || !filter.PrimaryKey)
+                    {
+                        buildFilter = true;
+                    }
+                }
+            }
+
+            if (buildFilter)
+            {
+                tableDirect = false;
+                return BuildFilterCommand(entityName, filters);
+            }
+
+            return new SqlCeCommand()
+            {
+                CommandText = entityName,
+                CommandType = CommandType.TableDirect,
+                IndexName = indexName ?? Entities[entityName].PrimaryKeyIndexName
+            };
+        }
+
+        private SqlCeCommand BuildFilterCommand(string entityName, IEnumerable<FilterCondition> filters)
+        {
+            var command = new SqlCeCommand();
+            command.CommandType = CommandType.Text;
+
+            StringBuilder sb = new StringBuilder(string.Format("SELECT * FROM {0}", entityName));
+
+            for (int i = 0; i < filters.Count(); i++)
+            {
+                sb.Append(i == 0 ? " WHERE " : " AND ");
+
+                var filter = filters.ElementAt(i);
+                sb.Append(filter.FieldName);
+
+                switch (filters.ElementAt(i).Operator)
+                {
+                    case FilterCondition.FilterOperator.Equals:
+                        sb.Append(" = ");
+                        break;
+                    case FilterCondition.FilterOperator.Like:
+                        sb.Append(" LIKE ");
+                        break;
+                    case FilterCondition.FilterOperator.LessThan:
+                        sb.Append(" < ");
+                        break;
+                    case FilterCondition.FilterOperator.GreaterThan:
+                        sb.Append(" > ");
+                        break;
+                }
+
+                string paramName = string.Format("@p{0}", i);
+                sb.Append(paramName);
+                command.CommandText = sb.ToString();
+
+                command.Parameters.Add(paramName, filter.Value);
+            }
+
+            return command;
+        }
+
+        //private object[] SelectTableDirect(string entityName, SqlCeCommand command, FilterCondition filter, int fetchCount, int firstRowOffset)
+        //{
+        //    CheckPrimaryKeyIndex(entityName);
+        //    command.IndexName = Entities[entityName].PrimaryKeyIndexName;
+        //    var searchOrdinal = Entities[entityName].PrimaryKeyOrdinal;
+
+        //    using (var results = command.ExecuteResultSet(ResultSetOptions.None))
+        //    {
+        //        var matchValue = filter.Value;
+
+        //        if (results.HasRows)
+        //        {
+        //            ReferenceAttribute[] referenceFields = null;
+
+        //            int currentOffset = 0;
+
+        //            if (matchValue != null)
+        //            {
+        //                // convert enums to an int, else the .Equals later check will fail
+        //                // this feels a bit kludgey, but for now it's all I can think of
+        //                if (matchValue.GetType().IsEnum)
+        //                {
+        //                    matchValue = (int)matchValue;
+        //                }
+
+        //                if (searchOrdinal < 0)
+        //                {
+        //                    searchOrdinal = results.GetOrdinal(filter.FieldName);
+        //                }
+
+        //                results.Seek(DbSeekOptions.FirstEqual, new object[] { matchValue });
+        //            }
+
+        //            while (results.Read())
+        //            {
+        //                if (currentOffset < firstRowOffset)
+        //                {
+        //                    currentOffset++;
+        //                    continue;
+        //                }
+
+        //                if (matchValue != null)
+        //                {
+        //                    // if we have a match value, we'll have seeked to the first match above
+        //                    // then at this point the first non-match means we have no more matches, so
+        //                    // we can exit out once we hit the first non-match
+        //                    if (!results[searchOrdinal].Equals(matchValue))
+        //                    {
+        //                        break;
+        //                    }
+        //                }
+
+        //                object item = Activator.CreateInstance(objectType);
+        //                object rowPK = null;
+
+        //                foreach (var field in Entities[entityName].Fields)
+        //                {
+        //                    var value = results[field.Ordinal];
+        //                    if (value != DBNull.Value)
+        //                    {
+        //                        if (field.DataType == DbType.Object)
+        //                        {
+        //                            // get serializer
+        //                            var itemType = item.GetType();
+        //                            var deserializer = GetDeserializer(itemType);
+
+        //                            if (deserializer == null)
+        //                            {
+        //                                throw new MissingMethodException(
+        //                                    string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
+        //                                    field.FieldName, entityName));
+        //                            }
+
+        //                            var @object = deserializer.Invoke(item, new object[] { field.FieldName, value });
+        //                            field.PropertyInfo.SetValue(item, @object, null);
+        //                        }
+        //                        else if (field.IsRowVersion)
+        //                        {
+        //                            // sql stores this an 8-byte array
+        //                            field.PropertyInfo.SetValue(item, BitConverter.ToInt64((byte[])value, 0), null);
+        //                        }
+        //                        else
+        //                        {
+        //                            field.PropertyInfo.SetValue(item, value, null);
+        //                        }
+        //                    }
+        //                    if (field.IsPrimaryKey)
+        //                    {
+        //                        rowPK = value;
+        //                    }
+        //                }
+
+        //                // autofill references if desired
+        //                if (referenceFields == null)
+        //                {
+        //                    referenceFields = Entities[entityName].References.ToArray();
+        //                }
+
+        //                if (referenceFields.Length > 0)
+        //                {
+        //                    FillReferences(item, rowPK, referenceFields, true);
+        //                }
+
+        //                items.Add(item);
+
+        //                if ((fetchCount > 0) && (items.Count >= fetchCount))
+        //                {
+        //                    break;
+        //                }
+        //            }
+        //        }
+
+        //        return items.ToArray();
+        //    }
+        //}
+
+        private object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset)
         {
             string entityName = m_entities.GetNameForType(objectType);
 
@@ -686,39 +955,40 @@ namespace OpenNETCF.ORM
             UpdateIndexCacheForType(entityName);
 
             var items = new List<object>();
+            bool tableDirect;
 
             SqlCeConnection connection = GetConnection(false);
             try
             {
                 CheckOrdinals(entityName);
 
-                using (var command = new SqlCeCommand())
+                using (var command = GetSelectCommand(entityName, filters, out tableDirect))
                 {
                     command.Connection = connection;
-                    command.CommandText = entityName;
-                    command.CommandType = CommandType.TableDirect;
 
                     int searchOrdinal = -1;
+                    ResultSetOptions options = ResultSetOptions.Scrollable;
 
-                    if (searchFieldName != null)
+                    object matchValue = null;
+                    string matchField = null;
+                    if (tableDirect) // use index
                     {
-                        string indexName = string.Format("ORM_IDX_{0}_{1}", entityName, searchFieldName);
-                        // check for index name to see if it exists
-                        if (!Entities[entityName].IndexNames.Contains(indexName))
+                        if ((filters != null) && (filters.Count() > 0))
                         {
-                            throw new SearchOrderRequiredException(entityName, searchFieldName);
+                            var filter = filters.First();
+
+                            matchValue = filter.Value;
+                            matchField = filter.FieldName;
+
+                            var sqlfilter = filter as SqlFilterCondition;
+                            if ((sqlfilter != null) && (sqlfilter.PrimaryKey))
+                            {
+                                searchOrdinal = Entities[entityName].PrimaryKeyOrdinal;
+                            }
                         }
-
-                        command.IndexName = indexName;
-                    }
-                    else
-                    {
-                        CheckPrimaryKeyIndex(entityName);
-                        command.IndexName = Entities[entityName].PrimaryKeyIndexName;
-                        searchOrdinal = Entities[entityName].PrimaryKeyOrdinal;
                     }
 
-                    using (var results = command.ExecuteResultSet(ResultSetOptions.None))
+                    using (var results = command.ExecuteResultSet(options))
                     {
                         if (results.HasRows)
                         {
@@ -734,13 +1004,16 @@ namespace OpenNETCF.ORM
                                 {
                                     matchValue = (int)matchValue;
                                 }
-                                
+
                                 if (searchOrdinal < 0)
                                 {
-                                    searchOrdinal = results.GetOrdinal(searchFieldName);
+                                    searchOrdinal = results.GetOrdinal(matchField);
                                 }
 
-                                results.Seek(DbSeekOptions.FirstEqual, new object[] { matchValue });
+                                if (tableDirect)
+                                {
+                                    results.Seek(DbSeekOptions.FirstEqual, new object[] { matchValue });
+                                }
                             }
 
                             while (results.Read())
@@ -751,7 +1024,7 @@ namespace OpenNETCF.ORM
                                     continue;
                                 }
 
-                                if (matchValue != null)
+                                if (tableDirect && (matchValue != null))
                                 {
                                     // if we have a match value, we'll have seeked to the first match above
                                     // then at this point the first non-match means we have no more matches, so
@@ -810,7 +1083,8 @@ namespace OpenNETCF.ORM
 
                                 if (referenceFields.Length > 0)
                                 {
-                                    FillReferences(item, rowPK, referenceFields, true);
+                                    //FillReferences(item, rowPK, referenceFields, true);
+                                    FillReferences(item, rowPK, referenceFields, false);
                                 }
 
                                 items.Add(item);

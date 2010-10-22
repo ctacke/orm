@@ -22,6 +22,8 @@ namespace OpenNETCF.ORM
         T[] Select<T>() where T : new();
         T Select<T>(object primaryKey) where T : new();
         T[] Select<T>(string searchFieldName, object matchValue) where T : new();
+        T[] Select<T>(IEnumerable<FilterCondition> filters) where T : new();
+        object[] Select(Type entityType);
 
         void Update(object item);
         void Update(object item, bool cascadeUpdates);

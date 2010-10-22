@@ -72,6 +72,7 @@
     <Compile Include="EntityInfoCollection.cs" />
     <Compile Include="DataStore.cs" />
     <Compile Include="Entity.cs" />
+    <Compile Include="FilterCondition.cs" />
     <Compile Include="Interfaces\IDataStore.cs" />
     <Compile Include="Interfaces\ITableEntity.cs" />
     <Compile Include="KeyScheme.cs" />
