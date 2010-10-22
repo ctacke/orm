@@ -6,6 +6,12 @@ using System.Reflection;
 
 namespace OpenNETCF.ORM
 {
+    public enum ReferenceType
+    {
+        OneToMany,
+        ManyToMany
+    }
+
     [AttributeUsage(AttributeTargets.Property)]
     public class ReferenceAttribute : Attribute, IEquatable<ReferenceAttribute>
     {
@@ -14,12 +20,14 @@ namespace OpenNETCF.ORM
         public bool Autofill { get; set; }
         public PropertyInfo PropertyInfo { get; internal set; }
         public bool CascadeDelete { get; set; }
+        public ReferenceType ReferenceType { get; set; }
 
         public ReferenceAttribute(Type referenceEntityType, string referenceField)
         {
             ReferenceEntityType = referenceEntityType;
             ReferenceField = referenceField;
             Autofill = false;
+            ReferenceType = ReferenceType.OneToMany;
         }
 
         public bool Equals(ReferenceAttribute other)

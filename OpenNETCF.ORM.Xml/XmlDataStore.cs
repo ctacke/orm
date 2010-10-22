@@ -200,5 +200,15 @@ namespace OpenNETCF.ORM.Xml
         {
             throw new NotImplementedException();
         }
+
+        public override object[] Select(Type entityType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override T[] Select<T>(IEnumerable<FilterCondition> filters)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
