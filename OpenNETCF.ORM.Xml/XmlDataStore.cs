@@ -210,5 +210,10 @@ namespace OpenNETCF.ORM.Xml
         {
             throw new NotImplementedException();
         }
+
+        public override void EnsureCompatibility()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

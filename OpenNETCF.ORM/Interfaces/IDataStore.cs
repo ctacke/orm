@@ -14,6 +14,7 @@ namespace OpenNETCF.ORM
         void CreateStore();
         void DeleteStore();
         bool StoreExists { get; }
+        void EnsureCompatibility();
 
         void Insert(object item);
 
