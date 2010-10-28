@@ -12,9 +12,12 @@ namespace OpenNETCF.ORM
     {
         protected EntityInfoCollection<TEntityInfo> m_entities = new EntityInfoCollection<TEntityInfo>();
 
+        // TODO: maybe move these to another object since they're more "admin" related?
         public abstract void CreateStore();
         public abstract void DeleteStore();
         public abstract bool StoreExists { get; }
+        public abstract void EnsureCompatibility();
+
         public abstract void Insert(object item, bool insertReferences);
         public abstract T[] Select<T>() where T : new();
         public abstract T Select<T>(object primaryKey) where T : new();

@@ -101,6 +101,33 @@ namespace OpenNETCF.ORM
             }
         }
 
+        /// <summary>
+        /// Ensures that the underlying database tables contain all of the Fields to represent the known entities.
+        /// This is useful if you need to add a Field to an existing store.  Just add the Field to the Entity, then 
+        /// call EnsureCompatibility to have the field added to the database.
+        /// </summary>
+        public override void EnsureCompatibility()
+        {
+            if (!StoreExists)
+            {
+                CreateStore();
+                return;
+            }
+
+            SqlCeConnection connection = GetConnection(true);
+            try
+            {
+                foreach (var entity in this.Entities)
+                {
+                    ValidateTable(connection, entity);
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
         private SqlCeConnection GetConnection(bool maintenance)
         {
             switch (ConnectionBehavior)
@@ -827,122 +854,6 @@ namespace OpenNETCF.ORM
             return command;
         }
 
-        //private object[] SelectTableDirect(string entityName, SqlCeCommand command, FilterCondition filter, int fetchCount, int firstRowOffset)
-        //{
-        //    CheckPrimaryKeyIndex(entityName);
-        //    command.IndexName = Entities[entityName].PrimaryKeyIndexName;
-        //    var searchOrdinal = Entities[entityName].PrimaryKeyOrdinal;
-
-        //    using (var results = command.ExecuteResultSet(ResultSetOptions.None))
-        //    {
-        //        var matchValue = filter.Value;
-
-        //        if (results.HasRows)
-        //        {
-        //            ReferenceAttribute[] referenceFields = null;
-
-        //            int currentOffset = 0;
-
-        //            if (matchValue != null)
-        //            {
-        //                // convert enums to an int, else the .Equals later check will fail
-        //                // this feels a bit kludgey, but for now it's all I can think of
-        //                if (matchValue.GetType().IsEnum)
-        //                {
-        //                    matchValue = (int)matchValue;
-        //                }
-
-        //                if (searchOrdinal < 0)
-        //                {
-        //                    searchOrdinal = results.GetOrdinal(filter.FieldName);
-        //                }
-
-        //                results.Seek(DbSeekOptions.FirstEqual, new object[] { matchValue });
-        //            }
-
-        //            while (results.Read())
-        //            {
-        //                if (currentOffset < firstRowOffset)
-        //                {
-        //                    currentOffset++;
-        //                    continue;
-        //                }
-
-        //                if (matchValue != null)
-        //                {
-        //                    // if we have a match value, we'll have seeked to the first match above
-        //                    // then at this point the first non-match means we have no more matches, so
-        //                    // we can exit out once we hit the first non-match
-        //                    if (!results[searchOrdinal].Equals(matchValue))
-        //                    {
-        //                        break;
-        //                    }
-        //                }
-
-        //                object item = Activator.CreateInstance(objectType);
-        //                object rowPK = null;
-
-        //                foreach (var field in Entities[entityName].Fields)
-        //                {
-        //                    var value = results[field.Ordinal];
-        //                    if (value != DBNull.Value)
-        //                    {
-        //                        if (field.DataType == DbType.Object)
-        //                        {
-        //                            // get serializer
-        //                            var itemType = item.GetType();
-        //                            var deserializer = GetDeserializer(itemType);
-
-        //                            if (deserializer == null)
-        //                            {
-        //                                throw new MissingMethodException(
-        //                                    string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
-        //                                    field.FieldName, entityName));
-        //                            }
-
-        //                            var @object = deserializer.Invoke(item, new object[] { field.FieldName, value });
-        //                            field.PropertyInfo.SetValue(item, @object, null);
-        //                        }
-        //                        else if (field.IsRowVersion)
-        //                        {
-        //                            // sql stores this an 8-byte array
-        //                            field.PropertyInfo.SetValue(item, BitConverter.ToInt64((byte[])value, 0), null);
-        //                        }
-        //                        else
-        //                        {
-        //                            field.PropertyInfo.SetValue(item, value, null);
-        //                        }
-        //                    }
-        //                    if (field.IsPrimaryKey)
-        //                    {
-        //                        rowPK = value;
-        //                    }
-        //                }
-
-        //                // autofill references if desired
-        //                if (referenceFields == null)
-        //                {
-        //                    referenceFields = Entities[entityName].References.ToArray();
-        //                }
-
-        //                if (referenceFields.Length > 0)
-        //                {
-        //                    FillReferences(item, rowPK, referenceFields, true);
-        //                }
-
-        //                items.Add(item);
-
-        //                if ((fetchCount > 0) && (items.Count >= fetchCount))
-        //                {
-        //                    break;
-        //                }
-        //            }
-        //        }
-
-        //        return items.ToArray();
-        //    }
-        //}
-
         private object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset)
         {
             string entityName = m_entities.GetNameForType(objectType);
@@ -1355,6 +1266,52 @@ namespace OpenNETCF.ORM
         private SqlCeConnection CreateConnection()
         {
             return new SqlCeConnection(ConnectionString);
+        }
+
+        private void ValidateTable(SqlCeConnection connection, EntityInfo entity)
+        {
+            using (var command = new SqlCeCommand())
+            {
+                command.Connection = connection;
+
+                foreach(var field in entity.Fields)
+                {
+                    // yes, I realize hard-coded ordinals are not a good practice, but the SQL isn't changing, it's method specific
+                    var sql = string.Format("SELECT column_name, "  // 0
+                              + "data_type, "                       // 1
+                              + "character_maximum_length, "        // 2
+                              + "numeric_precision, "               // 3
+                              + "numeric_scale, "                   // 4
+                              + "is_nullable "
+                              + "FROM information_schema.columns "
+                              + "WHERE (table_name = '{0}' AND column_name = '{1}')", 
+                              entity.EntityAttribute.NameInStore, field.FieldName);
+
+                    command.CommandText = sql;
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if(!reader.Read())
+                        {
+                            // field doesn't exist - we must create it
+                            var alter = new StringBuilder(string.Format("ALTER TABLE [{0}] ", entity.EntityAttribute.NameInStore));
+                            alter.Append(string.Format("ADD {0} {1} {2}", 
+                                field.FieldName,
+                                GetFieldDataTypeString(entity.EntityName, field),
+                                GetFieldCreationAttributes(entity.EntityAttribute, field)));
+
+                            using(var altercmd = new SqlCeCommand(alter.ToString(), connection))
+                            {
+                                altercmd.ExecuteNonQuery();
+                            }
+                        }
+                        else
+                        {
+                            // TODO: verify field length, etc.
+                        }
+                    }
+                }
+            }
         }
 
         private void CreateTable(SqlCeConnection connection, EntityInfo entity)

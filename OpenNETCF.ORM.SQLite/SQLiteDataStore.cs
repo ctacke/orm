@@ -17,14 +17,6 @@ using System.Data;
 
 namespace OpenNETCF.ORM.SQLite
 {
-    public class SQLiteException : Exception
-    {
-        public SQLiteException(string message)
-            : base(message)
-        {
-        }
-    }
-
     public class SQLiteDataStore : DataStore<SQLiteEntityInfo>, IDisposable
     {
         private Sqlite3.sqlite3 m_store;
@@ -309,5 +301,20 @@ namespace OpenNETCF.ORM.SQLite
         {
             // TODO: add SQLite reserved words here
         };
+
+        public override void EnsureCompatibility()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override T[] Select<T>(System.Collections.Generic.IEnumerable<FilterCondition> filters)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override object[] Select(Type entityType)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
