@@ -5,19 +5,19 @@ using System.Text;
 
 namespace OpenNETCF.ORM
 {
-    public class SqlCeEntityInfo : EntityInfo
+    public class SqlEntityInfo : EntityInfo
     {
         private int m_pkOrdinal = -1;
 
-        public SqlCeEntityInfo()
+        public SqlEntityInfo()
         {
             PrimaryKeyIndexName = null;
         }
 
-        internal string PrimaryKeyIndexName { get; set; }
-        internal List<string> IndexNames { get; set; }
+        public string PrimaryKeyIndexName { get; set; }
+        public List<string> IndexNames { get; set; }
 
-        internal int PrimaryKeyOrdinal
+        public int PrimaryKeyOrdinal
         {
             get
             {
@@ -28,6 +28,5 @@ namespace OpenNETCF.ORM
                 return m_pkOrdinal;
             }
         }
-
     }
 }

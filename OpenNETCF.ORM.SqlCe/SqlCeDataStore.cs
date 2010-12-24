@@ -8,36 +8,21 @@ using System.Data;
 using System.Data.SqlServerCe;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Data.Common;
 
 namespace OpenNETCF.ORM
 {
-    public partial class SqlCeDataStore : DataStore<SqlCeEntityInfo>, IDisposable
+    public partial class SqlCeDataStore : SQLStoreBase<SqlEntityInfo>
     {
-        private class IndexInfo
-        {
-            public IndexInfo()
-            {
-                MaxCharLength = -1;
-            }
-
-            public string Name { get; set; }
-            public int MaxCharLength { get; set; }
-        }
-
         private string m_connectionString;
-        private SqlCeConnection m_connection;
 
         private Dictionary<Type, object[]> m_referenceCache = new Dictionary<Type, object[]>();
         private Dictionary<Type, MethodInfo> m_serializerCache = new Dictionary<Type, MethodInfo>();
         private Dictionary<Type, MethodInfo> m_deserializerCache = new Dictionary<Type, MethodInfo>();
-        private List<IndexInfo> m_indexNameCache = new List<IndexInfo>();
 
         private string Password { get; set; }
 
         public string FileName { get; private set; }
-        public int DefaultStringFieldSize { get; set; } 
-        public int DefaultNumericFieldPrecision { get; set; }
-        public ConnectionBehavior ConnectionBehavior { get; set; }
 
         public SqlCeDataStore(string fileName)
             : this(fileName, null)
@@ -48,23 +33,6 @@ namespace OpenNETCF.ORM
         {
             FileName = fileName;
             Password = password;
-            DefaultStringFieldSize = 200;
-            DefaultNumericFieldPrecision = 16;
-        }
-
-        ~SqlCeDataStore()
-        {
-            Dispose();
-        }
-
-        public void Dispose()
-        {
-            if (m_connection != null)
-            {
-                m_connection.Dispose();
-            }
-
-            GC.SuppressFinalize(this);
         }
 
         public override bool StoreExists
@@ -73,6 +41,11 @@ namespace OpenNETCF.ORM
             {
                 return File.Exists(FileName);
             }
+        }
+
+        protected override DbCommand GetNewCommandObject()
+        {
+            return new SqlCeCommand();
         }
 
         /// <summary>
@@ -99,7 +72,7 @@ namespace OpenNETCF.ORM
                 engine.CreateDatabase();
             }
 
-            SqlCeConnection connection = GetConnection(true);
+            var connection = GetConnection(true);
             try
             {
                 foreach (var entity in this.Entities)
@@ -126,7 +99,7 @@ namespace OpenNETCF.ORM
                 return;
             }
 
-            SqlCeConnection connection = GetConnection(true);
+            var connection = GetConnection(true);
             try
             {
                 foreach (var entity in this.Entities)
@@ -137,56 +110,6 @@ namespace OpenNETCF.ORM
             finally
             {
                 DoneWithConnection(connection, true);
-            }
-        }
-
-        private SqlCeConnection GetConnection(bool maintenance)
-        {
-            switch (ConnectionBehavior)
-            {
-                case ConnectionBehavior.AlwaysNew:
-                    var connection = CreateConnection();
-                    connection.Open();
-                    return connection;
-                case ConnectionBehavior.HoldMaintenance:
-                    if (m_connection == null)
-                    {
-                        m_connection = CreateConnection();
-                        m_connection.Open();
-                    }
-                    if (maintenance) return m_connection;
-                    var connection2 = CreateConnection();
-                    connection2.Open();
-                    return connection2;
-                case ConnectionBehavior.Persistent:
-                    if (m_connection == null)
-                    {
-                        m_connection = CreateConnection();
-                        m_connection.Open();
-                    }
-                    return m_connection;
-                default:
-                    throw new NotSupportedException();
-            }
-        }
-
-        private void DoneWithConnection(SqlCeConnection connection, bool maintenance)
-        {
-            switch (ConnectionBehavior)
-            {
-                case ConnectionBehavior.AlwaysNew:
-                    connection.Close();
-                    connection.Dispose();
-                    break;
-                case ConnectionBehavior.HoldMaintenance:
-                    if (maintenance) return;
-                    connection.Close();
-                    connection.Dispose();
-                    break;
-                case ConnectionBehavior.Persistent:
-                    return;
-                default:
-                    throw new NotSupportedException();
             }
         }
 
@@ -342,12 +265,12 @@ namespace OpenNETCF.ORM
                 throw new EntityNotFoundException(t);
             }
 
-            SqlCeConnection connection = GetConnection(true);
+            var connection = GetConnection(true);
             try
             {
                 using (var command = BuildFilterCommand(entityName, filters, true))
                 {
-                    command.Connection = connection;
+                    command.Connection = connection as SqlCeConnection;
                     return (int)command.ExecuteScalar();
                 }
             }
@@ -372,12 +295,12 @@ namespace OpenNETCF.ORM
                 throw new EntityNotFoundException(t);
             }
 
-            SqlCeConnection connection = GetConnection(true);
+            var connection = GetConnection(true);
             try
             {
                 using (var command = new SqlCeCommand())
                 {
-                    command.Connection = connection;
+                    command.Connection = connection as SqlCeConnection;
                     command.CommandText = string.Format("SELECT COUNT(*) FROM {0}", entityName);
                     return (int)command.ExecuteScalar();
                 }
@@ -385,90 +308,6 @@ namespace OpenNETCF.ORM
             finally
             {
                 DoneWithConnection(connection, true);
-            }
-        }
-
-        private string VerifyIndex(string entityName, string fieldName, FieldSearchOrder searchOrder)
-        {
-            return VerifyIndex(entityName, fieldName, searchOrder, null);
-        }
-
-        private string VerifyIndex(string entityName, string fieldName, FieldSearchOrder searchOrder, SqlCeConnection connection)
-        {            
-            bool localConnection = false;
-            if (connection == null)
-            {
-                localConnection = true;
-                connection = GetConnection(true);
-            }
-            try
-            {
-                var indexName = string.Format("ORM_IDX_{0}_{1}_{2}", entityName, fieldName, 
-                    searchOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
-
-                if(m_indexNameCache.Find(ii => ii.Name == indexName) != null) return indexName;
-
-                using (SqlCeCommand command = new SqlCeCommand())
-                {
-                    command.Connection = connection;
-
-                    var sql = string.Format("SELECT COUNT(*) FROM information_schema.indexes WHERE INDEX_NAME = '{0}'", indexName);
-                    command.CommandText = sql;
-
-                    int i = (int)command.ExecuteScalar();
-
-                    if (i == 0)
-                    {
-                        sql = string.Format("CREATE INDEX {0} ON {1}({2} {3})",
-                            indexName,
-                            entityName,
-                            fieldName,
-                            searchOrder == FieldSearchOrder.Descending ? "DESC" : string.Empty);
-
-                        Debug.WriteLine(sql);
-
-                        command.CommandText = sql;
-                        command.ExecuteNonQuery();
-                    }
-
-                    var indexinfo = new IndexInfo
-                    {
-                        Name = indexName
-                    };
-
-                    sql = string.Format("SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.columns WHERE TABLE_NAME = '{0}' AND COLUMN_NAME = '{1}'"
-                        , entityName, fieldName);
-
-                    command.CommandText = sql;
-                    
-                    using (var reader = command.ExecuteReader())
-                    {
-                        // this should always return true
-                        if (reader.Read())
-                        {
-                            var length = reader[0];
-                            if (length != DBNull.Value)
-                            {
-                                indexinfo.MaxCharLength = Convert.ToInt32(length);
-                            }
-                        }
-                        else
-                        {
-                            if (Debugger.IsAttached) Debugger.Break();
-                        }
-                    }
-
-                    m_indexNameCache.Add(indexinfo);
-                }
-
-                return indexName;
-            }
-            finally
-            {
-                if (localConnection)
-                {
-                    DoneWithConnection(connection, true);
-                }
             }
         }
 
@@ -490,7 +329,7 @@ namespace OpenNETCF.ORM
             }
 
             // we'll use table direct for inserts - no point in getting the query parser involved in this
-            SqlCeConnection connection = GetConnection(false);
+            var connection = GetConnection(false);
             try
             {
                 CheckOrdinals(entityName);
@@ -499,7 +338,7 @@ namespace OpenNETCF.ORM
 
                 using (var command = new SqlCeCommand())
                 {
-                    command.Connection = connection;
+                    command.Connection = connection as SqlCeConnection;
                     command.CommandText = entityName;
                     command.CommandType = CommandType.TableDirect;
 
@@ -609,9 +448,9 @@ namespace OpenNETCF.ORM
             }
         }
 
-        private int GetIdentity(SqlCeConnection connection)
+        private int GetIdentity(DbConnection connection)
         {
-            using (var command = new SqlCeCommand("SELECT @@IDENTITY", connection))
+            using (var command = new SqlCeCommand("SELECT @@IDENTITY", connection as SqlCeConnection))
             {
                 object id = command.ExecuteScalar();
                 return Convert.ToInt32(id);
@@ -622,12 +461,12 @@ namespace OpenNETCF.ORM
         {
             if (Entities[entityName].Fields.OrdinalsAreValid) return;
 
-            SqlCeConnection connection = GetConnection(true);
+            var connection = GetConnection(true);
             try
             {
                 using (var command = new SqlCeCommand())
                 {
-                    command.Connection = connection;
+                    command.Connection = connection as SqlCeConnection;
                     command.CommandText = entityName;
                     command.CommandType = CommandType.TableDirect;
 
@@ -656,12 +495,12 @@ namespace OpenNETCF.ORM
             if (Entities[entityName].IndexNames != null) return;
 
             // get all iindex names for the type
-            SqlCeConnection connection = GetConnection(true);
+            var connection = GetConnection(true);
             try
             {
                 string sql = string.Format("SELECT INDEX_NAME FROM information_schema.indexes WHERE (TABLE_NAME = '{0}')", entityName);
 
-                using (SqlCeCommand command = new SqlCeCommand(sql, connection))
+                using (SqlCeCommand command = new SqlCeCommand(sql, connection as SqlCeConnection))
                 using(var reader = command.ExecuteReader())
                 {
                     List<string> nameList = new List<string>();
@@ -684,12 +523,12 @@ namespace OpenNETCF.ORM
         {
             if (Entities[entityName].PrimaryKeyIndexName != null) return;
 
-            SqlCeConnection connection = GetConnection(true);
+            var connection = GetConnection(true);
             try
             {
                 string sql = string.Format("SELECT INDEX_NAME FROM information_schema.indexes WHERE (TABLE_NAME = '{0}') AND (PRIMARY_KEY = 1)", entityName);
 
-                using (SqlCeCommand command = new SqlCeCommand(sql, connection))
+                using (SqlCeCommand command = new SqlCeCommand(sql, connection as SqlCeConnection))
                 {
                     Entities[entityName].PrimaryKeyIndexName = command.ExecuteScalar() as string;
                 }
@@ -717,16 +556,16 @@ namespace OpenNETCF.ORM
             }
         }
 
-        private SqlCeConnection CreateConnection()
+        protected override DbConnection GetNewConnectionObject()
         {
             return new SqlCeConnection(ConnectionString);
         }
 
-        private void ValidateTable(SqlCeConnection connection, EntityInfo entity)
+        private void ValidateTable(DbConnection connection, EntityInfo entity)
         {
             using (var command = new SqlCeCommand())
             {
-                command.Connection = connection;
+                command.Connection = connection as SqlCeConnection;
 
                 foreach(var field in entity.Fields)
                 {
@@ -754,7 +593,7 @@ namespace OpenNETCF.ORM
                                 GetFieldDataTypeString(entity.EntityName, field),
                                 GetFieldCreationAttributes(entity.EntityAttribute, field)));
 
-                            using(var altercmd = new SqlCeCommand(alter.ToString(), connection))
+                            using (var altercmd = new SqlCeCommand(alter.ToString(), connection as SqlCeConnection))
                             {
                                 altercmd.ExecuteNonQuery();
                             }
@@ -768,149 +607,135 @@ namespace OpenNETCF.ORM
             }
         }
 
-        private void CreateTable(SqlCeConnection connection, EntityInfo entity)
-        {
-            StringBuilder sql = new StringBuilder();
+        //private void CreateTable(SqlCeConnection connection, EntityInfo entity)
+        //{
+        //    StringBuilder sql = new StringBuilder();
 
-            if (ReservedWords.Contains(entity.EntityName, StringComparer.InvariantCultureIgnoreCase))
-            {
-                throw new ReservedWordException(entity.EntityName);
-            }
+        //    if (ReservedWords.Contains(entity.EntityName, StringComparer.InvariantCultureIgnoreCase))
+        //    {
+        //        throw new ReservedWordException(entity.EntityName);
+        //    }
 
-            sql.AppendFormat("CREATE TABLE {0} (", entity.EntityName);
+        //    sql.AppendFormat("CREATE TABLE {0} (", entity.EntityName);
 
-            int count = entity.Fields.Count;
+        //    int count = entity.Fields.Count;
 
-            foreach (var field in entity.Fields)
-            {
-                //if (field is ReferenceFieldAttribute)
-                //{
-                //    count--;
-                //    continue;
-                //}
+        //    foreach (var field in entity.Fields)
+        //    {
+        //        //if (field is ReferenceFieldAttribute)
+        //        //{
+        //        //    count--;
+        //        //    continue;
+        //        //}
 
-                if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
-                {
-                    throw new ReservedWordException(field.FieldName);
-                }
+        //        if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
+        //        {
+        //            throw new ReservedWordException(field.FieldName);
+        //        }
 
-                sql.AppendFormat("[{0}] {1} {2}",
-                    field.FieldName,
-                    GetFieldDataTypeString(entity.EntityName, field),
-                    GetFieldCreationAttributes(entity.EntityAttribute, field));
+        //        sql.AppendFormat("[{0}] {1} {2}",
+        //            field.FieldName,
+        //            GetFieldDataTypeString(entity.EntityName, field),
+        //            GetFieldCreationAttributes(entity.EntityAttribute, field));
 
-                if (--count > 0) sql.Append(", ");
-            }
+        //        if (--count > 0) sql.Append(", ");
+        //    }
 
-            sql.Append(")");
+        //    sql.Append(")");
 
-            Debug.WriteLine(sql);
+        //    Debug.WriteLine(sql);
 
-            using (SqlCeCommand command = new SqlCeCommand(sql.ToString(), connection))
-            {
-                int i = command.ExecuteNonQuery();
-            }
+        //    using (SqlCeCommand command = new SqlCeCommand(sql.ToString(), connection))
+        //    {
+        //        int i = command.ExecuteNonQuery();
+        //    }
 
-            // create indexes
-            foreach (var field in entity.Fields)
-            {
-                if (field.SearchOrder != FieldSearchOrder.NotSearchable)
-                {
-                    VerifyIndex(entity.EntityName, field.FieldName, field.SearchOrder, connection);
-                }
-            }
-        }
+        //    // create indexes
+        //    foreach (var field in entity.Fields)
+        //    {
+        //        if (field.SearchOrder != FieldSearchOrder.NotSearchable)
+        //        {
+        //            VerifyIndex(entity.EntityName, field.FieldName, field.SearchOrder, connection);
+        //        }
+        //    }
+        //}
 
-        private string GetFieldDataTypeString(string entityName, FieldAttribute field)
-        {
-            // the SQL RowVersion is a special case
-            if(field.IsRowVersion)
-            {
-                switch(field.DataType)
-                {
-                    case DbType.UInt64:
-                    case DbType.Int64:
-                        // no error
-                        break;
-                    default:
-                        throw new FieldDefinitionException(entityName, field.FieldName, "rowversion fields must be an 8-byte data type (In64 or UInt64)");
-                }
+        //private string GetFieldDataTypeString(string entityName, FieldAttribute field)
+        //{
+        //    // the SQL RowVersion is a special case
+        //    if(field.IsRowVersion)
+        //    {
+        //        switch(field.DataType)
+        //        {
+        //            case DbType.UInt64:
+        //            case DbType.Int64:
+        //                // no error
+        //                break;
+        //            default:
+        //                throw new FieldDefinitionException(entityName, field.FieldName, "rowversion fields must be an 8-byte data type (Int64 or UInt64)");
+        //        }
 
-                return "rowversion";
-            }
+        //        return "rowversion";
+        //    }
 
-            return field.DataType.ToSqlTypeString();
-        }
+        //    return field.DataType.ToSqlTypeString();
+        //}
 
-        private string GetFieldCreationAttributes(EntityAttribute attribute, FieldAttribute field)
-        {
-            StringBuilder sb = new StringBuilder();
+        //private string GetFieldCreationAttributes(EntityAttribute attribute, FieldAttribute field)
+        //{
+        //    StringBuilder sb = new StringBuilder();
 
-            switch (field.DataType)
-            {
-                case DbType.String:
-                    if (field.Length > 0)
-                    {
-                        sb.AppendFormat("({0}) ", field.Length);
-                    }
-                    else
-                    {
-                        sb.AppendFormat("({0}) ", DefaultStringFieldSize);
-                    }
-                    break;
-                case DbType.Decimal:
-                    int p = field.Precision == 0 ? DefaultNumericFieldPrecision : field.Precision;
-                    sb.AppendFormat("({0},{1}) ", p, field.Scale);
-                    break;
-            }
+        //    switch (field.DataType)
+        //    {
+        //        case DbType.String:
+        //            if (field.Length > 0)
+        //            {
+        //                sb.AppendFormat("({0}) ", field.Length);
+        //            }
+        //            else
+        //            {
+        //                sb.AppendFormat("({0}) ", DefaultStringFieldSize);
+        //            }
+        //            break;
+        //        case DbType.Decimal:
+        //            int p = field.Precision == 0 ? DefaultNumericFieldPrecision : field.Precision;
+        //            sb.AppendFormat("({0},{1}) ", p, field.Scale);
+        //            break;
+        //    }
 
-            if (field.IsPrimaryKey)
-            {
-                sb.Append("PRIMARY KEY ");
+        //    if (field.IsPrimaryKey)
+        //    {
+        //        sb.Append("PRIMARY KEY ");
 
-                if (attribute.KeyScheme == KeyScheme.Identity)
-                {
-                    switch(field.DataType)
-                    {
-                        case DbType.Int32:
-                        case DbType.UInt32:
-                            sb.Append("IDENTITY ");
-                            break;
-                        case DbType.Guid:
-                            sb.Append("ROWGUIDCOL ");
-                            break;
-                        default:
-                            throw new FieldDefinitionException(attribute.NameInStore, field.FieldName,
-                                string.Format("Data Type '{0}' cannot be marked as an Identity field", field.DataType));
-                    }
-                }
-            }
+        //        if (attribute.KeyScheme == KeyScheme.Identity)
+        //        {
+        //            switch(field.DataType)
+        //            {
+        //                case DbType.Int32:
+        //                case DbType.UInt32:
+        //                    sb.Append("IDENTITY ");
+        //                    break;
+        //                case DbType.Guid:
+        //                    sb.Append("ROWGUIDCOL ");
+        //                    break;
+        //                default:
+        //                    throw new FieldDefinitionException(attribute.NameInStore, field.FieldName,
+        //                        string.Format("Data Type '{0}' cannot be marked as an Identity field", field.DataType));
+        //            }
+        //        }
+        //    }
 
-            if (!field.AllowsNulls)
-            {
-                sb.Append("NOT NULL ");
-            }
+        //    if (!field.AllowsNulls)
+        //    {
+        //        sb.Append("NOT NULL ");
+        //    }
 
-            if (field.RequireUniqueValue)
-            {
-                sb.Append("UNIQUE ");
-            }
+        //    if (field.RequireUniqueValue)
+        //    {
+        //        sb.Append("UNIQUE ");
+        //    }
 
-            return sb.ToString();
-        }
-
-        public static string[] ReservedWords = new string[]
-        {
-            "IDENTITY" ,"ENCRYPTION" ,"ORDER" ,"ADD" ,"END" ,"OUTER" ,"ALL" ,"ERRLVL" ,"OVER" ,"ALTER" ,"ESCAPE" ,"PERCENT" ,"AND" ,"EXCEPT" ,"PLAN" ,"ANY" ,"EXEC" ,"PRECISION" ,"AS" ,"EXECUTE" ,"PRIMARY" ,"ASC",
-            "EXISTS" ,"PRINT" ,"AUTHORIZATION" ,"EXIT" ,"PROC" ,"AVG" ,"EXPRESSION" ,"PROCEDURE" ,"BACKUP" ,"FETCH" ,"PUBLIC" ,"BEGIN" ,"FILE" ,"RAISERROR" ,"BETWEEN" ,"FILLFACTOR" ,"READ" ,"BREAK" ,"FOR" ,"READTEXT",
-            "BROWSE" ,"FOREIGN" ,"RECONFIGURE" ,"BULK" ,"FREETEXT" ,"REFERENCES" ,"BY" ,"FREETEXTTABLE" ,"REPLICATION" ,"CASCADE" ,"FROM" ,"RESTORE" ,"CASE" ,"FULL" ,"RESTRICT" ,"CHECK" ,"FUNCTION" ,"RETURN" ,"CHECKPOINT",
-            "GOTO" ,"REVOKE" ,"CLOSE" ,"GRANT" ,"RIGHT" ,"CLUSTERED" ,"GROUP" ,"ROLLBACK" ,"COALESCE" ,"HAVING" ,"ROWCOUNT" ,"COLLATE" ,"HOLDLOCK" ,"ROWGUIDCOL" ,"COLUMN" ,"IDENTITY" ,"RULE",
-            "COMMIT" ,"IDENTITY_INSERT" ,"SAVE" ,"COMPUTE" ,"IDENTITYCOL" ,"SCHEMA" ,"CONSTRAINT" ,"IF" ,"SELECT" ,"CONTAINS" ,"IN" ,"SESSION_USER" ,"CONTAINSTABLE" ,"INDEX" ,"SET" ,"CONTINUE" ,"INNER" ,"SETUSER",
-            "CONVERT" ,"INSERT" ,"SHUTDOWN" ,"COUNT" ,"INTERSECT" ,"SOME" ,"CREATE" ,"INTO" ,"STATISTICS" ,"CROSS" ,"IS" ,"SUM" ,"CURRENT" ,"JOIN" ,"SYSTEM_USER" ,"CURRENT_DATE" ,"KEY" ,"TABLE" ,"CURRENT_TIME" ,"KILL",
-            "TEXTSIZE" ,"CURRENT_TIMESTAMP" ,"LEFT" ,"THEN" ,"CURRENT_USER" ,"LIKE" ,"TO" ,"CURSOR" ,"LINENO" ,"TOP" ,"DATABASE" ,"LOAD" ,"TRAN" ,"DATABASEPASSWORD" ,"MAX" ,"TRANSACTION" ,"DATEADD" ,"MIN" ,"TRIGGER",
-            "DATEDIFF" ,"NATIONAL" ,"TRUNCATE" ,"DATENAME" ,"NOCHECK" ,"TSEQUAL" ,"DATEPART" ,"NONCLUSTERED" ,"UNION" ,"DBCC" ,"NOT" ,"UNIQUE" ,"DEALLOCATE", "NULL", "UPDATE", "DECLARE", "NULLIF", "UPDATETEXT",
-            "DEFAULT", "OF", "USE", "DELETE", "OFF", "USER", "DENY", "OFFSETS", "VALUES", "DESC", "ON", "VARYING", "DISK", "OPEN", "VIEW", "DISTINCT", "OPENDATASOURCE", "WAITFOR", "DISTRIBUTED", "OPENQUERY", "WHEN", 
-            "DOUBLE", "OPENROWSET", "WHERE", "DROP", "OPENXML", "WHILE", "DUMP", "OPTION", "WITH", "ELSE", "OR", "WRITETEXT" 
-        };
+        //    return sb.ToString();
+        //}
     }
 }
