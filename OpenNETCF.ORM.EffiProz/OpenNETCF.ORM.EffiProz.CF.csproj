@@ -4,16 +4,16 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>9.0.30729</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{2D0EA40A-5C80-4477-A901-7648E57BA749}</ProjectGuid>
+    <ProjectGuid>{3852EBE0-64C1-4656-9CE8-E81BECABA5B7}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>OpenNETCF.ORM</RootNamespace>
-    <AssemblyName>OpenNETCF.ORM</AssemblyName>
+    <RootNamespace>OpenNETCF.ORM.EffiProz</RootNamespace>
+    <AssemblyName>OpenNETCF.ORM.EffiProz</AssemblyName>
     <ProjectTypeGuids>{4D628B5B-2FBC-4AA6-8C16-197242AEB884};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <PlatformFamilyName>WindowsCE</PlatformFamilyName>
     <PlatformID>E2BECB1F-8C8C-41ba-B736-9BE7D946A398</PlatformID>
     <OSVersion>5.0</OSVersion>
-    <DeployDirSuffix>OpenNETCF.ORM</DeployDirSuffix>
+    <DeployDirSuffix>OpenNETCF.ORM.EffiProz</DeployDirSuffix>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <NativePlatformName>Windows CE</NativePlatformName>
     <FormFactorID>
@@ -49,6 +49,10 @@
     <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="EffiProz.CF, Version=1.4.3941.34356, Culture=neutral, PublicKeyToken=9c147f7358eea142, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>references\CF\EffiProz.CF.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -58,28 +62,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\OpenNETCF.ORM.Shared\OpenNETCF.ORM.Version.cs">
-      <Link>Properties\OpenNETCF.ORM.Version.cs</Link>
-    </Compile>
-    <Compile Include="Attributes\ReferenceAttributeCollection.cs" />
-    <Compile Include="Attributes\EntityAttribute.cs" />
-    <Compile Include="Attributes\FieldAttribute.cs" />
-    <Compile Include="Attributes\ReferenceAttribute.cs" />
-    <Compile Include="Exceptions.cs" />
-    <Compile Include="Extensions.cs" />
-    <Compile Include="Attributes\FieldAttributeCollection.cs" />
-    <Compile Include="EntityInfo.cs" />
-    <Compile Include="EntityInfoCollection.cs" />
-    <Compile Include="DataStore.cs" />
-    <Compile Include="Entity.cs" />
-    <Compile Include="FilterCondition.cs" />
-    <Compile Include="Interfaces\IDataStore.cs" />
-    <Compile Include="Interfaces\ITableEntity.cs" />
-    <Compile Include="KeyScheme.cs" />
+    <Compile Include="EffiProzDataStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SQL Store Base\ConnectionBehavior.cs" />
-    <Compile Include="SQL Store Base\SqlEntityInfo.cs" />
-    <Compile Include="SQL Store Base\SQLStoreBase.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\OpenNETCF.ORM\OpenNETCF.ORM.csproj">
+      <Project>{2D0EA40A-5C80-4477-A901-7648E57BA749}</Project>
+      <Name>OpenNETCF.ORM</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CompactFramework.CSharp.targets" />
   <ProjectExtensions>
