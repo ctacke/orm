@@ -24,7 +24,7 @@ namespace OpenNETCF.ORM.Test
 
             do
             {
-                authors = store.Fetch<Author>("Name", authorsPerPage, offset);
+                authors = store.Fetch<Author>(authorsPerPage, offset, "Name");
                 offset += authors.Length;
 
                 Debug.WriteLine(string.Format("Authors page {0}", page));

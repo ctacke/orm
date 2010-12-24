@@ -129,7 +129,7 @@ namespace OpenNETCF.ORM.Test
 
         public Author[] GetAuthors(int count, int offset)
         {
-            return Store.Fetch<Author>("Name", count, offset);
+            return Store.Fetch<Author>(count, offset, "Name");
         }
 
         public void TruncateBooks()

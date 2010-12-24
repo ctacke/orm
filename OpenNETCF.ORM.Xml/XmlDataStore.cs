@@ -181,22 +181,12 @@ namespace OpenNETCF.ORM.Xml
             throw new NotImplementedException();
         }
 
-        public override T[] Fetch<T>(string searchFieldName, int fetchCount, int firstRowOffset)
-        {
-            throw new NotImplementedException();
-        }
-
         public override void Delete<T>(string fieldName, object matchValue)
         {
             throw new NotImplementedException();
         }
 
         public override bool Contains(object item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Update(object item, bool cascadeUpdates)
         {
             throw new NotImplementedException();
         }
@@ -212,6 +202,56 @@ namespace OpenNETCF.ORM.Xml
         }
 
         public override void EnsureCompatibility()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override T[] Select<T>(bool fillReferences)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override T Select<T>(object primaryKey, bool fillReferences)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override T[] Select<T>(string searchFieldName, object matchValue, bool fillReferences)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override T[] Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override object[] Select(Type entityType, bool fillReferences)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Update(object item, bool cascadeUpdates, string fieldName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Update(object item, string fieldName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override int Count<T>(IEnumerable<FilterCondition> filters)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField)
         {
             throw new NotImplementedException();
         }

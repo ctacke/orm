@@ -19,20 +19,33 @@ namespace OpenNETCF.ORM
         public abstract void EnsureCompatibility();
 
         public abstract void Insert(object item, bool insertReferences);
+
         public abstract T[] Select<T>() where T : new();
+        public abstract T[] Select<T>(bool fillReferences) where T : new();
         public abstract T Select<T>(object primaryKey) where T : new();
+        public abstract T Select<T>(object primaryKey, bool fillReferences) where T : new();
         public abstract T[] Select<T>(string searchFieldName, object matchValue) where T : new();
-        public abstract T[] Select<T>(IEnumerable<FilterCondition> filters)where T : new();
+        public abstract T[] Select<T>(string searchFieldName, object matchValue, bool fillReferences) where T : new();
+        public abstract T[] Select<T>(IEnumerable<FilterCondition> filters) where T : new();
+        public abstract T[] Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences) where T : new();
         public abstract object[] Select(Type entityType);
+        public abstract object[] Select(Type entityType, bool fillReferences);
+        
         public abstract void Update(object item);
-        public abstract void Update(object item, bool cascadeUpdates);
+        public abstract void Update(object item, bool cascadeUpdates, string fieldName);
+        public abstract void Update(object item, string fieldName);
+        
         public abstract void Delete(object item);
         public abstract void Delete<T>(object primaryKey);
+        
         public abstract void FillReferences(object instance);
         public abstract T[] Fetch<T>(int fetchCount) where T : new();
         public abstract T[] Fetch<T>(int fetchCount, int firstRowOffset) where T : new();
-        public abstract T[] Fetch<T>(string searchFieldName, int fetchCount, int firstRowOffset) where T : new();
+        public abstract T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField) where T : new();
+        public abstract T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences) where T : new();
+
         public abstract int Count<T>();
+        public abstract int Count<T>(IEnumerable<FilterCondition> filters);
         public abstract void Delete<T>();
         public abstract void Delete<T>(string fieldName, object matchValue);
         public abstract bool Contains(object item);
@@ -152,5 +165,12 @@ namespace OpenNETCF.ORM
             Insert(item, false);
         }
 
+        public T[] Select<T>(Func<T, bool> selector)
+            where T : new()
+        {
+            return (from e in Select<T>(false)
+                   where selector(e)
+                   select e).ToArray();
+        }
     }
 }
