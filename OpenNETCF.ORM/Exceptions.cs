@@ -97,4 +97,12 @@ namespace OpenNETCF.ORM
         {
         }
     }
+
+    public class FieldNotFoundException : Exception
+    {
+        public FieldNotFoundException(string message)
+            : base(message)
+        {
+        }
+    }
 }

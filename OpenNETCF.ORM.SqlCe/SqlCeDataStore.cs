@@ -11,14 +11,26 @@ using System.Runtime.InteropServices;
 
 namespace OpenNETCF.ORM
 {
-    public class SqlCeDataStore : DataStore<SqlCeEntityInfo>, IDisposable
+    public partial class SqlCeDataStore : DataStore<SqlCeEntityInfo>, IDisposable
     {
+        private class IndexInfo
+        {
+            public IndexInfo()
+            {
+                MaxCharLength = -1;
+            }
+
+            public string Name { get; set; }
+            public int MaxCharLength { get; set; }
+        }
+
         private string m_connectionString;
         private SqlCeConnection m_connection;
 
         private Dictionary<Type, object[]> m_referenceCache = new Dictionary<Type, object[]>();
         private Dictionary<Type, MethodInfo> m_serializerCache = new Dictionary<Type, MethodInfo>();
         private Dictionary<Type, MethodInfo> m_deserializerCache = new Dictionary<Type, MethodInfo>();
+        private List<IndexInfo> m_indexNameCache = new List<IndexInfo>();
 
         private string Password { get; set; }
 
@@ -178,163 +190,6 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public override void Delete<T>(string fieldName, object matchValue)
-        {
-            Delete(typeof(T), fieldName, matchValue);
-        }
-
-        /// <summary>
-        /// Deletes entities of a given type where the specified field name matches a specified value
-        /// </summary>
-        /// <param name="t"></param>
-        /// <param name="indexName"></param>
-        /// <param name="matchValue"></param>
-        private void Delete(Type entityType, string fieldName, object matchValue)
-        {
-            string entityName = m_entities.GetNameForType(entityType);
-
-            SqlCeConnection connection = GetConnection(true);
-            try
-            {
-                using (var command = new SqlCeCommand())
-                {
-                    command.Connection = connection;
-                    command.CommandText = string.Format("DELETE FROM {0} WHERE {1} = ?", entityName, fieldName);
-                    command.Parameters.Add("@val", matchValue);
-                    command.ExecuteNonQuery();
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, true);
-            }
-        }
-
-        private void Delete(Type t, object primaryKey)
-        {
-            string entityName = m_entities.GetNameForType(t);
-
-            if (entityName == null)
-            {
-                throw new EntityNotFoundException(t);
-            }
-
-            if (Entities[entityName].Fields.KeyField == null)
-            {
-                throw new PrimaryKeyRequiredException("A primary key is required on an Entity in order to perform a Delete");
-            }
-            
-            // handle cascade deletes
-            foreach (var reference in Entities[entityName].References)
-            {
-                if (!reference.CascadeDelete) continue;
-
-                Delete(reference.ReferenceEntityType, reference.ReferenceField, primaryKey);
-            }
-
-            SqlCeConnection connection = GetConnection(false);
-            try
-            {
-                CheckOrdinals(entityName);
-                CheckPrimaryKeyIndex(entityName);
-
-                using (var command = new SqlCeCommand())
-                {
-                    command.Connection = connection;
-                    command.CommandText = entityName;
-                    command.CommandType = CommandType.TableDirect;
-                    command.IndexName = Entities[entityName].PrimaryKeyIndexName;
-
-                    using (var results = command.ExecuteResultSet(ResultSetOptions.Scrollable | ResultSetOptions.Updatable))
-                    {
-
-                        // seek on the PK
-                        var found = results.Seek(DbSeekOptions.BeforeEqual, new object[] { primaryKey });
-
-                        if (!found)
-                        {
-                            throw new RecordNotFoundException("Cannot locate a record with the provided primary key.  Unable to delete the item");
-                        }
-
-                        results.Read();
-                        results.Delete();
-                    }
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, false);
-            }
-        }
-
-        /// <summary>
-        /// Deletes an entity instance with the specified primary key from the DataStore
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="primaryKey"></param>
-        public override void Delete<T>(object primaryKey)
-        {
-            Delete(typeof(T), primaryKey);
-        }
-
-        /// <summary>
-        /// Deletes all entity instances of the specified type from the DataStore
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        public override void Delete<T>()
-        {
-            var t = typeof(T);
-            string entityName = m_entities.GetNameForType(t);
-
-            if (entityName == null)
-            {
-                throw new EntityNotFoundException(t);
-            }
-
-            // TODO: handle cascade deletes?
-
-            SqlCeConnection connection = GetConnection(true);
-            try
-            {
-                using (var command = new SqlCeCommand())
-                {
-                    command.Connection = connection;
-                    command.CommandText = string.Format("DELETE FROM {0}", entityName);
-                    command.ExecuteNonQuery();
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, true);
-            }
-        }
-
-        /// <summary>
-        /// Deletes the specified entity instance from the DataStore
-        /// </summary>
-        /// <param name="item"></param>
-        /// <remarks>
-        /// The instance provided must have a valid primary key value
-        /// </remarks>
-        public override void Delete(object item)
-        {
-            var type = item.GetType();
-            string entityName = m_entities.GetNameForType(type);
-
-            if (entityName == null)
-            {
-                throw new EntityNotFoundException(type);
-            }
-
-            if (Entities[entityName].Fields.KeyField == null)
-            {
-                throw new PrimaryKeyRequiredException("A primary key is required on an Entity in order to perform a Delete");
-            }
-            var keyValue = Entities[entityName].Fields.KeyField.PropertyInfo.GetValue(item, null);
-
-            Delete(type, keyValue);
-        }
-
         private MethodInfo GetSerializer(Type itemType)
         {
             if (m_serializerCache.ContainsKey(itemType))
@@ -366,129 +221,6 @@ namespace OpenNETCF.ORM
         }
 
         /// <summary>
-        /// Updates the backing DataStore with the values in the specified entity instance
-        /// </summary>
-        /// <param name="item"></param>
-        /// <remarks>
-        /// The instance provided must have a valid primary key value
-        /// </remarks>
-        public override void Update(object item)
-        {
-            //TODO: is a cascading default of true a good idea?
-            Update(item, true);
-        }
-
-        public override void Update(object item, bool cascadeUpdates)
-        {
-            object keyValue;
-            var itemType = item.GetType();
-            string entityName = m_entities.GetNameForType(itemType);
-
-            if (entityName == null)
-            {
-                throw new EntityNotFoundException(itemType);
-            }
-
-            if (Entities[entityName].Fields.KeyField == null)
-            {
-                throw new PrimaryKeyRequiredException("A primary key is required on an Entity in order to perform Updates");
-            }
-
-            SqlCeConnection connection = GetConnection(false);
-            try
-            {
-                CheckOrdinals(entityName);
-                CheckPrimaryKeyIndex(entityName);
-
-                using (var command = new SqlCeCommand())
-                {
-                    command.Connection = connection;
-                    command.CommandText = entityName;
-                    command.CommandType = CommandType.TableDirect;
-                    command.IndexName = Entities[entityName].PrimaryKeyIndexName;
-
-                    using (var results = command.ExecuteResultSet(ResultSetOptions.Scrollable | ResultSetOptions.Updatable))
-                    {
-                        keyValue = Entities[entityName].Fields.KeyField.PropertyInfo.GetValue(item, null);
-
-                        // seek on the PK
-                        var found = results.Seek(DbSeekOptions.BeforeEqual, new object[] { keyValue });
-
-                        if (!found)
-                        {
-                            // TODO: the PK value has changed - we need to store the original value in the entity or diallow this kind of change
-                            throw new RecordNotFoundException("Cannot locate a record with the provided primary key.  You cannot update a primary key value through the Update method");
-                        }
-
-                        results.Read();
-
-                        // update the values
-                        foreach (var field in Entities[entityName].Fields)
-                        {
-                            // do not update PK fields
-                            if (field.IsPrimaryKey)
-                            {
-                                continue;
-                            }
-                            else if (field.DataType == DbType.Object)
-                            {
-                                // get serializer
-                                var serializer = GetSerializer(itemType);
-
-                                if (serializer == null)
-                                {
-                                    throw new MissingMethodException(
-                                        string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
-                                        field.FieldName, entityName));
-                                }
-                                var value = serializer.Invoke(item, new object[] { field.FieldName });
-                                results.SetValue(field.Ordinal, value);
-                            }
-                            else if (field.IsRowVersion)
-                            {
-                                // read-only, so do nothing
-                            }
-                            else
-                            {
-                                var value = field.PropertyInfo.GetValue(item, null);
-
-                                // TODO: should we update only if it's changed?  Does it really matter at this point?
-                                results.SetValue(field.Ordinal, value);
-                            }
-                        }
-
-                        results.Update();
-                    }
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, false);
-            }
-
-            if(cascadeUpdates)
-            {
-                // TODO: move this into the base DataStore class as it's not SqlCe-specific
-                foreach (var reference in Entities[entityName].References)
-                {
-                    foreach (var refItem in reference.PropertyInfo.GetValue(item, null) as Array)
-                    {
-                        if (!this.Contains(refItem))
-                        {
-                            var foreignKey = refItem.GetType().GetProperty(reference.ReferenceField, BindingFlags.Instance | BindingFlags.Public);
-                            foreignKey.SetValue(refItem, keyValue, null);
-                            Insert(refItem, false);
-                        }
-                        else
-                        {
-                            Update(refItem, true);
-                        }
-                    }
-                }
-            }
-        }
-
-        /// <summary>
         /// Determines if the specified object already exists in the Store (by primary key value)
         /// </summary>
         /// <param name="item"></param>
@@ -503,17 +235,6 @@ namespace OpenNETCF.ORM
             var existing = Select(itemType, null, keyValue, -1, -1).FirstOrDefault();
 
             return existing != null;
-        }
-
-        /// <summary>
-        /// Retrieves a single entity instance from the DataStore identified by the specified primary key value
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="primaryKey"></param>
-        /// <returns></returns>
-        public override T Select<T>(object primaryKey)
-        {
-            return (T)Select(typeof(T), null, primaryKey, -1, -1).FirstOrDefault();
         }
 
         /// <summary>
@@ -532,6 +253,8 @@ namespace OpenNETCF.ORM
 
         private void FillReferences(object instance, object keyValue, ReferenceAttribute[] fieldsToFill, bool cacheReferenceTable)
         {
+            if (instance == null) return;
+
             Type type = instance.GetType();
             string entityName = m_entities.GetNameForType(type);
 
@@ -609,76 +332,29 @@ namespace OpenNETCF.ORM
             }
         }
 
-        /// <summary>
-        /// Retrieves all entity instances of the specified type from the DataStore
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public override T[] Select<T>()
+        public override int Count<T>(IEnumerable<FilterCondition> filters)
         {
-            var type = typeof(T);
-            var items = Select(type, null, null, -1, 0);
-            return items.Cast<T>().ToArray();
-        }
+            var t = typeof(T);
+            string entityName = m_entities.GetNameForType(t);
 
-        /// <summary>
-        /// Retrieves all entity instances of the specified type from the DataStore
-        /// </summary>
-        /// <param name="entityType"></param>
-        /// <returns></returns>
-        public override object[] Select(Type entityType)
-        {
-            var items = Select(entityType, null, null, -1, 0);
-            return items.ToArray();
-        }
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(t);
+            }
 
-        public override T[] Select<T>(string searchFieldName, object matchValue)
-        {
-            var type = typeof(T);
-            var items = Select(type, searchFieldName, matchValue, - 1, 0);
-            return items.Cast<T>().ToArray();
-        }
-
-        /// <summary>
-        /// Fetches up to the requested number of entity instances of the specified type from the DataStore, starting with the first instance
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="fetchCount"></param>
-        /// <returns></returns>
-        public override T[] Fetch<T>(int fetchCount)
-        {
-            var type = typeof(T);
-            var items = Select(type, null, null, fetchCount, 0);
-            return items.Cast<T>().ToArray();
-        }
-
-        /// <summary>
-        /// Fetches up to the requested number of entity instances of the specified type from the DataStore, starting with the specified instance
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="fetchCount"></param>
-        /// <param name="firstRowOffset"></param>
-        /// <returns></returns>
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset)
-        {
-            var type = typeof(T);
-            var items = Select(type, null, null, fetchCount, firstRowOffset);
-            return items.Cast<T>().ToArray();
-        }
-
-        /// <summary>
-        /// Fetches a sorted list of entities, up to the requested number of entity instances, of the specified type from the DataStore, starting with the specified instance
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="searchFieldName"></param>
-        /// <param name="fetchCount"></param>
-        /// <param name="firstRowOffset"></param>
-        /// <returns></returns>
-        public override T[] Fetch<T>(string searchFieldName, int fetchCount, int firstRowOffset)
-        {
-            var type = typeof(T);
-            var items = Select(type, searchFieldName, null, fetchCount, firstRowOffset);
-            return items.Cast<T>().ToArray();
+            SqlCeConnection connection = GetConnection(true);
+            try
+            {
+                using (var command = BuildFilterCommand(entityName, filters, true))
+                {
+                    command.Connection = connection;
+                    return (int)command.ExecuteScalar();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
         }
 
         /// <summary>
@@ -712,310 +388,88 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public override T[] Select<T>(IEnumerable<FilterCondition> filters)
+        private string VerifyIndex(string entityName, string fieldName, FieldSearchOrder searchOrder)
         {
-            var objectType = typeof(T);
-            return Select(objectType, filters, -1, 0).Cast<T>().ToArray();
+            return VerifyIndex(entityName, fieldName, searchOrder, null);
         }
 
-        private object[] Select(Type objectType, string searchFieldName, object matchValue, int fetchCount, int firstRowOffset)
-        {
-            string entityName = m_entities.GetNameForType(objectType);
-            FilterCondition filter = null;
-
-            if (searchFieldName == null)
+        private string VerifyIndex(string entityName, string fieldName, FieldSearchOrder searchOrder, SqlCeConnection connection)
+        {            
+            bool localConnection = false;
+            if (connection == null)
             {
-                if (matchValue != null)
-                {
-                    CheckPrimaryKeyIndex(entityName);
-
-                    // searching on primary key
-                    filter = new SqlFilterCondition
-                        {
-                            FieldName = Entities[entityName].PrimaryKeyIndexName,
-                            Operator = FilterCondition.FilterOperator.Equals,
-                            Value = matchValue,
-                            PrimaryKey = true
-                        };
-                }
+                localConnection = true;
+                connection = GetConnection(true);
             }
-            else
-            {
-                filter = new FilterCondition
-                {
-                    FieldName = searchFieldName,
-                    Operator = FilterCondition.FilterOperator.Equals,
-                    Value = matchValue
-                };
-            }
-
-            return Select(
-                objectType,
-                (filter == null) ? null :
-                    new FilterCondition[]
-                    {
-                        filter
-                    },
-                fetchCount,
-                firstRowOffset);
-        }
-
-        private SqlCeCommand GetSelectCommand(string entityName, IEnumerable<FilterCondition> filters, out bool tableDirect)
-        {
-            tableDirect = true;
-            var buildFilter = false;
-            string indexName = null;
-
-            if (filters != null)
-            {
-                if (filters.Count() == 1)
-                {
-                    var filter = filters.First();
-
-                    if (!(filter is SqlFilterCondition))
-                    {
-                        var field = Entities[entityName].Fields[filter.FieldName];
-
-                        if (!field.IsPrimaryKey)                            
-                        {
-                            if (field.SearchOrder == FieldSearchOrder.NotSearchable)
-                            {
-                                buildFilter = true;
-                            }
-                            else
-                            {
-                                indexName = string.Format("ORM_IDX_{0}_{1}", entityName, filter.FieldName);
-                            }
-                        }
-                    }
-                }
-                else if (filters.Count() >= 1)
-                {
-                    var filter = filters.First() as SqlFilterCondition;
-
-                    if (filter == null || !filter.PrimaryKey)
-                    {
-                        buildFilter = true;
-                    }
-                }
-            }
-
-            if (buildFilter)
-            {
-                tableDirect = false;
-                return BuildFilterCommand(entityName, filters);
-            }
-
-            return new SqlCeCommand()
-            {
-                CommandText = entityName,
-                CommandType = CommandType.TableDirect,
-                IndexName = indexName ?? Entities[entityName].PrimaryKeyIndexName
-            };
-        }
-
-        private SqlCeCommand BuildFilterCommand(string entityName, IEnumerable<FilterCondition> filters)
-        {
-            var command = new SqlCeCommand();
-            command.CommandType = CommandType.Text;
-
-            StringBuilder sb = new StringBuilder(string.Format("SELECT * FROM {0}", entityName));
-
-            for (int i = 0; i < filters.Count(); i++)
-            {
-                sb.Append(i == 0 ? " WHERE " : " AND ");
-
-                var filter = filters.ElementAt(i);
-                sb.Append(filter.FieldName);
-
-                switch (filters.ElementAt(i).Operator)
-                {
-                    case FilterCondition.FilterOperator.Equals:
-                        sb.Append(" = ");
-                        break;
-                    case FilterCondition.FilterOperator.Like:
-                        sb.Append(" LIKE ");
-                        break;
-                    case FilterCondition.FilterOperator.LessThan:
-                        sb.Append(" < ");
-                        break;
-                    case FilterCondition.FilterOperator.GreaterThan:
-                        sb.Append(" > ");
-                        break;
-                }
-
-                string paramName = string.Format("@p{0}", i);
-                sb.Append(paramName);
-                command.CommandText = sb.ToString();
-
-                command.Parameters.Add(paramName, filter.Value);
-            }
-
-            return command;
-        }
-
-        private object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset)
-        {
-            string entityName = m_entities.GetNameForType(objectType);
-
-            if (entityName == null)
-            {
-                throw new EntityNotFoundException(objectType);
-            }
-
-            UpdateIndexCacheForType(entityName);
-
-            var items = new List<object>();
-            bool tableDirect;
-
-            SqlCeConnection connection = GetConnection(false);
             try
             {
-                CheckOrdinals(entityName);
+                var indexName = string.Format("ORM_IDX_{0}_{1}_{2}", entityName, fieldName, 
+                    searchOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
 
-                using (var command = GetSelectCommand(entityName, filters, out tableDirect))
+                if(m_indexNameCache.Find(ii => ii.Name == indexName) != null) return indexName;
+
+                using (SqlCeCommand command = new SqlCeCommand())
                 {
                     command.Connection = connection;
 
-                    int searchOrdinal = -1;
-                    ResultSetOptions options = ResultSetOptions.Scrollable;
+                    var sql = string.Format("SELECT COUNT(*) FROM information_schema.indexes WHERE INDEX_NAME = '{0}'", indexName);
+                    command.CommandText = sql;
 
-                    object matchValue = null;
-                    string matchField = null;
-                    if (tableDirect) // use index
+                    int i = (int)command.ExecuteScalar();
+
+                    if (i == 0)
                     {
-                        if ((filters != null) && (filters.Count() > 0))
+                        sql = string.Format("CREATE INDEX {0} ON {1}({2} {3})",
+                            indexName,
+                            entityName,
+                            fieldName,
+                            searchOrder == FieldSearchOrder.Descending ? "DESC" : string.Empty);
+
+                        Debug.WriteLine(sql);
+
+                        command.CommandText = sql;
+                        command.ExecuteNonQuery();
+                    }
+
+                    var indexinfo = new IndexInfo
+                    {
+                        Name = indexName
+                    };
+
+                    sql = string.Format("SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.columns WHERE TABLE_NAME = '{0}' AND COLUMN_NAME = '{1}'"
+                        , entityName, fieldName);
+
+                    command.CommandText = sql;
+                    
+                    using (var reader = command.ExecuteReader())
+                    {
+                        // this should always return true
+                        if (reader.Read())
                         {
-                            var filter = filters.First();
-
-                            matchValue = filter.Value;
-                            matchField = filter.FieldName;
-
-                            var sqlfilter = filter as SqlFilterCondition;
-                            if ((sqlfilter != null) && (sqlfilter.PrimaryKey))
+                            var length = reader[0];
+                            if (length != DBNull.Value)
                             {
-                                searchOrdinal = Entities[entityName].PrimaryKeyOrdinal;
+                                indexinfo.MaxCharLength = Convert.ToInt32(length);
                             }
+                        }
+                        else
+                        {
+                            if (Debugger.IsAttached) Debugger.Break();
                         }
                     }
 
-                    using (var results = command.ExecuteResultSet(options))
-                    {
-                        if (results.HasRows)
-                        {
-                            ReferenceAttribute[] referenceFields = null;
-
-                            int currentOffset = 0;
-
-                            if (matchValue != null)
-                            {
-                                // convert enums to an int, else the .Equals later check will fail
-                                // this feels a bit kludgey, but for now it's all I can think of
-                                if (matchValue.GetType().IsEnum)
-                                {
-                                    matchValue = (int)matchValue;
-                                }
-
-                                if (searchOrdinal < 0)
-                                {
-                                    searchOrdinal = results.GetOrdinal(matchField);
-                                }
-
-                                if (tableDirect)
-                                {
-                                    results.Seek(DbSeekOptions.FirstEqual, new object[] { matchValue });
-                                }
-                            }
-
-                            while (results.Read())
-                            {
-                                if (currentOffset < firstRowOffset)
-                                {
-                                    currentOffset++;
-                                    continue;
-                                }
-
-                                if (tableDirect && (matchValue != null))
-                                {
-                                    // if we have a match value, we'll have seeked to the first match above
-                                    // then at this point the first non-match means we have no more matches, so
-                                    // we can exit out once we hit the first non-match
-                                    if (!results[searchOrdinal].Equals(matchValue))
-                                    {
-                                        break;
-                                    }
-                                }
-
-                                object item = Activator.CreateInstance(objectType);
-                                object rowPK = null;
-
-                                foreach (var field in Entities[entityName].Fields)
-                                {
-                                    var value = results[field.Ordinal];
-                                    if (value != DBNull.Value)
-                                    {
-                                        if (field.DataType == DbType.Object)
-                                        {
-                                            // get serializer
-                                            var itemType = item.GetType();
-                                            var deserializer = GetDeserializer(itemType);
-
-                                            if (deserializer == null)
-                                            {
-                                                throw new MissingMethodException(
-                                                    string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
-                                                    field.FieldName, entityName));
-                                            }
-
-                                            var @object = deserializer.Invoke(item, new object[] { field.FieldName, value });
-                                            field.PropertyInfo.SetValue(item, @object, null);
-                                        }
-                                        else if (field.IsRowVersion)
-                                        {
-                                            // sql stores this an 8-byte array
-                                            field.PropertyInfo.SetValue(item, BitConverter.ToInt64((byte[])value, 0), null);
-                                        }
-                                        else
-                                        {
-                                            field.PropertyInfo.SetValue(item, value, null);
-                                        }
-                                    }
-                                    if (field.IsPrimaryKey)
-                                    {
-                                        rowPK = value;
-                                    }
-                                }
-                                
-                                // autofill references if desired
-                                if (referenceFields == null)
-                                {
-                                    referenceFields = Entities[entityName].References.ToArray();
-                                }
-
-                                if (referenceFields.Length > 0)
-                                {
-                                    //FillReferences(item, rowPK, referenceFields, true);
-                                    FillReferences(item, rowPK, referenceFields, false);
-                                }
-
-                                items.Add(item);
-
-                                if ((fetchCount > 0) && (items.Count >= fetchCount))
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                    }
+                    m_indexNameCache.Add(indexinfo);
                 }
+
+                return indexName;
             }
             finally
             {
-                FlushReferenceTableCache();
-                DoneWithConnection(connection, false);
+                if (localConnection)
+                {
+                    DoneWithConnection(connection, true);
+                }
             }
-
-            return items.ToArray();
         }
 
         /// <summary>
@@ -1362,17 +816,7 @@ namespace OpenNETCF.ORM
             {
                 if (field.SearchOrder != FieldSearchOrder.NotSearchable)
                 {
-                    var idxsql = string.Format("CREATE INDEX ORM_IDX_{0}_{1} ON {0}({1} {2})",
-                        entity.EntityName,
-                        field.FieldName,
-                        field.SearchOrder == FieldSearchOrder.Descending ? "DESC" : string.Empty);
-
-                    Debug.WriteLine(idxsql);
-
-                    using (SqlCeCommand command = new SqlCeCommand(idxsql, connection))
-                    {
-                        int i = command.ExecuteNonQuery();
-                    }
+                    VerifyIndex(entity.EntityName, field.FieldName, field.SearchOrder, connection);
                 }
             }
         }

@@ -27,7 +27,8 @@ namespace OpenNETCF.ORM
         object[] Select(Type entityType);
 
         void Update(object item);
-        void Update(object item, bool cascadeUpdates);
+        void Update(object item, bool cascadeUpdates, string fieldName);
+        void Update(object item, string fieldName);
 
         void Delete(object item);
         void Delete<T>(object primaryKey);
@@ -36,7 +37,9 @@ namespace OpenNETCF.ORM
 
         T[] Fetch<T>(int fetchCount) where T : new();
         T[] Fetch<T>(int fetchCount, int firstRowOffset) where T : new();
-        T[] Fetch<T>(string searchFieldName, int fetchCount, int firstRowOffset) where T : new();
+        T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField) where T : new();
+        T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+            where T : new();
 
         int Count<T>();
 
