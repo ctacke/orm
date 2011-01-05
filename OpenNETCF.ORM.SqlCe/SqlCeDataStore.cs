@@ -366,7 +366,14 @@ namespace OpenNETCF.ORM
                                         field.FieldName, entityName));
                                 }
                                 var value = serializer.Invoke(item, new object[] { field.FieldName });
-                                record.SetValue(field.Ordinal, value);
+                                if (value == null)
+                                {
+                                    record.SetValue(field.Ordinal, DBNull.Value);
+                                }
+                                else
+                                {
+                                    record.SetValue(field.Ordinal, value);
+                                }
                             }
                             else if (field.IsRowVersion)
                             {

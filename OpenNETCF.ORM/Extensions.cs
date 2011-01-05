@@ -56,6 +56,10 @@ namespace OpenNETCF.ORM
                     return DbType.Byte;
                 case "System.Guid":
                     return DbType.Guid;
+
+                case "System.Byte[]":
+                    return DbType.Binary;
+
                 default:
                     if (type.IsEnum)
                     {
