@@ -55,10 +55,13 @@ namespace OpenNETCF.ORM.Test
             // Debug.WriteLine(string.Format("Data set has now has {0} Books", store.GetBookCount()));
 
             // uncomment to test binary data
-            store.TestBinaryCRUD();
+            //store.TestBinaryCRUD();
 
             // uncomment to test serialization
-            store.TestCustomObjectCRUD();
+            //store.TestCustomObjectCRUD();
+
+            // uncomment to test enum field handling
+            store.TestEnumCRUD();
 
             TestCascadingInsert(tests);
             TestCascadingUpdates(tests);
