@@ -54,6 +54,12 @@ namespace OpenNETCF.ORM.Test
             // store.TruncateBooks();
             // Debug.WriteLine(string.Format("Data set has now has {0} Books", store.GetBookCount()));
 
+            // uncomment to test binary data
+            store.TestBinaryCRUD();
+
+            // uncomment to test serialization
+            store.TestCustomObjectCRUD();
+
             TestCascadingInsert(tests);
             TestCascadingUpdates(tests);
 

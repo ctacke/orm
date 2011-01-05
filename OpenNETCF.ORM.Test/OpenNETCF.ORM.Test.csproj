@@ -62,6 +62,8 @@
     <Compile Include="DataGenerator.cs" />
     <Compile Include="Entities\Author.cs" />
     <Compile Include="Entities\Book.cs" />
+    <Compile Include="Entities\CustomObject.cs" />
+    <Compile Include="Entities\TestTable.cs" />
     <Compile Include="ITestClass.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -146,5 +146,116 @@ namespace OpenNETCF.ORM.Test
         {
             Store.Update(author);
         }
+
+        public void TestCustomObjectCRUD()
+        {
+            // truncate the table for this test
+            Store.Delete<TestTable>();
+
+            var newObject = new CustomObject
+            {
+                ObjectName = "Object A",
+                Identifier = Guid.NewGuid(),
+                SomeIntProp = 12345
+            };
+
+            var testRow = new TestTable
+            {
+                CustomObject = newObject
+            };
+
+            Store.Insert(testRow);
+
+            var existing = Store.Select<TestTable>().First();
+
+            // make sure that the existing fields are what we inserted
+            if (newObject.ObjectName != existing.CustomObject.ObjectName)
+            {
+                if (Debugger.IsAttached) Debugger.Break();
+                Debug.WriteLine("** Custom object Insert failed on ObjectName! **");
+            }
+            if (newObject.SomeIntProp != existing.CustomObject.SomeIntProp)
+            {
+                if (Debugger.IsAttached) Debugger.Break();
+                Debug.WriteLine("** Custom object Insert failed on SomeIntProp! **");
+            }
+            if (!newObject.Identifier.Equals(existing.CustomObject.Identifier))
+            {
+                if (Debugger.IsAttached) Debugger.Break();
+                Debug.WriteLine("** Custom object Insert failed on Identifier! **");
+            }
+
+            existing.CustomObject.ObjectName = "New Name";
+
+            Store.Update(existing);
+
+            var secondPull = Store.Select<TestTable>().First();
+
+            if (secondPull.CustomObject.ObjectName != existing.CustomObject.ObjectName)
+            {
+                if (Debugger.IsAttached) Debugger.Break();
+                Debug.WriteLine("** Custom object Update failed on ObjectName! **");
+            }
+
+        }
+
+        public void TestBinaryCRUD()
+        {
+            var rand = new Random();
+
+            var small = new byte[200];
+            var large = new byte[10000];
+
+            rand.NextBytes(small);
+            rand.NextBytes(large);
+
+            // truncate the table for this test
+            Store.Delete<TestTable>();
+
+            var testRow = new TestTable
+            {
+                LongBinary = large,
+                ShortBinary = small
+            };
+
+            Store.Insert(testRow);
+
+            var existing = Store.Select<TestTable>().First();
+
+            // make sure that the existing fields are what we inserted
+            for (int i = 0; i < small.Length; i++)            
+            {
+                if (existing.ShortBinary[i] != small[i])
+                {
+                    Debug.WriteLine("** ShortBinary Insert failed **");
+                    break;
+                }
+            }
+            for (int i = 0; i < large.Length; i++)
+            {
+                if (existing.LongBinary[i] != large[i])
+                {
+                    Debug.WriteLine("** LongBinary Insert failed **");
+                    break;
+                }
+            }
+
+            rand.NextBytes(small);
+            existing.ShortBinary = small;
+
+            Store.Update(existing);
+
+            var secondPull = Store.Select<TestTable>().First();
+
+            for (int i = 0; i < small.Length; i++)
+            {
+                if (existing.ShortBinary[i] != small[i])
+                {
+                    Debug.WriteLine("** ShortBinary Insert failed **");
+                    break;
+                }
+            }
+
+        }
     }
 }

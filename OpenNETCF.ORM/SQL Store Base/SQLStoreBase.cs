@@ -16,6 +16,8 @@ namespace OpenNETCF.ORM
 
         public int DefaultStringFieldSize { get; set; }
         public int DefaultNumericFieldPrecision { get; set; }
+        public int DefaultVarBinaryLength { get; set; }
+
         public ConnectionBehavior ConnectionBehavior { get; set; }
 
         public abstract override void CreateStore();
@@ -67,6 +69,7 @@ namespace OpenNETCF.ORM
         {
             DefaultStringFieldSize = 200;
             DefaultNumericFieldPrecision = 16;
+            DefaultVarBinaryLength = 8000;
         }
 
         ~SQLStoreBase()
@@ -359,6 +362,17 @@ namespace OpenNETCF.ORM
                 }
 
                 return "rowversion";
+            }
+
+            if (field.DataType == DbType.Binary)
+            {
+                // default to varbinary unless a Length is specifically supplied and it is >= 8000
+                if (field.Length >= 8000)
+                {
+                    return "image";
+                }
+                // if no length was supplied, default to DefaultVarBinaryLength (8000)
+                return string.Format("varbinary({0})", field.Length == 0 ? DefaultVarBinaryLength : field.Length);
             }
 
             return field.DataType.ToSqlTypeString();
