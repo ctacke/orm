@@ -227,6 +227,7 @@ namespace OpenNETCF.ORM.Test
             {
                 if (existing.ShortBinary[i] != small[i])
                 {
+                    if (Debugger.IsAttached) Debugger.Break();
                     Debug.WriteLine("** ShortBinary Insert failed **");
                     break;
                 }
@@ -235,6 +236,7 @@ namespace OpenNETCF.ORM.Test
             {
                 if (existing.LongBinary[i] != large[i])
                 {
+                    if (Debugger.IsAttached) Debugger.Break();
                     Debug.WriteLine("** LongBinary Insert failed **");
                     break;
                 }
@@ -251,11 +253,42 @@ namespace OpenNETCF.ORM.Test
             {
                 if (existing.ShortBinary[i] != small[i])
                 {
+                    if (Debugger.IsAttached) Debugger.Break();
                     Debug.WriteLine("** ShortBinary Insert failed **");
                     break;
                 }
             }
 
+        }
+
+        public void TestEnumCRUD()
+        {
+            // truncate the table for this test
+            Store.Delete<TestTable>();
+
+            var testRow = new TestTable
+            {
+                 EnumField = TestEnum.ValueB
+            };
+
+            Store.Insert(testRow);
+
+            var existing = Store.Select<TestTable>().First();
+            if (testRow.EnumField != existing.EnumField)
+            {
+                if (Debugger.IsAttached) Debugger.Break();
+                Debug.WriteLine("** EnumField Insert failed! **");
+            }
+
+            existing.EnumField = TestEnum.ValueC;
+            Store.Update(existing);
+            var secondPull = Store.Select<TestTable>().First();
+
+            if (secondPull.EnumField != existing.EnumField)
+            {
+                if (Debugger.IsAttached) Debugger.Break();
+                Debug.WriteLine("** EnumField Update failed! **");
+            }
         }
     }
 }

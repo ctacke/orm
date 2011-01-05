@@ -5,6 +5,13 @@ using System.Text;
 
 namespace OpenNETCF.ORM.Test.Entities
 {
+    public enum TestEnum
+    {
+        ValueA,
+        ValueB,
+        ValueC
+    }
+
     [Entity(KeyScheme.Identity)]
     public class TestTable
     {
@@ -16,6 +23,9 @@ namespace OpenNETCF.ORM.Test.Entities
 
         [Field(Length = 20000)]
         public byte[] LongBinary { get; set; }
+
+        [Field]
+        public TestEnum EnumField { get; set; }
 
         [Field]
         public CustomObject CustomObject { get; set; }
