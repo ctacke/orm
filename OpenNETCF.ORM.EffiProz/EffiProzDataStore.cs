@@ -2,8 +2,8 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
-using System.Data.Common;
 using System.Data.EffiProz;
+using System.Data.Common;
 
 namespace OpenNETCF.ORM.EffiProz
 {
@@ -185,12 +185,20 @@ namespace OpenNETCF.ORM.EffiProz
 
         protected override DbCommand GetNewCommandObject()
         {
+#if WINDOWS_PHONE
+            return new EfzCommandWrapper();
+#else
             return new EfzCommand();
+#endif
         }
 
         protected override DbConnection GetNewConnectionObject()
         {
+#if WINDOWS_PHONE
+            return new EfzConnectionWrapper(ConnectionString);
+#else
             return new EfzConnection(ConnectionString);
+#endif
         }
 
         private string ConnectionString

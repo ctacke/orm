@@ -5,12 +5,12 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProductVersion>10.0.20506</ProductVersion>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{C52EC860-6119-4131-815B-4305DB3BFA95}</ProjectGuid>
+    <ProjectGuid>{C68F4B54-2062-4970-BBA7-F466D6518F96}</ProjectGuid>
     <ProjectTypeGuids>{C089C8C0-30E0-4E22-80C0-CE093F111A43};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>OpenNETCF.ORM.WinPhone</RootNamespace>
-    <AssemblyName>OpenNETCF.ORM.WinPhone</AssemblyName>
+    <RootNamespace>OpenNETCF.ORM.EffiProz</RootNamespace>
+    <AssemblyName>OpenNETCF.ORM.EffiProz</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
     <TargetFrameworkProfile>WindowsPhone</TargetFrameworkProfile>
@@ -45,6 +45,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="EffiProz.WP">
+      <HintPath>references\WinPhone\EffiProz.WP.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib" />
     <Reference Include="System.Windows" />
     <Reference Include="system" />
@@ -56,29 +59,17 @@
     <Compile Include="..\OpenNETCF.ORM.Shared\OpenNETCF.ORM.Version.cs">
       <Link>Properties\OpenNETCF.ORM.Version.cs</Link>
     </Compile>
-    <Compile Include="Attributes\EntityAttribute.cs" />
-    <Compile Include="Attributes\FieldAttribute.cs" />
-    <Compile Include="Attributes\FieldAttributeCollection.cs" />
-    <Compile Include="Attributes\ReferenceAttribute.cs" />
-    <Compile Include="Attributes\ReferenceAttributeCollection.cs" />
-    <Compile Include="DataStore.cs" />
-    <Compile Include="DbType.cs" />
-    <Compile Include="Entity.cs" />
-    <Compile Include="EntityInfo.cs" />
-    <Compile Include="EntityInfoCollection.cs" />
-    <Compile Include="Exceptions.cs" />
-    <Compile Include="Extensions.cs" />
-    <Compile Include="FilterCondition.cs" />
-    <Compile Include="Interfaces\IDataStore.cs" />
-    <Compile Include="Interfaces\ITableEntity.cs" />
-    <Compile Include="KeyScheme.cs" />
-    <Compile Include="Phone Compatibility\DbCommand.cs" />
-    <Compile Include="Phone Compatibility\DbConnection.cs" />
-    <Compile Include="Phone Compatibility\DbDataReader.cs" />
+    <Compile Include="object wrappers\EfzDataReaderWrapper.cs" />
+    <Compile Include="EffiProzDataStore.cs" />
+    <Compile Include="object wrappers\EfzCommandWrapper.cs" />
+    <Compile Include="object wrappers\EfzConnectionWrapper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SQL Store Base\ConnectionBehavior.cs" />
-    <Compile Include="SQL Store Base\SqlEntityInfo.cs" />
-    <Compile Include="SQL Store Base\SQLStoreBase.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\OpenNETCF.ORM\OpenNETCF.ORM.WinPhone.csproj">
+      <Project>{C52EC860-6119-4131-815B-4305DB3BFA95}</Project>
+      <Name>OpenNETCF.ORM.WinPhone</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\Silverlight for Phone\$(TargetFrameworkVersion)\Microsoft.Silverlight.$(TargetFrameworkProfile).Overrides.targets" />
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\Silverlight for Phone\$(TargetFrameworkVersion)\Microsoft.Silverlight.CSharp.targets" />
