@@ -2,9 +2,9 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
-using System.Data.Common;
 using System.Diagnostics;
 using System.Data;
+using System.Data.Common;
 
 namespace OpenNETCF.ORM
 {
@@ -259,7 +259,7 @@ namespace OpenNETCF.ORM
 
         protected IndexInfo GetIndexInfo(string indexName)
         {
-            return m_indexNameCache.Find(ii => ii.Name == indexName);
+            return m_indexNameCache.FirstOrDefault(ii => ii.Name == indexName);
         }
 
         protected virtual string VerifyIndex(string entityName, string fieldName, FieldSearchOrder searchOrder)
@@ -280,7 +280,7 @@ namespace OpenNETCF.ORM
                 var indexName = string.Format("ORM_IDX_{0}_{1}_{2}", entityName, fieldName,
                     searchOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
 
-                if (m_indexNameCache.Find(ii => ii.Name == indexName) != null) return indexName;
+                if (m_indexNameCache.FirstOrDefault(ii => ii.Name == indexName) != null) return indexName;
 
                 using (var command = GetNewCommandObject())
                 {

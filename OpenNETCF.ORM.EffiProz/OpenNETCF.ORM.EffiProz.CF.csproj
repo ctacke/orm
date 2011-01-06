@@ -62,6 +62,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\OpenNETCF.ORM.Shared\OpenNETCF.ORM.Version.cs">
+      <Link>OpenNETCF.ORM.Version.cs</Link>
+    </Compile>
     <Compile Include="EffiProzDataStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
