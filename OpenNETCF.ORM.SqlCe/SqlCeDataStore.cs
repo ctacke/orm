@@ -574,175 +574,58 @@ namespace OpenNETCF.ORM
             {
                 command.Connection = connection as SqlCeConnection;
 
-                foreach(var field in entity.Fields)
+                // first make sure the table exists
+                var sql = string.Format("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '{0}'", entity.EntityAttribute.NameInStore);
+
+                command.CommandText = sql;
+
+                var count = Convert.ToInt32(command.ExecuteScalar());
+
+                if (count == 0)
                 {
-                    // yes, I realize hard-coded ordinals are not a good practice, but the SQL isn't changing, it's method specific
-                    var sql = string.Format("SELECT column_name, "  // 0
+                    CreateTable(connection, entity);
+                }
+                else
+                {
+                    foreach (var field in entity.Fields)
+                    {
+                        // yes, I realize hard-coded ordinals are not a good practice, but the SQL isn't changing, it's method specific
+                        sql = string.Format("SELECT column_name, "  // 0
                               + "data_type, "                       // 1
                               + "character_maximum_length, "        // 2
                               + "numeric_precision, "               // 3
                               + "numeric_scale, "                   // 4
                               + "is_nullable "
                               + "FROM information_schema.columns "
-                              + "WHERE (table_name = '{0}' AND column_name = '{1}')", 
+                              + "WHERE (table_name = '{0}' AND column_name = '{1}')",
                               entity.EntityAttribute.NameInStore, field.FieldName);
 
-                    command.CommandText = sql;
+                        command.CommandText = sql;
 
-                    using (var reader = command.ExecuteReader())
-                    {
-                        if(!reader.Read())
+                        using (var reader = command.ExecuteReader())
                         {
-                            // field doesn't exist - we must create it
-                            var alter = new StringBuilder(string.Format("ALTER TABLE [{0}] ", entity.EntityAttribute.NameInStore));
-                            alter.Append(string.Format("ADD {0} {1} {2}", 
-                                field.FieldName,
-                                GetFieldDataTypeString(entity.EntityName, field),
-                                GetFieldCreationAttributes(entity.EntityAttribute, field)));
-
-                            using (var altercmd = new SqlCeCommand(alter.ToString(), connection as SqlCeConnection))
+                            if (!reader.Read())
                             {
-                                altercmd.ExecuteNonQuery();
+                                // field doesn't exist - we must create it
+                                var alter = new StringBuilder(string.Format("ALTER TABLE [{0}] ", entity.EntityAttribute.NameInStore));
+                                alter.Append(string.Format("ADD {0} {1} {2}",
+                                    field.FieldName,
+                                    GetFieldDataTypeString(entity.EntityName, field),
+                                    GetFieldCreationAttributes(entity.EntityAttribute, field)));
+
+                                using (var altercmd = new SqlCeCommand(alter.ToString(), connection as SqlCeConnection))
+                                {
+                                    altercmd.ExecuteNonQuery();
+                                }
                             }
-                        }
-                        else
-                        {
-                            // TODO: verify field length, etc.
+                            else
+                            {
+                                // TODO: verify field length, etc.
+                            }
                         }
                     }
                 }
             }
         }
-
-        //private void CreateTable(SqlCeConnection connection, EntityInfo entity)
-        //{
-        //    StringBuilder sql = new StringBuilder();
-
-        //    if (ReservedWords.Contains(entity.EntityName, StringComparer.InvariantCultureIgnoreCase))
-        //    {
-        //        throw new ReservedWordException(entity.EntityName);
-        //    }
-
-        //    sql.AppendFormat("CREATE TABLE {0} (", entity.EntityName);
-
-        //    int count = entity.Fields.Count;
-
-        //    foreach (var field in entity.Fields)
-        //    {
-        //        //if (field is ReferenceFieldAttribute)
-        //        //{
-        //        //    count--;
-        //        //    continue;
-        //        //}
-
-        //        if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
-        //        {
-        //            throw new ReservedWordException(field.FieldName);
-        //        }
-
-        //        sql.AppendFormat("[{0}] {1} {2}",
-        //            field.FieldName,
-        //            GetFieldDataTypeString(entity.EntityName, field),
-        //            GetFieldCreationAttributes(entity.EntityAttribute, field));
-
-        //        if (--count > 0) sql.Append(", ");
-        //    }
-
-        //    sql.Append(")");
-
-        //    Debug.WriteLine(sql);
-
-        //    using (SqlCeCommand command = new SqlCeCommand(sql.ToString(), connection))
-        //    {
-        //        int i = command.ExecuteNonQuery();
-        //    }
-
-        //    // create indexes
-        //    foreach (var field in entity.Fields)
-        //    {
-        //        if (field.SearchOrder != FieldSearchOrder.NotSearchable)
-        //        {
-        //            VerifyIndex(entity.EntityName, field.FieldName, field.SearchOrder, connection);
-        //        }
-        //    }
-        //}
-
-        //private string GetFieldDataTypeString(string entityName, FieldAttribute field)
-        //{
-        //    // the SQL RowVersion is a special case
-        //    if(field.IsRowVersion)
-        //    {
-        //        switch(field.DataType)
-        //        {
-        //            case DbType.UInt64:
-        //            case DbType.Int64:
-        //                // no error
-        //                break;
-        //            default:
-        //                throw new FieldDefinitionException(entityName, field.FieldName, "rowversion fields must be an 8-byte data type (Int64 or UInt64)");
-        //        }
-
-        //        return "rowversion";
-        //    }
-
-        //    return field.DataType.ToSqlTypeString();
-        //}
-
-        //private string GetFieldCreationAttributes(EntityAttribute attribute, FieldAttribute field)
-        //{
-        //    StringBuilder sb = new StringBuilder();
-
-        //    switch (field.DataType)
-        //    {
-        //        case DbType.String:
-        //            if (field.Length > 0)
-        //            {
-        //                sb.AppendFormat("({0}) ", field.Length);
-        //            }
-        //            else
-        //            {
-        //                sb.AppendFormat("({0}) ", DefaultStringFieldSize);
-        //            }
-        //            break;
-        //        case DbType.Decimal:
-        //            int p = field.Precision == 0 ? DefaultNumericFieldPrecision : field.Precision;
-        //            sb.AppendFormat("({0},{1}) ", p, field.Scale);
-        //            break;
-        //    }
-
-        //    if (field.IsPrimaryKey)
-        //    {
-        //        sb.Append("PRIMARY KEY ");
-
-        //        if (attribute.KeyScheme == KeyScheme.Identity)
-        //        {
-        //            switch(field.DataType)
-        //            {
-        //                case DbType.Int32:
-        //                case DbType.UInt32:
-        //                    sb.Append("IDENTITY ");
-        //                    break;
-        //                case DbType.Guid:
-        //                    sb.Append("ROWGUIDCOL ");
-        //                    break;
-        //                default:
-        //                    throw new FieldDefinitionException(attribute.NameInStore, field.FieldName,
-        //                        string.Format("Data Type '{0}' cannot be marked as an Identity field", field.DataType));
-        //            }
-        //        }
-        //    }
-
-        //    if (!field.AllowsNulls)
-        //    {
-        //        sb.Append("NOT NULL ");
-        //    }
-
-        //    if (field.RequireUniqueValue)
-        //    {
-        //        sb.Append("UNIQUE ");
-        //    }
-
-        //    return sb.ToString();
-        //}
     }
 }
