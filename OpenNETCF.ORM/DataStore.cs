@@ -64,6 +64,11 @@ namespace OpenNETCF.ORM
             return Entities[entityName];
         }
 
+        public void AddType<T>()
+        {
+            AddType(typeof(T), true);
+        }
+
         public void AddType(Type entityType)
         {
             AddType(entityType, true);
@@ -142,6 +147,11 @@ namespace OpenNETCF.ORM
                 }
             }
 
+            if (map.Fields.Count == 0)
+            {
+                throw new OpenNETCF.ORM.EntityDefinitionException(map.EntityName, string.Format("Entity '{0}' Contains no Field definitions.", map.EntityName));
+            }
+
             m_entities.Add(map);
         }
 
@@ -156,6 +166,11 @@ namespace OpenNETCF.ORM
                 // the interface has already been verified by our LINQ
                 AddType(entity, false);
             }
+        }
+
+        protected void AddFieldToEntity(EntityInfo entity, FieldAttribute field)
+        {
+            entity.Fields.Add(field);
         }
 
         public void Insert(object item)

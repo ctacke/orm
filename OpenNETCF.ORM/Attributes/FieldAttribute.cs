@@ -7,13 +7,6 @@ using System.Reflection;
 
 namespace OpenNETCF.ORM
 {
-    public enum FieldSearchOrder
-    {
-        NotSearchable = 0,
-        Ascending = 1,
-        Descending = 2
-    }
-
     [AttributeUsage(AttributeTargets.Property)]
     public class FieldAttribute : Attribute
     {
@@ -39,6 +32,7 @@ namespace OpenNETCF.ORM
         public bool RequireUniqueValue { get; set; }
         public int Ordinal { get; set; }
         public FieldSearchOrder SearchOrder { get; set; }
+        public IDefaultValue Default { get; set; }
 
         /// <summary>
         /// rowversion or timestamp time for Sql Server

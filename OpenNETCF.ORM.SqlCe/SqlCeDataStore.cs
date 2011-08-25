@@ -9,12 +9,14 @@ using System.Data.SqlServerCe;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Data.Common;
+using System.Data.SqlTypes;
 
 namespace OpenNETCF.ORM
 {
     public partial class SqlCeDataStore : SQLStoreBase<SqlEntityInfo>
     {
         private string m_connectionString;
+        private int m_maxSize = 128; // Max Database Size defaults to 128MB
 
         private Dictionary<Type, object[]> m_referenceCache = new Dictionary<Type, object[]>();
         private Dictionary<Type, MethodInfo> m_serializerCache = new Dictionary<Type, MethodInfo>();
@@ -22,7 +24,11 @@ namespace OpenNETCF.ORM
 
         private string Password { get; set; }
 
-        public string FileName { get; private set; }
+        public string FileName { get; protected set; }
+
+        protected SqlCeDataStore()
+        {
+        }
 
         public SqlCeDataStore(string fileName)
             : this(fileName, null)
@@ -379,6 +385,21 @@ namespace OpenNETCF.ORM
                             {
                                 // read-only, so do nothing
                             }
+                            else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
+                            {
+                                // SQL Compact doesn't support Time, so we're convert to a DateTime both directions
+                                var value = field.PropertyInfo.GetValue(item, null);
+
+                                if (value == null)
+                                {
+                                    record.SetValue(field.Ordinal, DBNull.Value);
+                                }
+                                else
+                                {
+                                    var timespanTicks = ((TimeSpan)value).Ticks;
+                                    record.SetValue(field.Ordinal, timespanTicks);
+                                }
+                            }
                             else
                             {
                                 var value = field.PropertyInfo.GetValue(item, null);
@@ -546,13 +567,26 @@ namespace OpenNETCF.ORM
             }
         }
 
+        public int MaxDatabaseSizeInMB 
+        {
+            get { return m_maxSize; }
+            set
+            {
+                // min of 128MB
+                if (value < 128) throw new ArgumentOutOfRangeException();
+                // max of 4GB
+                if (value > 4096) throw new ArgumentOutOfRangeException();
+                m_maxSize = value;
+            }
+        }
+
         private string ConnectionString
         {
             get
             {
                 if (m_connectionString == null)
                 {
-                    m_connectionString = string.Format("Data Source={0};Persist Security Info=False;", FileName);
+                    m_connectionString = string.Format("Data Source={0};Persist Security Info=False;Max Database Size={1}", FileName, MaxDatabaseSizeInMB);
 
                     if (!string.IsNullOrEmpty(Password))
                     {
@@ -568,7 +602,36 @@ namespace OpenNETCF.ORM
             return new SqlCeConnection(ConnectionString);
         }
 
-        private void ValidateTable(DbConnection connection, EntityInfo entity)
+        protected void ValidateIndex(DbConnection connection, string indexName, string tableName, string fieldName, bool ascending)
+        {
+            var valid = false;
+
+            string sql = string.Format("SELECT INDEX_NAME FROM information_schema.indexes WHERE (TABLE_NAME = '{0}') AND (COLUMN_NAME = '{1}')", tableName, fieldName);
+
+            using (SqlCeCommand command = new SqlCeCommand(sql, connection as SqlCeConnection))
+            {
+                var name = command.ExecuteScalar() as string;
+
+                if (string.Compare(name, indexName, true) == 0)
+                {
+                    valid = true;
+                }
+
+                if (!valid)
+                {
+                    sql = string.Format("CREATE INDEX {0} ON {1}({2} {3})",
+                        indexName,
+                        tableName,
+                        fieldName,
+                        ascending ? "ASC" : "DESC");
+
+                    command.CommandText = sql;
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+
+        protected void ValidateTable(DbConnection connection, EntityInfo entity)
         {
             using (var command = new SqlCeCommand())
             {
@@ -589,6 +652,11 @@ namespace OpenNETCF.ORM
                 {
                     foreach (var field in entity.Fields)
                     {
+                        if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
+                        {
+                            throw new ReservedWordException(field.FieldName);
+                        }
+
                         // yes, I realize hard-coded ordinals are not a good practice, but the SQL isn't changing, it's method specific
                         sql = string.Format("SELECT column_name, "  // 0
                               + "data_type, "                       // 1
@@ -607,8 +675,8 @@ namespace OpenNETCF.ORM
                             if (!reader.Read())
                             {
                                 // field doesn't exist - we must create it
-                                var alter = new StringBuilder(string.Format("ALTER TABLE [{0}] ", entity.EntityAttribute.NameInStore));
-                                alter.Append(string.Format("ADD {0} {1} {2}",
+                                var alter = new StringBuilder(string.Format("ALTER TABLE {0} ", entity.EntityAttribute.NameInStore));
+                                alter.Append(string.Format("ADD [{0}] {1} {2}",
                                     field.FieldName,
                                     GetFieldDataTypeString(entity.EntityName, field),
                                     GetFieldCreationAttributes(entity.EntityAttribute, field)));

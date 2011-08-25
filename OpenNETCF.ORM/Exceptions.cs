@@ -105,4 +105,15 @@ namespace OpenNETCF.ORM
         {
         }
     }
+
+    public class EntityDefinitionException : Exception
+    {
+        public string EntityName { get; private set; }
+
+        public EntityDefinitionException(string entityName, string message)
+            : base(message)
+        {
+            EntityName = entityName;
+        }
+    }
 }

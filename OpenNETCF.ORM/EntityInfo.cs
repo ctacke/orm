@@ -24,7 +24,7 @@ namespace OpenNETCF.ORM
         public FieldAttributeCollection Fields { get; private set; }
         public ReferenceAttributeCollection References { get; private set; }
 
-        public EntityAttribute EntityAttribute { get; internal set; }
+        public EntityAttribute EntityAttribute { get; set; }
 
         public string EntityName 
         {
@@ -37,6 +37,11 @@ namespace OpenNETCF.ORM
         public override string ToString()
         {
             return EntityName;
+        }
+
+        protected void AddField(FieldAttribute field)
+        {
+            Fields.Add(field);
         }
     }
 }

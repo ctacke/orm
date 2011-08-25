@@ -408,6 +408,12 @@ namespace OpenNETCF.ORM
                                             // sql stores this an 8-byte array
                                             field.PropertyInfo.SetValue(item, BitConverter.ToInt64((byte[])value, 0), null);
                                         }
+                                        else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
+                                        {
+                                            // SQL Compact doesn't support Time, so we're convert to ticks in both directions
+                                            var valueAsTimeSpan = new TimeSpan((long)value);
+                                            field.PropertyInfo.SetValue(item, valueAsTimeSpan, null);
+                                        }
                                         else
                                         {
                                             field.PropertyInfo.SetValue(item, value, null);

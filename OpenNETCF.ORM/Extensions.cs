@@ -41,6 +41,8 @@ namespace OpenNETCF.ORM
                     return DbType.UInt32;
                 case "System.DateTime":
                     return DbType.DateTime;
+                case "System.TimeSpan":
+                    return DbType.Int64;
 
                 case "System.Decimal":
                     return DbType.Decimal;
@@ -77,6 +79,10 @@ namespace OpenNETCF.ORM
             {
                 case DbType.DateTime:
                     return "datetime";
+                case DbType.Time:
+                case DbType.Int64:
+                case DbType.UInt64:
+                    return "bigint";
                 case DbType.Int32:
                 case DbType.UInt32:
                     return "int";
@@ -91,10 +97,6 @@ namespace OpenNETCF.ORM
                     return "bit";
                 case DbType.Object:
                     return "image";
-                case DbType.Int64:
-                    return "bigint";
-                case DbType.UInt64:
-                    return "bigint";
                 case DbType.Byte:
                     return "tinyint";
 
@@ -108,6 +110,18 @@ namespace OpenNETCF.ORM
                 default:
                     throw new NotSupportedException(
                         string.Format("Unable to determine convert DbType '{0}' to string", type.ToString()));
+            }
+        }
+
+        public static bool UnderlyingTypeIs<T>(this Type checkType)
+        {
+            if ((checkType.IsGenericType) && (checkType.GetGenericTypeDefinition().Equals(typeof(Nullable<>))))
+            {
+                return Nullable.GetUnderlyingType(checkType).Equals(typeof(T));
+            }
+            else
+            {
+                return checkType.Equals(typeof(T));
             }
         }
     }
