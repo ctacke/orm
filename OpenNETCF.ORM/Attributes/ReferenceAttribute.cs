@@ -9,7 +9,8 @@ namespace OpenNETCF.ORM
     public enum ReferenceType
     {
         OneToMany,
-        ManyToMany
+        ManyToMany,
+        ManyToOne
     }
 
     [AttributeUsage(AttributeTargets.Property)]

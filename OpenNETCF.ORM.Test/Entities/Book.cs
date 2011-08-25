@@ -26,6 +26,9 @@ namespace OpenNETCF.ORM.Test.Entities
         [Field]
         public int AuthorID { get; set; }
 
+        [Reference(typeof(Author), "AuthorID", ReferenceType = ReferenceType.ManyToOne)]
+        public Author Author { get; set; }
+
         [Field]
         public string Title { get; set; }
         

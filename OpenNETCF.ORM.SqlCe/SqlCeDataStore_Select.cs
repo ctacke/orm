@@ -379,6 +379,13 @@ namespace OpenNETCF.ORM
                                 object item = Activator.CreateInstance(objectType);
                                 object rowPK = null;
 
+                                // autofill references if desired
+                                if (referenceFields == null)
+                                {
+                                    referenceFields = Entities[entityName].References.ToArray();
+                                }
+
+
                                 foreach (var field in Entities[entityName].Fields)
                                 {
                                     var value = results[field.Ordinal];
@@ -419,16 +426,18 @@ namespace OpenNETCF.ORM
                                             field.PropertyInfo.SetValue(item, value, null);
                                         }
                                     }
+                                    //Check if it is reference key to set, not primary.
+                                    ReferenceAttribute attr = referenceFields.Where(
+                                        x => x.ReferenceField == field.FieldName).FirstOrDefault();
+
+                                    if (attr != null)
+                                    {
+                                        rowPK = value;
+                                    }
                                     if (field.IsPrimaryKey)
                                     {
                                         rowPK = value;
                                     }
-                                }
-
-                                // autofill references if desired
-                                if (referenceFields == null)
-                                {
-                                    referenceFields = Entities[entityName].References.ToArray();
                                 }
 
                                 if ((fillReferences) && (referenceFields.Length > 0))
