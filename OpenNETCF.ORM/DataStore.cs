@@ -135,11 +135,11 @@ namespace OpenNETCF.ORM
 
                     if (reference != null)
                     {
-                        if (!prop.PropertyType.IsArray)
-                        {
-                            throw new InvalidReferenceTypeException(reference.ReferenceEntityType, reference.ReferenceField,
-                                "Reference fields must be arrays");
-                        }
+                        //if (!prop.PropertyType.IsArray)
+                        //{
+                        //    throw new InvalidReferenceTypeException(reference.ReferenceEntityType, reference.ReferenceField,
+                        //        "Reference fields must be arrays");
+                        //}
 
                         reference.PropertyInfo = prop;
                         map.References.Add(reference);

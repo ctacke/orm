@@ -256,8 +256,20 @@ namespace OpenNETCF.ORM
                         children.Add(child);
                     }
                 }
-                //var carr = children.ToArray(reference.ReferenceEntityType);
-                reference.PropertyInfo.SetValue(instance, children.ToArray(reference.ReferenceEntityType), null);
+                var carr = children.ToArray(reference.ReferenceEntityType);
+                if (reference.PropertyInfo.PropertyType.IsArray)
+                {
+                    reference.PropertyInfo.SetValue(instance, carr, null);
+                }
+                else
+                {
+                    var enumerator = carr.GetEnumerator();
+
+                    if (enumerator.MoveNext())
+                    {
+                        reference.PropertyInfo.SetValue(instance, children[0], null);
+                    }
+                }
             }
         }
 
