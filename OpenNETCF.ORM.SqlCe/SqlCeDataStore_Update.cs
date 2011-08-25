@@ -102,6 +102,20 @@ namespace OpenNETCF.ORM
                             {
                                 // read-only, so do nothing
                             }
+                            else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
+                            {
+                                // SQL Compact doesn't support Time, so we're convert to ticks in both directions
+                                var value = field.PropertyInfo.GetValue(item, null);
+                                if (value == null)
+                                {
+                                    results.SetValue(field.Ordinal, DBNull.Value);
+                                }
+                                else
+                                {
+                                    var valueAsTimeSpan = new TimeSpan((long)value);
+                                    results.SetValue(field.Ordinal, valueAsTimeSpan);
+                                }
+                            }
                             else
                             {
                                 var value = field.PropertyInfo.GetValue(item, null);

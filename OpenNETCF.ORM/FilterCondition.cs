@@ -7,6 +7,17 @@ namespace OpenNETCF.ORM
 {
     public class FilterCondition
     {
+        public FilterCondition()
+        {
+        }
+
+        public FilterCondition(string fieldName, object value, FilterOperator @operator)
+        {
+            FieldName = fieldName;
+            Value = value;
+            Operator = @operator;
+        }
+
         public string FieldName { get; set; }
         public object Value { get; set; }
         public FilterOperator Operator { get; set; }

@@ -137,7 +137,12 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public virtual int ExecuteNonQuery(string sql)
+        public int ExecuteNonQuery(string sql)
+        {
+            return ExecuteNonQuery(sql, false);
+        }
+
+        public int ExecuteNonQuery(string sql, bool throwExceptions)
         {
             var connection = GetConnection(false);
             try
@@ -145,8 +150,16 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 {
                     command.CommandText = sql;
+                    command.Connection = connection;
                     return command.ExecuteNonQuery();
                 }
+            }
+            catch(Exception ex)
+            {
+                if (throwExceptions) throw;
+
+                Debug.WriteLine("SQLStoreBase::ExecuteNonQuery threw: " + ex.Message);
+                return 0;
             }
             finally
             {
@@ -154,13 +167,14 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public virtual object ExecuteScalar(string sql)
+        public object ExecuteScalar(string sql)
         {
             var connection = GetConnection(false);
             try
             {
                 using (var command = GetNewCommandObject())
                 {
+                    command.Connection = connection;
                     command.CommandText = sql;
                     return command.ExecuteScalar();
                 }
@@ -398,6 +412,11 @@ namespace OpenNETCF.ORM
                     int p = field.Precision == 0 ? DefaultNumericFieldPrecision : field.Precision;
                     sb.AppendFormat("({0},{1}) ", p, field.Scale);
                     break;
+            }
+
+            if (field.Default != null)
+            {
+                sb.AppendFormat("DEFAULT {0} ", field.Default.GetDefaultValue());
             }
 
             if (field.IsPrimaryKey)
