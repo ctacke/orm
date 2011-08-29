@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Data;
 using System.Data.SqlServerCe;
+using System.Threading;
 
 namespace OpenNETCF.ORM
 {
@@ -17,6 +18,18 @@ namespace OpenNETCF.ORM
         /// using the command cache can improve performance by preventing the underlying SQL Compact Engine from recomputing statistics.
         /// </summary>
         public bool UseCommandCache { get; set; }
+
+        public void ClearCommandCache()
+        {
+            lock (m_commandCache)
+            {
+                foreach (var cmd in m_commandCache)
+                {
+                    cmd.Value.Dispose();
+                }
+                m_commandCache.Clear();
+            }
+        }
 
         /// <summary>
         /// Retrieves a single entity instance from the DataStore identified by the specified primary key value
@@ -265,19 +278,22 @@ namespace OpenNETCF.ORM
 
             if (UseCommandCache)
             {
-                if (m_commandCache.ContainsKey(sql))
+                lock (m_commandCache)
                 {
-                    command.Dispose();
-                    command = m_commandCache[sb.ToString()];
-                }
-                else
-                {
-                    m_commandCache.Add(sql, command);
-
-                    // trim the cache so it doesn't grow infinitely
-                    if (m_commandCache.Count > CommandCacheMaxLength)
+                    if (m_commandCache.ContainsKey(sql))
                     {
-                        m_commandCache.Remove(m_commandCache.First().Key);
+                        command.Dispose();
+                        command = m_commandCache[sb.ToString()];
+                    }
+                    else
+                    {
+                        m_commandCache.Add(sql, command);
+
+                        // trim the cache so it doesn't grow infinitely
+                        if (m_commandCache.Count > CommandCacheMaxLength)
+                        {
+                            m_commandCache.Remove(m_commandCache.First().Key);
+                        }
                     }
                 }
             }
@@ -301,6 +317,11 @@ namespace OpenNETCF.ORM
 
             var connection = GetConnection(false);
             SqlCeCommand command = null;
+
+            if (UseCommandCache)
+            {
+                Monitor.Enter(m_commandCache);
+            }
 
             try
             {
@@ -488,7 +509,15 @@ namespace OpenNETCF.ORM
             }
             finally
             {
-                if ((!UseCommandCache) && (command != null)) command.Dispose();
+                if ((!UseCommandCache) && (command != null))
+                {
+                    command.Dispose();
+                }
+
+                if (UseCommandCache)
+                {
+                    Monitor.Exit(m_commandCache);
+                }
 
                 FlushReferenceTableCache();
                 DoneWithConnection(connection, false);
