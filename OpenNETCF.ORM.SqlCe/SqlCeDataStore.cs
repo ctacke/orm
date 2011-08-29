@@ -28,6 +28,7 @@ namespace OpenNETCF.ORM
 
         protected SqlCeDataStore()
         {
+            UseCommandCache = true;
         }
 
         public SqlCeDataStore(string fileName)
@@ -36,6 +37,7 @@ namespace OpenNETCF.ORM
         }
 
         public SqlCeDataStore(string fileName, string password)
+            : this()
         {
             FileName = fileName;
             Password = password;
