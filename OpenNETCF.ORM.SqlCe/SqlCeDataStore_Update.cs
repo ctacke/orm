@@ -112,8 +112,8 @@ namespace OpenNETCF.ORM
                                 }
                                 else
                                 {
-                                    var valueAsTimeSpan = new TimeSpan((long)value);
-                                    results.SetValue(field.Ordinal, valueAsTimeSpan);
+                                    var ticks = ((TimeSpan)value).Ticks;
+                                    results.SetValue(field.Ordinal, ticks);
                                 }
                             }
                             else
