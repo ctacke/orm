@@ -225,6 +225,7 @@ namespace OpenNETCF.ORM
         {
             var command = new SqlCeCommand();
             command.CommandType = CommandType.Text;
+            var @params = new List<SqlCeParameter>();
 
             StringBuilder sb;
 
@@ -271,10 +272,11 @@ namespace OpenNETCF.ORM
                 sb.Append(paramName);
 
                 var param = new SqlCeParameter(paramName, filter.Value ?? DBNull.Value);
-                command.Parameters.Add(param);
+                @params.Add(param);
             }
             var sql = sb.ToString();
             command.CommandText = sql;
+            command.Parameters.AddRange(@params.ToArray());
 
             if (UseCommandCache)
             {
@@ -284,6 +286,13 @@ namespace OpenNETCF.ORM
                     {
                         command.Dispose();
                         command = m_commandCache[sb.ToString()];
+
+                        // use the cached command object, but we must copy over the new command parameter values
+                        // or it will use the old ones
+                        for(int p = 0 ; p < command.Parameters.Count ; p++)
+                        {
+                            command.Parameters[p].Value = @params[p].Value;
+                        }
                     }
                     else
                     {
