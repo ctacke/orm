@@ -180,6 +180,10 @@ namespace OpenNETCF.ORM
                             {
                                 buildFilter = true;
                             }
+                            else if(filter.Operator != FilterCondition.FilterOperator.Equals)
+                            {
+                                buildFilter = true;
+                            }
                             else
                             {
                                 indexName = string.Format("ORM_IDX_{0}_{1}_{2}", entityName, filter.FieldName,
