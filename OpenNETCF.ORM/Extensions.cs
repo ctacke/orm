@@ -16,6 +16,51 @@ namespace OpenNETCF.ORM
             return false;
         }
 
+        public static Type ToManagedType(this DbType type)
+        {
+            return type.ToManagedType(false);
+        }
+
+        public static Type ToManagedType(this DbType type, bool isNullable)
+        {
+            switch (type)
+            {
+                case DbType.AnsiString:
+                case DbType.AnsiStringFixedLength:
+                case DbType.String:
+                case DbType.StringFixedLength:
+                    return typeof(string);
+                case DbType.Boolean:
+                    return isNullable ? typeof(bool?) : typeof(bool);
+                case DbType.Int16:
+                    return isNullable ? typeof(short?) : typeof(short);
+                case DbType.UInt16:
+                    return isNullable ? typeof(ushort?) : typeof(ushort);
+                case DbType.Int32:
+                    return isNullable ? typeof(int?) : typeof(int);
+                case DbType.UInt32:
+                    return isNullable ? typeof(uint?) : typeof(uint);
+                case DbType.DateTime:
+                    return isNullable ? typeof(DateTime?) : typeof(DateTime);
+                case DbType.Decimal:
+                    return isNullable ? typeof(decimal?) : typeof(decimal);
+                case DbType.Double:
+                    return isNullable ? typeof(double?) : typeof(double);
+                case DbType.Int64:
+                    return isNullable ? typeof(long?) : typeof(long);
+                case DbType.UInt64:
+                    return isNullable ? typeof(ulong?) : typeof(ulong);
+                case DbType.Byte:
+                    return isNullable ? typeof(byte?) : typeof(byte);
+                case DbType.Guid:
+                    return isNullable ? typeof(Guid?) : typeof(Guid);
+                case DbType.Binary:
+                    return typeof(byte[]);
+                default:
+                    throw new NotSupportedException();
+            }
+        }
+
         public static DbType ToDbType(this Type type)
         {
             string typeName = type.FullName;
@@ -70,6 +115,41 @@ namespace OpenNETCF.ORM
 
                     // everything else is an "object" and requires a custom serializer/deserializer
                     return DbType.Object;
+            }
+        }
+
+        public static DbType ParseToDbType(this string dbTypeName)
+        {
+            switch (dbTypeName.ToLower())
+            {
+                case "datetime":
+                    return DbType.DateTime;
+                case "bigint":
+                    return DbType.UInt64;
+                case "int":
+                    return DbType.UInt32;
+                case "smallint":
+                    return DbType.UInt16;
+                case "nvarchar":
+                    return DbType.String;
+                case "nchar":
+                    return DbType.StringFixedLength;
+                case "bit":
+                    return DbType.Boolean;
+                case "image":
+                    return DbType.Object;
+                case "tinyint":
+                    return DbType.Byte;
+                case "numeric":
+                    return DbType.Decimal;
+                case "float":
+                    return DbType.Double;
+                case "uniqueidentifier":
+                    return DbType.Guid;
+
+                default:
+                    throw new NotSupportedException(
+                        string.Format("Unable to determine convert string '{0}' to DbType", dbTypeName));
             }
         }
 
