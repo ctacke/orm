@@ -600,7 +600,7 @@ namespace OpenNETCF.ORM
             {
                 if (m_connectionString == null)
                 {
-                    m_connectionString = string.Format("Data Source={0};Persist Security Info=False;Max Database Size={1}", FileName, MaxDatabaseSizeInMB);
+                    m_connectionString = string.Format("Data Source={0};Persist Security Info=False;Max Database Size={1};", FileName, MaxDatabaseSizeInMB);
 
                     if (!string.IsNullOrEmpty(Password))
                     {

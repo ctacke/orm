@@ -8,6 +8,11 @@ namespace OpenNETCF.ORM
     [AttributeUsage(AttributeTargets.Class)]
     public class EntityAttribute : Attribute
     {
+        public EntityAttribute()
+            : this(KeyScheme.None)
+        {
+        }
+
         public EntityAttribute(KeyScheme keyScheme)
         {
             KeyScheme = keyScheme;
