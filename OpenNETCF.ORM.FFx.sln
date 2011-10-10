@@ -5,9 +5,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.FFx", "OpenNE
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SqlCe.FFx", "OpenNETCF.ORM.SqlCe\OpenNETCF.ORM.SqlCe.FFx.csproj", "{B63F2DF8-E247-402D-A250-2514EF4A08FD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EntityGenerator", "EntityGenerator\EntityGenerator.csproj", "{5BAFE144-30A1-4D9A-A267-1BEE62E45D2C}"
+EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 3
+		SccNumberOfProjects = 4
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs01
 		SccLocalPath0 = .
@@ -17,6 +19,9 @@ Global
 		SccProjectUniqueName2 = OpenNETCF.ORM\\OpenNETCF.ORM.FFx.csproj
 		SccProjectName2 = OpenNETCF.ORM
 		SccLocalPath2 = OpenNETCF.ORM
+		SccProjectUniqueName3 = EntityGenerator\\EntityGenerator.csproj
+		SccProjectName3 = EntityGenerator
+		SccLocalPath3 = EntityGenerator
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,6 +36,10 @@ Global
 		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5BAFE144-30A1-4D9A-A267-1BEE62E45D2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5BAFE144-30A1-4D9A-A267-1BEE62E45D2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5BAFE144-30A1-4D9A-A267-1BEE62E45D2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5BAFE144-30A1-4D9A-A267-1BEE62E45D2C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
