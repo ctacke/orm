@@ -65,6 +65,14 @@ namespace EntityGenerator.Entities
             return SourceName;
         }
 
+        private class IndexInfo
+        {
+            public string IndexName { get; set; }
+            public bool PrimaryKey { get; set; }
+            public string ColumnName { get; set; }
+            public FieldSearchOrder SearchOrder { get; set; }
+        }
+
         public EntityInfo[] GetEntityDefinitions()
         {
             ValidateConnection();
@@ -80,15 +88,43 @@ namespace EntityGenerator.Entities
                     while (reader.Read())
                     {
                         var info = new EntityInfo();
+                        var indexInfo = new Dictionary<string, IndexInfo>();
 
                         info.Entity = new EntityAttribute();
                         info.Entity.NameInStore = reader.GetString(0);
+
+                        using(var indexCommand = new SqlCeCommand(
+                            string.Format("SELECT INDEX_NAME, PRIMARY_KEY, COLUMN_NAME, COLLATION FROM INFORMATION_SCHEMA.INDEXES WHERE TABLE_NAME = '{0}'", info.Entity.NameInStore),
+                            connection))
+                        using (var indexReader = indexCommand.ExecuteReader())
+                        {
+                            while(indexReader.Read())
+                            {
+                                var indexName = indexReader.GetString(0);
+                                var primaryKey = indexReader.GetBoolean(1);
+                                var columnName = indexReader.GetString(2);
+                                var sortOrder = indexReader.GetInt16(3) == 1 ? FieldSearchOrder.Ascending : FieldSearchOrder.Descending;
+                                // collation of 1 == ascending, 2 == descending (based on a quick test, this might be incorrect)
+
+                                // TODO: handle cases where a column is in multiple indexes (ORM doesn't support that scenario for now)
+                                if (!indexInfo.ContainsKey(columnName))
+                                {
+                                    indexInfo.Add(columnName, new IndexInfo()
+                                    {
+                                        ColumnName = columnName,
+                                        IndexName = indexName,
+                                        PrimaryKey = primaryKey,
+                                        SearchOrder = sortOrder
+                                    });
+                                }
+                            }
+                        }
 
                         // TODO: look for primary key to set key scheme
                         info.Entity.KeyScheme = KeyScheme.None;
 
                         using (var fieldCommand = new SqlCeCommand(
-                            string.Format("SELECT COLUMN_NAME, COLUMN_HASDEFAULT, IS_NULLABLE, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{0}'", info.Entity.NameInStore),
+                            string.Format("SELECT COLUMN_NAME, COLUMN_HASDEFAULT, IS_NULLABLE, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION, NUMERIC_SCALE, AUTOINC_SEED FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '{0}'", info.Entity.NameInStore),
                             connection))
                         {
                             using (var fieldReader = fieldCommand.ExecuteReader())
@@ -113,6 +149,29 @@ namespace EntityGenerator.Entities
                                     if (!val.Equals(DBNull.Value))
                                     {
                                         field.Scale = Convert.ToInt32(val);
+                                    }
+                                    val = fieldReader[7];
+                                    if (!val.Equals(DBNull.Value))
+                                    {
+                                        // identity field, so it must be the PK (or part of it)
+                                        info.Entity.KeyScheme = KeyScheme.Identity;
+                                    }
+
+                                    // check for indexes
+                                    if (indexInfo.ContainsKey(field.FieldName))
+                                    {
+                                        var idx = indexInfo[field.FieldName];
+
+                                        if (idx.PrimaryKey)
+                                        {
+                                            field.IsPrimaryKey = true;
+
+                                            if (field.DataType == DbType.Guid)
+                                            {
+                                                info.Entity.KeyScheme = KeyScheme.GUID;
+                                            }
+                                        }
+                                        field.SearchOrder = idx.SearchOrder;
                                     }
 
                                     // TODO: populate the remainder of the field info

@@ -125,11 +125,11 @@ namespace OpenNETCF.ORM
                 case "datetime":
                     return DbType.DateTime;
                 case "bigint":
-                    return DbType.UInt64;
+                    return DbType.Int64;
                 case "int":
-                    return DbType.UInt32;
+                    return DbType.Int32;
                 case "smallint":
-                    return DbType.UInt16;
+                    return DbType.Int16;
                 case "nvarchar":
                     return DbType.String;
                 case "nchar":
@@ -146,7 +146,8 @@ namespace OpenNETCF.ORM
                     return DbType.Double;
                 case "uniqueidentifier":
                     return DbType.Guid;
-
+                case "ntext":
+                    return DbType.Binary; // TODO: verify this
                 default:
                     throw new NotSupportedException(
                         string.Format("Unable to determine convert string '{0}' to DbType", dbTypeName));
