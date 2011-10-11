@@ -84,7 +84,7 @@ namespace EntityGenerator.Services
                     // TODO: determine KeyScheme
                     // TODO: set NameInStore if different than class name (user overridden)
                     var entityAttributeDeclaration = new CodeAttributeDeclaration("Entity",
-                        new CodeAttributeArgument(new CodeSnippetExpression("KeyScheme.None"))
+                        new CodeAttributeArgument(new CodeSnippetExpression("KeyScheme." + entity.Entity.KeyScheme.ToString()))
                         // new CodeAttributeArgument(new CodeSnippetExpression("NameInStore=\"" + entity.Entity.NameInStore + "\""))
                         );
 
@@ -109,8 +109,8 @@ namespace EntityGenerator.Services
                         var prop = new CodeMemberProperty();
                         prop.Name = field.FieldName;
                         prop.Attributes = MemberAttributes.Public | MemberAttributes.Final;  // TODO: get from UI
-                        prop.CustomAttributes.Add(new CodeAttributeDeclaration("Field")); // TODO add precision, etc.
-                        prop.Type = type; // TODO: check nullability
+                        prop.CustomAttributes.Add(new CodeAttributeDeclaration("Field", GenerateFieldArguments(field)));                            
+                        prop.Type = type;
                         prop.GetStatements.Add(
                             new CodeMethodReturnStatement(
                                 new CodeFieldReferenceExpression(
@@ -141,6 +141,25 @@ namespace EntityGenerator.Services
                 }
 
             }
+        }
+
+        private CodeAttributeArgument[] GenerateFieldArguments(FieldAttribute field)
+        {
+            var attrList = new List<CodeAttributeArgument>();
+
+            // TODO add precision, etc.
+
+            if (field.IsPrimaryKey)
+            {
+                attrList.Add(new CodeAttributeArgument(new CodeSnippetExpression("IsPrimaryKey=true")));
+            }
+
+            if (field.SearchOrder != FieldSearchOrder.NotSearchable)
+            {
+                attrList.Add(new CodeAttributeArgument(new CodeSnippetExpression("SearchOrder=FieldSearchOrder." + field.SearchOrder.ToString())));
+            }
+
+            return attrList.ToArray();
         }
 
         private void GenerateClassFile(BuildOptions buildOptions, CodeDomProvider provider, CodeCompileUnit ccu, string entityname)

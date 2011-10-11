@@ -44,6 +44,8 @@ namespace EntityGenerator.Views
         {
             try
             {
+                Cursor.Current = Cursors.WaitCursor;
+                entityTree.BeginUpdate();
                 entityTree.Nodes.Clear();
 
                 var entities = Source.GetEntityDefinitions();
@@ -68,6 +70,11 @@ namespace EntityGenerator.Views
             catch (InvalidPasswordException)
             {
                 Presenter.GoBack();
+            }
+            finally
+            {
+                entityTree.EndUpdate();
+                Cursor.Current = Cursors.Default;
             }
         }
 
@@ -94,6 +101,22 @@ namespace EntityGenerator.Views
             }
 
             GeneratorService.SetSelectedStructure(structure);
+        }
+
+        private void selectEntities_Click(object sender, EventArgs e)
+        {
+            foreach (TreeNode entityNode in entityTree.Nodes)
+            {
+                entityNode.Checked = true;
+            }
+        }
+
+        private void unselectEntities_Click(object sender, EventArgs e)
+        {
+            foreach (TreeNode entityNode in entityTree.Nodes)
+            {
+                entityNode.Checked = false;
+            }
         }
     }
 }
