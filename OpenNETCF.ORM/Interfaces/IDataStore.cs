@@ -21,10 +21,16 @@ namespace OpenNETCF.ORM
         EntityInfo GetEntityInfo(string entityName);
 
         T[] Select<T>() where T : new();
+        T[] Select<T>(bool fillReferences) where T : new();
         T Select<T>(object primaryKey) where T : new();
+        T Select<T>(object primaryKey, bool fillReferences) where T : new();
         T[] Select<T>(string searchFieldName, object matchValue) where T : new();
+        T[] Select<T>(string searchFieldName, object matchValue, bool fillReferences) where T : new();
         T[] Select<T>(IEnumerable<FilterCondition> filters) where T : new();
+        T[] Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences) where T : new();
         object[] Select(Type entityType);
+        object[] Select(Type entityType, bool fillReferences);
+        T[] Select<T>(Func<T, bool> selector) where T : new();
 
         void Update(object item);
         void Update(object item, bool cascadeUpdates, string fieldName);
