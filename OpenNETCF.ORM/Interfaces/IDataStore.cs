@@ -8,7 +8,9 @@ namespace OpenNETCF.ORM
 {
     public interface IDataStore
     {
+        void AddType<T>();
         void AddType(Type entityType);
+
         void DiscoverTypes(Assembly containingAssembly);
 
         void CreateStore();
