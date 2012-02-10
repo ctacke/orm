@@ -18,8 +18,6 @@ namespace OpenNETCF.ORM
         private string m_connectionString;
         private int m_maxSize = 128; // Max Database Size defaults to 128MB
 
-        private Dictionary<Type, object[]> m_referenceCache = new Dictionary<Type, object[]>();
-
         private string Password { get; set; }
 
         public string FileName { get; protected set; }
@@ -125,129 +123,6 @@ namespace OpenNETCF.ORM
             }
         }
 
-        /// <summary>
-        /// Determines if the specified object already exists in the Store (by primary key value)
-        /// </summary>
-        /// <param name="item"></param>
-        /// <returns></returns>
-        public override bool Contains(object item)
-        {
-            var itemType = item.GetType();
-            string entityName = m_entities.GetNameForType(itemType);
-
-            var keyValue = this.Entities[entityName].Fields.KeyField.PropertyInfo.GetValue(item, null);
-
-            var existing = Select(itemType, null, keyValue, -1, -1).FirstOrDefault();
-
-            return existing != null;
-        }
-
-        /// <summary>
-        /// Populates the ReferenceField members of the provided entity instance
-        /// </summary>
-        /// <param name="instance"></param>
-        public override void FillReferences(object instance)
-        {
-            FillReferences(instance, null, null, false);
-        }
-
-        private void FlushReferenceTableCache()
-        {
-            m_referenceCache.Clear();
-        }
-
-        private void FillReferences(object instance, object keyValue, ReferenceAttribute[] fieldsToFill, bool cacheReferenceTable)
-        {
-            if (instance == null) return;
-
-            Type type = instance.GetType();
-            string entityName = m_entities.GetNameForType(type);
-
-            if (entityName == null)
-            {
-                throw new EntityNotFoundException(type);
-            }
-
-            if (Entities[entityName].References.Count == 0) return;
-
-            Dictionary<ReferenceAttribute, object[]> referenceItems = new Dictionary<ReferenceAttribute, object[]>();
-
-            // query the key if not provided
-            if (keyValue == null)
-            {
-                keyValue = m_entities[entityName].Fields.KeyField.PropertyInfo.GetValue(instance, null);
-            }
-
-            // populate reference fields
-            foreach (var reference in Entities[entityName].References)
-            {
-                if (fieldsToFill != null)
-                {
-                    if (!fieldsToFill.Contains(reference))
-                    {
-                        continue;
-                    }
-                }
-
-                // get the lookup values - until we support filtered selects, this may be very expensive memory-wise
-                if (!referenceItems.ContainsKey(reference))
-                {
-                    object[] refData;
-                    if (cacheReferenceTable)
-                    {
-                        // TODO: ref cache needs to be type->reftype->ref's, not type->refs
-
-                        if (!m_referenceCache.ContainsKey(reference.ReferenceEntityType))
-                        {
-                            refData = Select(reference.ReferenceEntityType, null, null, -1, 0);
-                            m_referenceCache.Add(reference.ReferenceEntityType, refData);
-                        }
-                        else
-                        {
-                            refData = m_referenceCache[reference.ReferenceEntityType];
-                        }
-                    }
-                    else
-                    {
-                        refData = Select(reference.ReferenceEntityType, reference.ReferenceField, keyValue, -1, 0);
-                    }
-
-                    referenceItems.Add(reference, refData);
-                }
-
-                // get the lookup field
-                var childEntityName = m_entities.GetNameForType(reference.ReferenceEntityType);
-
-                System.Collections.ArrayList children = new System.Collections.ArrayList();
-
-                // now look for those that match our pk
-                foreach (var child in referenceItems[reference])
-                {
-                    var childKey = m_entities[childEntityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(child, null);
-
-                    // this seems "backward" because childKey may turn out null, 
-                    // so doing it backwards (keyValue.Equals instead of childKey.Equals) prevents a null referenceexception
-                    if (keyValue.Equals(childKey))
-                    {
-                        children.Add(child);
-                    }
-                }
-                var carr = children.ToArray(reference.ReferenceEntityType);
-                if (reference.PropertyInfo.PropertyType.IsArray)
-                {
-                    reference.PropertyInfo.SetValue(instance, carr, null);
-                }
-                else
-                {
-                    var enumerator = carr.GetEnumerator();
-
-                    if (enumerator.MoveNext())
-                    {
-                        reference.PropertyInfo.SetValue(instance, children[0], null);
-                    }
-                }
-            }
-        }
 
         public override int Count<T>(IEnumerable<FilterCondition> filters)
         {
@@ -262,7 +137,7 @@ namespace OpenNETCF.ORM
             var connection = GetConnection(true);
             try
             {
-                using (var command = BuildFilterCommand(entityName, filters, true))
+                using (var command = BuildFilterCommand<SqlCeCommand, SqlCeParameter>(entityName, filters, true))
                 {
                     command.Connection = connection as SqlCeConnection;
                     return (int)command.ExecuteScalar();
@@ -473,7 +348,28 @@ namespace OpenNETCF.ORM
             }
         }
 
-        private void CheckOrdinals(string entityName)
+        protected override string GetPrimaryKeyIndexName(string entityName)
+        {
+            var connection = GetConnection(true);
+            try
+            {
+                string sql = string.Format("SELECT INDEX_NAME FROM information_schema.indexes WHERE (TABLE_NAME = '{0}') AND (PRIMARY_KEY = 1)", entityName);
+
+                using (var command = GetNewCommandObject())
+                {
+                    command.CommandText = sql;
+                    command.Connection = connection;
+                    return command.ExecuteScalar() as string;
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
+
+        protected override void CheckOrdinals(string entityName)
         {
             if (Entities[entityName].Fields.OrdinalsAreValid) return;
 
@@ -497,56 +393,6 @@ namespace OpenNETCF.ORM
                     }
 
                     command.Dispose();
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, true);
-            }
-        }
-
-        private void UpdateIndexCacheForType(string entityName)
-        {
-            // have we already cached this?
-            if (Entities[entityName].IndexNames != null) return;
-
-            // get all iindex names for the type
-            var connection = GetConnection(true);
-            try
-            {
-                string sql = string.Format("SELECT INDEX_NAME FROM information_schema.indexes WHERE (TABLE_NAME = '{0}')", entityName);
-
-                using (SqlCeCommand command = new SqlCeCommand(sql, connection as SqlCeConnection))
-                using(var reader = command.ExecuteReader())
-                {
-                    List<string> nameList = new List<string>();
-
-                    while (reader.Read())
-                    {
-                        nameList.Add(reader.GetString(0));
-                    }
-
-                    Entities[entityName].IndexNames = nameList;
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, true);
-            }
-        }
-
-        private void CheckPrimaryKeyIndex(string entityName)
-        {
-            if (Entities[entityName].PrimaryKeyIndexName != null) return;
-
-            var connection = GetConnection(true);
-            try
-            {
-                string sql = string.Format("SELECT INDEX_NAME FROM information_schema.indexes WHERE (TABLE_NAME = '{0}') AND (PRIMARY_KEY = 1)", entityName);
-
-                using (SqlCeCommand command = new SqlCeCommand(sql, connection as SqlCeConnection))
-                {
-                    Entities[entityName].PrimaryKeyIndexName = command.ExecuteScalar() as string;
                 }
             }
             finally

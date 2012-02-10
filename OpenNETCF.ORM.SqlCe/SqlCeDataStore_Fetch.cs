@@ -18,7 +18,7 @@ namespace OpenNETCF.ORM
         public override T[] Fetch<T>(int fetchCount)
         {
             var type = typeof(T);
-            var items = Select(type, null, null, fetchCount, 0);
+            var items = Select(type, null, null, fetchCount, 0, false);
             return items.Cast<T>().ToArray();
         }
 
@@ -32,7 +32,7 @@ namespace OpenNETCF.ORM
         public override T[] Fetch<T>(int fetchCount, int firstRowOffset)
         {
             var type = typeof(T);
-            var items = Select(type, null, null, fetchCount, firstRowOffset);
+            var items = Select(type, null, null, fetchCount, firstRowOffset, false);
             return items.Cast<T>().ToArray();
         }
 

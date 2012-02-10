@@ -1,6 +1,7 @@
 ﻿using OpenNETCF.ORM.SQLite;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Linq;
 
 namespace OpenNETCF.ORM.SQLite.Integration.Test
 {
@@ -17,11 +18,11 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             store.CreateStore();
 
             store.Insert(new TestItem("ItemA"));
-            //store.Insert(new TestItem("ItemB"));
-            //store.Insert(new TestItem("ItemC"));
+            store.Insert(new TestItem("ItemB"));
+            store.Insert(new TestItem("ItemC"));
 
-            //var item = store.Select<TestItem>("Name", "ItemB").FirstOrDefault();
-            //item = store.Select<TestItem>(2);
+            var item = store.Select<TestItem>("Name", "ItemB").FirstOrDefault();
+            item = store.Select<TestItem>(3);
         }
     }
 

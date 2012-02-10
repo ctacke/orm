@@ -16,6 +16,7 @@ namespace OpenNETCF.ORM
         private DbConnection m_connection;
         private Dictionary<Type, MethodInfo> m_serializerCache = new Dictionary<Type, MethodInfo>();
         private Dictionary<Type, MethodInfo> m_deserializerCache = new Dictionary<Type, MethodInfo>();
+        private Dictionary<Type, object[]> m_referenceCache = new Dictionary<Type, object[]>();
 
         public int DefaultStringFieldSize { get; set; }
         public int DefaultNumericFieldPrecision { get; set; }
@@ -33,16 +34,18 @@ namespace OpenNETCF.ORM
 
         public abstract override void Insert(object item, bool insertReferences);
 
-        public abstract override T[] Select<T>();
-        public abstract override T[] Select<T>(bool fillReferences);
-        public abstract override T Select<T>(object primaryKey);
-        public abstract override T Select<T>(object primaryKey, bool fillReferences);
-        public abstract override T[] Select<T>(string searchFieldName, object matchValue);
-        public abstract override T[] Select<T>(string searchFieldName, object matchValue, bool fillReferences);
-        public abstract override T[] Select<T>(IEnumerable<FilterCondition> filters);
-        public abstract override T[] Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences);
-        public abstract override object[] Select(Type entityType);
-        public abstract override object[] Select(Type entityType, bool fillReferences);
+        //public abstract override T[] Select<T>();
+        //public abstract override T[] Select<T>(bool fillReferences);
+        //public abstract override T Select<T>(object primaryKey);
+        //public abstract override T Select<T>(object primaryKey, bool fillReferences);
+        //public abstract override T[] Select<T>(string searchFieldName, object matchValue);
+        //public abstract override T[] Select<T>(string searchFieldName, object matchValue, bool fillReferences);
+        //public abstract override T[] Select<T>(IEnumerable<FilterCondition> filters);
+        //public abstract override T[] Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences);
+        //public abstract override object[] Select(Type entityType);
+        //public abstract override object[] Select(Type entityType, bool fillReferences);
+
+        protected abstract object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences);
 
         public abstract override void Update(object item);
         public abstract override void Update(object item, bool cascadeUpdates, string fieldName);
@@ -50,8 +53,6 @@ namespace OpenNETCF.ORM
 
         public abstract override void Delete(object item);
         public abstract override void Delete<T>(object primaryKey);
-
-        public abstract override void FillReferences(object instance);
 
         public abstract override T[] Fetch<T>(int fetchCount);
         public abstract override T[] Fetch<T>(int fetchCount, int firstRowOffset);
@@ -63,8 +64,6 @@ namespace OpenNETCF.ORM
 
         public abstract override void Delete<T>();
         public abstract override void Delete<T>(string fieldName, object matchValue);
-
-        public abstract override bool Contains(object item);
 
         protected abstract DbCommand GetNewCommandObject();
         protected abstract DbConnection GetNewConnectionObject();
@@ -486,6 +485,429 @@ namespace OpenNETCF.ORM
 
             m_deserializerCache.Add(itemType, deserializer);
             return deserializer;
+        }
+
+        /// <summary>
+        /// Determines if the specified object already exists in the Store (by primary key value)
+        /// </summary>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        public override bool Contains(object item)
+        {
+            var itemType = item.GetType();
+            string entityName = m_entities.GetNameForType(itemType);
+
+            var keyValue = this.Entities[entityName].Fields.KeyField.PropertyInfo.GetValue(item, null);
+
+            var existing = Select(itemType, null, keyValue, -1, -1).FirstOrDefault();
+
+            return existing != null;
+        }
+
+        /// <summary>
+        /// Retrieves a single entity instance from the DataStore identified by the specified primary key value
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="primaryKey"></param>
+        /// <returns></returns>
+        public override T Select<T>(object primaryKey)
+        {
+            return (T)Select(typeof(T), null, primaryKey, -1, -1, true).FirstOrDefault();
+        }
+
+        public override T Select<T>(object primaryKey, bool fillReferences)
+        {
+            return (T)Select(typeof(T), null, primaryKey, -1, -1, fillReferences).FirstOrDefault();
+        }
+
+        /// <summary>
+        /// Retrieves all entity instances of the specified type from the DataStore
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public override T[] Select<T>()
+        {
+            var type = typeof(T);
+            var items = Select(type, null, null, -1, 0);
+            return items.Cast<T>().ToArray();
+        }
+
+        /// <summary>
+        /// Retrieves all entity instances of the specified type from the DataStore
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public override T[] Select<T>(bool fillReferences)
+        {
+            var type = typeof(T);
+            var items = Select(type, null, null, -1, 0, fillReferences);
+            return items.Cast<T>().ToArray();
+        }
+
+        /// <summary>
+        /// Retrieves all entity instances of the specified type from the DataStore
+        /// </summary>
+        /// <param name="entityType"></param>
+        /// <returns></returns>
+        public override object[] Select(Type entityType)
+        {
+            return Select(entityType, true);
+        }
+
+        public override object[] Select(Type entityType, bool fillReferences)
+        {
+            var items = Select(entityType, null, null, -1, 0, fillReferences);
+            return items.ToArray();
+        }
+
+        public override T[] Select<T>(string searchFieldName, object matchValue)
+        {
+            return Select<T>(searchFieldName, matchValue, true);
+        }
+
+        public override T[] Select<T>(string searchFieldName, object matchValue, bool fillReferences)
+        {
+            var type = typeof(T);
+            var items = Select(type, searchFieldName, matchValue, -1, 0, fillReferences);
+            return items.Cast<T>().ToArray();
+        }
+
+        public override T[] Select<T>(IEnumerable<FilterCondition> filters)
+        {
+            return Select<T>(filters, true);
+        }
+
+        public override T[] Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences)
+        {
+            var objectType = typeof(T);
+            return Select(objectType, filters, -1, 0, fillReferences).Cast<T>().ToArray();
+        }
+
+        private object[] Select(Type objectType, string searchFieldName, object matchValue, int fetchCount, int firstRowOffset)
+        {
+            return Select(objectType, searchFieldName, matchValue, fetchCount, firstRowOffset, true);
+        }
+
+        protected virtual object[] Select(Type objectType, string searchFieldName, object matchValue, int fetchCount, int firstRowOffset, bool fillReferences)
+        {
+            string entityName = m_entities.GetNameForType(objectType);
+            FilterCondition filter = null;
+
+            if (searchFieldName == null)
+            {
+                if (matchValue != null)
+                {
+                    CheckPrimaryKeyIndex(entityName);
+
+                    // searching on primary key
+                    filter = new SqlFilterCondition
+                    {
+                        FieldName = (Entities[entityName] as SqlEntityInfo).PrimaryKeyIndexName,
+                        Operator = FilterCondition.FilterOperator.Equals,
+                        Value = matchValue,
+                        PrimaryKey = true
+                    };
+                }
+            }
+            else
+            {
+                filter = new FilterCondition
+                {
+                    FieldName = searchFieldName,
+                    Operator = FilterCondition.FilterOperator.Equals,
+                    Value = matchValue
+                };
+            }
+
+            return Select(
+                objectType,
+                (filter == null) ? null :
+                    new FilterCondition[]
+                    {
+                        filter
+                    },
+                fetchCount,
+                firstRowOffset,
+                fillReferences);
+        }
+
+        private const int CommandCacheMaxLength = 10;
+        protected Dictionary<string, DbCommand> CommandCache = new Dictionary<string, DbCommand>();
+
+        /// <summary>
+        /// Determines if the ORM engine should be allowed to cache commands of not.  If you frequently use the same FilterConditions on a Select call to a single entity, 
+        /// using the command cache can improve performance by preventing the underlying SQL Compact Engine from recomputing statistics.
+        /// </summary>
+        public bool UseCommandCache { get; set; }
+
+        public void ClearCommandCache()
+        {
+            lock (CommandCache)
+            {
+                foreach (var cmd in CommandCache)
+                {
+                    cmd.Value.Dispose();
+                }
+                CommandCache.Clear();
+            }
+        }
+
+        protected virtual TCommand GetSelectCommand<TCommand, TParameter>(string entityName, IEnumerable<FilterCondition> filters, out bool tableDirect)
+            where TCommand : DbCommand, new()
+            where TParameter : DbParameter, new()
+        {
+            tableDirect = false;
+            return BuildFilterCommand<TCommand, TParameter>(entityName, filters);
+        }
+
+        protected TCommand BuildFilterCommand<TCommand, TParameter>(string entityName, IEnumerable<FilterCondition> filters)
+            where TCommand : DbCommand, new()
+            where TParameter : DbParameter, new()
+        {
+            return BuildFilterCommand<TCommand, TParameter>(entityName, filters, false);
+        }
+
+        protected TCommand BuildFilterCommand<TCommand, TParameter>(string entityName, IEnumerable<FilterCondition> filters, bool isCount)
+            where TCommand : DbCommand, new()
+            where TParameter : DbParameter, new()
+        {
+            var command = new TCommand();
+            command.CommandType = CommandType.Text;
+            var @params = new List<TParameter>();
+
+            StringBuilder sb;
+
+            if (isCount)
+            {
+                sb = new StringBuilder(string.Format("SELECT COUNT(*) FROM {0}", entityName));
+            }
+            else
+            {
+                sb = new StringBuilder(string.Format("SELECT * FROM {0}", entityName));
+            }
+
+            for (int i = 0; i < filters.Count(); i++)
+            {
+                sb.Append(i == 0 ? " WHERE " : " AND ");
+
+                var filter = filters.ElementAt(i);
+                sb.Append("[" + filter.FieldName + "]");
+
+                switch (filters.ElementAt(i).Operator)
+                {
+                    case FilterCondition.FilterOperator.Equals:
+                        if ((filter.Value == null) || (filter.Value == DBNull.Value))
+                        {
+                            sb.Append(" IS NULL ");
+                            continue;
+                        }
+                        sb.Append(" = ");
+                        break;
+                    case FilterCondition.FilterOperator.Like:
+                        sb.Append(" LIKE ");
+                        break;
+                    case FilterCondition.FilterOperator.LessThan:
+                        sb.Append(" < ");
+                        break;
+                    case FilterCondition.FilterOperator.GreaterThan:
+                        sb.Append(" > ");
+                        break;
+                    default:
+                        throw new NotSupportedException();
+                }
+
+                string paramName = string.Format("@p{0}", i);
+                sb.Append(paramName);
+
+                var param = new TParameter()
+                {
+                    ParameterName = paramName,
+                    Value = filter.Value ?? DBNull.Value
+                };
+
+                @params.Add(param);
+            }
+            var sql = sb.ToString();
+            command.CommandText = sql;
+            command.Parameters.AddRange(@params.ToArray());
+
+            if (UseCommandCache)
+            {
+                lock (CommandCache)
+                {
+                    if (CommandCache.ContainsKey(sql))
+                    {
+                        command.Dispose();
+                        command = (TCommand)CommandCache[sb.ToString()];
+
+                        // use the cached command object, but we must copy over the new command parameter values
+                        // or it will use the old ones
+                        for (int p = 0; p < command.Parameters.Count; p++)
+                        {
+                            command.Parameters[p].Value = @params[p].Value;
+                        }
+                    }
+                    else
+                    {
+                        CommandCache.Add(sql, command);
+
+                        // trim the cache so it doesn't grow infinitely
+                        if (CommandCache.Count > CommandCacheMaxLength)
+                        {
+                            CommandCache.Remove(CommandCache.First().Key);
+                        }
+                    }
+                }
+            }
+
+            return command;
+        }
+
+        protected void CheckPrimaryKeyIndex(string entityName)
+        {
+            if ((Entities[entityName] as SqlEntityInfo).PrimaryKeyIndexName != null) return;
+            var name = GetPrimaryKeyIndexName(entityName);
+            (Entities[entityName] as SqlEntityInfo).PrimaryKeyIndexName = name;
+        }
+
+        protected abstract string GetPrimaryKeyIndexName(string entityName);
+
+        protected virtual void CheckOrdinals(string entityName)
+        {
+            if (Entities[entityName].Fields.OrdinalsAreValid) return;
+
+            var connection = GetConnection(true);
+            try
+            {
+                using (var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+                    command.CommandText = string.Format("SELECT * FROM {0}", entityName);
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        foreach (var field in Entities[entityName].Fields)
+                        {
+                            field.Ordinal = reader.GetOrdinal(field.FieldName);
+                        }
+
+                        Entities[entityName].Fields.OrdinalsAreValid = true;
+                    }
+
+                    command.Dispose();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
+        /// <summary>
+        /// Populates the ReferenceField members of the provided entity instance
+        /// </summary>
+        /// <param name="instance"></param>
+        public override void FillReferences(object instance)
+        {
+            FillReferences(instance, null, null, false);
+        }
+
+        protected void FlushReferenceTableCache()
+        {
+            m_referenceCache.Clear();
+        }
+
+        protected void FillReferences(object instance, object keyValue, ReferenceAttribute[] fieldsToFill, bool cacheReferenceTable)
+        {
+            if (instance == null) return;
+
+            Type type = instance.GetType();
+            string entityName = m_entities.GetNameForType(type);
+
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(type);
+            }
+
+            if (Entities[entityName].References.Count == 0) return;
+
+            Dictionary<ReferenceAttribute, object[]> referenceItems = new Dictionary<ReferenceAttribute, object[]>();
+
+            // query the key if not provided
+            if (keyValue == null)
+            {
+                keyValue = m_entities[entityName].Fields.KeyField.PropertyInfo.GetValue(instance, null);
+            }
+
+            // populate reference fields
+            foreach (var reference in Entities[entityName].References)
+            {
+                if (fieldsToFill != null)
+                {
+                    if (!fieldsToFill.Contains(reference))
+                    {
+                        continue;
+                    }
+                }
+
+                // get the lookup values - until we support filtered selects, this may be very expensive memory-wise
+                if (!referenceItems.ContainsKey(reference))
+                {
+                    object[] refData;
+                    if (cacheReferenceTable)
+                    {
+                        // TODO: ref cache needs to be type->reftype->ref's, not type->refs
+
+                        if (!m_referenceCache.ContainsKey(reference.ReferenceEntityType))
+                        {
+                            refData = Select(reference.ReferenceEntityType, null, null, -1, 0);
+                            m_referenceCache.Add(reference.ReferenceEntityType, refData);
+                        }
+                        else
+                        {
+                            refData = m_referenceCache[reference.ReferenceEntityType];
+                        }
+                    }
+                    else
+                    {
+                        refData = Select(reference.ReferenceEntityType, reference.ReferenceField, keyValue, -1, 0);
+                    }
+
+                    referenceItems.Add(reference, refData);
+                }
+
+                // get the lookup field
+                var childEntityName = m_entities.GetNameForType(reference.ReferenceEntityType);
+
+                System.Collections.ArrayList children = new System.Collections.ArrayList();
+
+                // now look for those that match our pk
+                foreach (var child in referenceItems[reference])
+                {
+                    var childKey = m_entities[childEntityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(child, null);
+
+                    // this seems "backward" because childKey may turn out null, 
+                    // so doing it backwards (keyValue.Equals instead of childKey.Equals) prevents a null referenceexception
+                    if (keyValue.Equals(childKey))
+                    {
+                        children.Add(child);
+                    }
+                }
+                var carr = children.ToArray(reference.ReferenceEntityType);
+                if (reference.PropertyInfo.PropertyType.IsArray)
+                {
+                    reference.PropertyInfo.SetValue(instance, carr, null);
+                }
+                else
+                {
+                    var enumerator = carr.GetEnumerator();
+
+                    if (enumerator.MoveNext())
+                    {
+                        reference.PropertyInfo.SetValue(instance, children[0], null);
+                    }
+                }
+            }
         }
     }
 }

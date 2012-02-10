@@ -3,7 +3,7 @@ using System.Net;
 
 namespace OpenNETCF.ORM
 {
-    public class SQLiteEntityInfo : EntityInfo
+    public class SQLiteEntityInfo : SqlEntityInfo
     {
 
     }
