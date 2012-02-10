@@ -95,6 +95,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SQL Store Base\ConnectionBehavior.cs" />
     <Compile Include="SQL Store Base\SqlEntityInfo.cs" />
+    <Compile Include="SQL Store Base\SqlFilterCondition.cs" />
     <Compile Include="SQL Store Base\SQLStoreBase.cs" />
     <Compile Include="SqlDateTimeDefault.cs" />
   </ItemGroup>

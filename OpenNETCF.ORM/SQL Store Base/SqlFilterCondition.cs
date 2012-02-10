@@ -5,7 +5,7 @@ using System.Text;
 
 namespace OpenNETCF.ORM
 {
-    internal class SqlFilterCondition : FilterCondition
+    public class SqlFilterCondition : FilterCondition
     {
         public bool PrimaryKey { get; set; }
     }

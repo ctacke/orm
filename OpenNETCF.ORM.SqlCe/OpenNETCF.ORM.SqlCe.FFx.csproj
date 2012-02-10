@@ -88,7 +88,6 @@
     <Compile Include="SqlCeDataStore_Update.cs">
       <DependentUpon>SqlCEDataStore.cs</DependentUpon>
     </Compile>
-    <Compile Include="SqlFilterCondition.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\OpenNETCF.ORM\OpenNETCF.ORM.FFx.csproj">
