@@ -5,6 +5,7 @@ using System.Text;
 using System.Diagnostics;
 using System.Data;
 using System.Data.Common;
+using System.Reflection;
 
 namespace OpenNETCF.ORM
 {
@@ -13,10 +14,13 @@ namespace OpenNETCF.ORM
     {
         private List<IndexInfo> m_indexNameCache = new List<IndexInfo>();
         private DbConnection m_connection;
+        private Dictionary<Type, MethodInfo> m_serializerCache = new Dictionary<Type, MethodInfo>();
+        private Dictionary<Type, MethodInfo> m_deserializerCache = new Dictionary<Type, MethodInfo>();
 
         public int DefaultStringFieldSize { get; set; }
         public int DefaultNumericFieldPrecision { get; set; }
         public int DefaultVarBinaryLength { get; set; }
+        protected abstract string AutoIncrementFieldIdentifier { get; }
 
         public ConnectionBehavior ConnectionBehavior { get; set; }
 
@@ -429,7 +433,7 @@ namespace OpenNETCF.ORM
                     {
                         case DbType.Int32:
                         case DbType.UInt32:
-                            sb.Append("IDENTITY ");
+                            sb.Append(AutoIncrementFieldIdentifier + " ");
                             break;
                         case DbType.Guid:
                             sb.Append("ROWGUIDCOL ");
@@ -454,5 +458,34 @@ namespace OpenNETCF.ORM
             return sb.ToString();
         }
 
+        protected virtual MethodInfo GetSerializer(Type itemType)
+        {
+            if (m_serializerCache.ContainsKey(itemType))
+            {
+                return m_serializerCache[itemType];
+            }
+
+            var serializer = itemType.GetMethod("Serialize", BindingFlags.Public | BindingFlags.Instance);
+
+            if (serializer == null) return null;
+
+            m_serializerCache.Add(itemType, serializer);
+            return serializer;
+        }
+
+        protected virtual MethodInfo GetDeserializer(Type itemType)
+        {
+            if (m_deserializerCache.ContainsKey(itemType))
+            {
+                return m_deserializerCache[itemType];
+            }
+
+            var deserializer = itemType.GetMethod("Deserialize", BindingFlags.Public | BindingFlags.Instance);
+
+            if (deserializer == null) return null;
+
+            m_deserializerCache.Add(itemType, deserializer);
+            return deserializer;
+        }
     }
 }
