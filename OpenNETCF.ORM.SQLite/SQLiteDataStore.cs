@@ -1,71 +1,292 @@
 ﻿using System;
 using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
-using Community.CsharpSqlite;
 using System.IO;
 using System.Diagnostics;
 using System.Text;
 using System.Linq;
 using System.Data;
+using System.Data.SQLite;
+using System.Data.Common;
 
 namespace OpenNETCF.ORM.SQLite
 {
-    public class SQLiteDataStore : DataStore<SQLiteEntityInfo>, IDisposable
+    public class SQLiteDataStore : SQLStoreBase<SQLiteEntityInfo>, IDisposable
     {
-        private Sqlite3.sqlite3 m_store;
-        private string m_storeName;
+        private string m_connectionString;
 
-        public int DefaultStringFieldSize { get; set; }
-        public int DefaultNumericFieldPrecision { get; set; }
+        public string FileName { get; protected set; }
 
-        public SQLiteDataStore(string databaseName)
+        protected SQLiteDataStore()
+            : base()
         {
-            if (string.IsNullOrEmpty(databaseName))
+//            UseCommandCache = true;
+        }
+
+        public SQLiteDataStore(string fileName)
+            : this()
+        {
+            if (string.IsNullOrEmpty(fileName))
             {
                 throw new ArgumentException();
             }
 
-            m_storeName = databaseName;
-            DefaultStringFieldSize = 200;
-            DefaultNumericFieldPrecision = 16;
-
-            OpenStore();
+            FileName = fileName;
         }
-         
+
+        private string ConnectionString
+        {
+            get
+            {
+                if (m_connectionString == null)
+                {
+                    m_connectionString = string.Format("Data Source={0}", FileName);
+
+                }
+                return m_connectionString;
+            }
+        }
+
+        protected override System.Data.Common.DbCommand GetNewCommandObject()
+        {
+            return new SQLiteCommand();
+        }
+
+        protected override System.Data.Common.DbConnection GetNewConnectionObject()
+        {
+            return new SQLiteConnection(ConnectionString);
+        }
+
+        protected override string AutoIncrementFieldIdentifier
+        {
+            get { return "AUTOINCREMENT"; }
+        }
+
         public override void CreateStore()
         {
-            foreach (var entity in this.Entities)
+            if (StoreExists)
             {
-                CreateTable(entity);
+                throw new StoreAlreadyExistsException();
+            }
+
+            SQLiteConnection.CreateFile(FileName);
+
+            var connection = GetConnection(true);
+            try
+            {
+                foreach (var entity in this.Entities)
+                {
+                    CreateTable(connection, entity);
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
             }
         }
 
         public override void DeleteStore()
         {
-            if (m_store != null)
-            {
-                CloseStore();
-            }
-
             if (StoreExists)
             {
-                File.Delete(m_storeName);
+                File.Delete(FileName);
             }
         }
 
         public override bool StoreExists
         {
-            get { return File.Exists(m_storeName); }
+            get { return File.Exists(FileName); }
         }
 
+        private SQLiteCommand GetInsertCommand(string entityName)
+        {
+            // TODO: support command caching to improve bulk insert speeds
+            //       simply use a dictionary keyed by entityname
+            var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
+            var insertCommand = new SQLiteCommand();
+
+            var sbFields = new StringBuilder(string.Format("INSERT INTO {0} (", entityName));
+            var sbParams = new StringBuilder( " VALUES (");
+
+            foreach (var field in Entities[entityName].Fields)
+            {
+                // skip auto-increments
+                if ((field.IsPrimaryKey) && (keyScheme == KeyScheme.Identity))
+                {
+                    continue;
+                }
+                sbFields.Append("[" + field.FieldName + "],");
+                sbParams.Append("?,");
+
+                insertCommand.Parameters.Add(new SQLiteParameter(field.FieldName));
+            }
+
+            // replace trailing commas
+            sbFields[sbFields.Length - 1] = ')';
+            sbParams[sbParams.Length - 1] = ')';
+
+            insertCommand.CommandText = sbFields.ToString() + sbParams.ToString();
+
+            return insertCommand;
+        }
+
+        /// <summary>
+        /// Inserts the provided entity instance into the underlying data store.
+        /// </summary>
+        /// <param name="item"></param>
+        /// <remarks>
+        /// If the entity has an identity field, calling Insert will populate that field with the identity vale vefore returning
+        /// </remarks>
         public override void Insert(object item, bool insertReferences)
+        {
+            var itemType = item.GetType();
+            string entityName = m_entities.GetNameForType(itemType);
+
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(item.GetType());
+            }
+
+            var connection = GetConnection(false);
+            try
+            {
+                //                CheckOrdinals(entityName);
+
+                FieldAttribute identity = null;
+                var command = GetInsertCommand(entityName);
+                command.Connection = connection as SQLiteConnection;
+
+                var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
+
+                // TODO: fill the parameters
+                foreach (var field in Entities[entityName].Fields)
+                {
+                    if ((field.IsPrimaryKey) && (keyScheme == KeyScheme.Identity))
+                    {
+                        identity = field;
+                        continue;
+                    }
+                    else if (field.DataType == DbType.Object)
+                    {
+                        // get serializer
+                        var serializer = GetSerializer(itemType);
+
+                        if (serializer == null)
+                        {
+                            throw new MissingMethodException(
+                                string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
+                                field.FieldName, entityName));
+                        }
+                        var value = serializer.Invoke(item, new object[] { field.FieldName });
+                        if (value == null)
+                        {
+                            command.Parameters[field.FieldName].Value = DBNull.Value;
+                        }
+                        else
+                        {
+                            command.Parameters[field.FieldName].Value = value;
+                        }
+                    }
+                    else if (field.IsRowVersion)
+                    {
+                        // read-only, so do nothing
+                    }
+                    else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
+                    {
+                        // SQL Compact doesn't support Time, so we're convert to a DateTime both directions
+                        var value = field.PropertyInfo.GetValue(item, null);
+
+                        if (value == null)
+                        {
+                            command.Parameters[field.FieldName].Value = DBNull.Value;
+                        }
+                        else
+                        {
+                            var timespanTicks = ((TimeSpan)value).Ticks;
+                            command.Parameters[field.FieldName].Value = timespanTicks;
+                        }
+                    }
+                    else
+                    {
+                        var value = field.PropertyInfo.GetValue(item, null);
+                        command.Parameters[field.FieldName].Value = value;
+                    }
+                }
+
+                command.ExecuteNonQuery();
+
+                // did we have an identity field?  If so, we need to update that value in the item
+                if (identity != null)
+                {
+                    var id = GetIdentity(connection);
+                    identity.PropertyInfo.SetValue(item, id, null);
+                }
+
+                if (insertReferences)
+                {
+                    // cascade insert any References
+                    // do this last because we need the PK from above
+                    foreach (var reference in Entities[entityName].References)
+                    {
+                        var valueArray = reference.PropertyInfo.GetValue(item, null);
+                        if (valueArray == null) continue;
+
+                        var fk = Entities[entityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(item, null);
+
+                        string et = null;
+
+                        // we've already enforced this to be an array when creating the store
+                        foreach (var element in valueArray as Array)
+                        {
+                            if (et == null)
+                            {
+                                et = m_entities.GetNameForType(element.GetType());
+                            }
+
+                            // get the FK value
+                            var keyValue = Entities[et].Fields.KeyField.PropertyInfo.GetValue(element, null);
+
+                            bool isNew = false;
+
+
+                            // only do an insert if the value is new (i.e. need to look for existing reference items)
+                            // not certain how this will work right now, so for now we ask the caller to know what they're doing
+                            switch (keyScheme)
+                            {
+                                case KeyScheme.Identity:
+                                    // TODO: see if PK field value == -1
+                                    isNew = keyValue.Equals(-1);
+                                    break;
+                                case KeyScheme.GUID:
+                                    // TODO: see if PK field value == null
+                                    isNew = keyValue.Equals(null);
+                                    break;
+                            }
+
+                            if (isNew)
+                            {
+                                Entities[et].Fields[reference.ReferenceField].PropertyInfo.SetValue(element, fk, null);
+                                Insert(element);
+                            }
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, false);
+            }
+        }
+
+        private int GetIdentity(DbConnection connection)
+        {
+            using (var command = new SQLiteCommand("SELECT last_insert_rowid()", connection as SQLiteConnection))
+            {
+                object id = command.ExecuteScalar();
+                return Convert.ToInt32(id);
+            }
+        }
+
+        public override void EnsureCompatibility()
         {
             throw new NotImplementedException();
         }
@@ -75,7 +296,17 @@ namespace OpenNETCF.ORM.SQLite
             throw new NotImplementedException();
         }
 
+        public override T[] Select<T>(bool fillReferences)
+        {
+            throw new NotImplementedException();
+        }
+
         public override T Select<T>(object primaryKey)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override T Select<T>(object primaryKey, bool fillReferences)
         {
             throw new NotImplementedException();
         }
@@ -85,7 +316,42 @@ namespace OpenNETCF.ORM.SQLite
             throw new NotImplementedException();
         }
 
+        public override T[] Select<T>(string searchFieldName, object matchValue, bool fillReferences)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override T[] Select<T>(System.Collections.Generic.IEnumerable<FilterCondition> filters)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override T[] Select<T>(System.Collections.Generic.IEnumerable<FilterCondition> filters, bool fillReferences)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override object[] Select(Type entityType)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override object[] Select(Type entityType, bool fillReferences)
+        {
+            throw new NotImplementedException();
+        }
+
         public override void Update(object item)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Update(object item, bool cascadeUpdates, string fieldName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Update(object item, string fieldName)
         {
             throw new NotImplementedException();
         }
@@ -115,7 +381,22 @@ namespace OpenNETCF.ORM.SQLite
             throw new NotImplementedException();
         }
 
+        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        {
+            throw new NotImplementedException();
+        }
+
         public override int Count<T>()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override int Count<T>(System.Collections.Generic.IEnumerable<FilterCondition> filters)
         {
             throw new NotImplementedException();
         }
@@ -135,226 +416,5 @@ namespace OpenNETCF.ORM.SQLite
             throw new NotImplementedException();
         }
 
-        public void Dispose()
-        {
-            if (m_store != null)
-            {
-                CloseStore();
-            }
-        }
-
-        private void OpenStore()
-        {
-            m_store = new Sqlite3.sqlite3();
-
-            var result = Sqlite3.sqlite3_open(m_storeName, ref m_store);
-
-            if (result != Sqlite3.SQLITE_OK)
-            {
-                throw new SQLiteException(Sqlite3.sqlite3_errmsg(m_store));
-            }
-        }
-
-        private void CloseStore()
-        {
-            var result = Sqlite3.sqlite3_close(m_store);
-            if (result != Sqlite3.SQLITE_OK)
-            {
-                throw new SQLiteException(Sqlite3.sqlite3_errmsg(m_store));
-            }
-            m_store = null;
-        }
-
-        private void CreateTable(EntityInfo entity)
-        {
-            StringBuilder sql = new StringBuilder();
-
-            if (ReservedWords.Contains(entity.EntityName, StringComparer.InvariantCultureIgnoreCase))
-            {
-                throw new ReservedWordException(entity.EntityName);
-            }
-
-            sql.AppendFormat("CREATE TABLE {0} (", entity.EntityName);
-
-            int count = entity.Fields.Count;
-
-            foreach (var field in entity.Fields)
-            {
-                if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
-                {
-                    throw new ReservedWordException(field.FieldName);
-                }
-
-                sql.AppendFormat("[{0}] {1} {2}",
-                    field.FieldName,
-                    GetFieldDataTypeString(entity.EntityName, field),
-                    GetFieldCreationAttributes(entity.EntityAttribute, field));
-
-                if (--count > 0) sql.Append(", ");
-            }
-
-            sql.Append(")");
-
-            Debug.WriteLine(sql);
-            string error = string.Empty;
-            var result = Sqlite3.sqlite3_exec(m_store, sql.ToString(), CommandCallback, null, ref error);
-            if (result != Sqlite3.SQLITE_OK)
-            {
-                throw new SQLiteException(Sqlite3.sqlite3_errmsg(m_store));
-            }
-        }
-
-        private int CommandCallback(object pArg, long nArg, object azArgs, object azCols)
-        {
-            return 0;
-        }
-
-        private string GetFieldDataTypeString(string entityName, FieldAttribute field)
-        {
-            // the SQL RowVersion is a special case
-            if (field.IsRowVersion)
-            {
-                switch (field.DataType)
-                {
-                    case DbType.UInt64:
-                    case DbType.Int64:
-                        // no error
-                        break;
-                    default:
-                        throw new FieldDefinitionException(entityName, field.FieldName, "rowversion fields must be an 8-byte data type (In64 or UInt64)");
-                }
-
-                return "rowversion";
-            }
-
-            return field.DataType.ToSqlTypeString();
-        }
-
-        private string GetFieldCreationAttributes(EntityAttribute attribute, FieldAttribute field)
-        {
-            StringBuilder sb = new StringBuilder();
-
-            switch (field.DataType)
-            {
-                case DbType.String:
-                    if (field.Length > 0)
-                    {
-                        sb.AppendFormat("({0}) ", field.Length);
-                    }
-                    else
-                    {
-                        sb.AppendFormat("({0}) ", DefaultStringFieldSize);
-                    }
-                    break;
-                case DbType.Decimal:
-                    int p = field.Precision == 0 ? DefaultNumericFieldPrecision : field.Precision;
-                    sb.AppendFormat("({0},{1}) ", p, field.Scale);
-                    break;
-            }
-
-            if (field.IsPrimaryKey)
-            {
-                sb.Append("PRIMARY KEY ");
-
-                if (attribute.KeyScheme == KeyScheme.Identity)
-                {
-                    switch (field.DataType)
-                    {
-                        case DbType.Int32:
-                        case DbType.UInt32:
-                            sb.Append("IDENTITY ");
-                            break;
-                        case DbType.Guid:
-                            sb.Append("ROWGUIDCOL ");
-                            break;
-                        default:
-                            throw new FieldDefinitionException(attribute.NameInStore, field.FieldName,
-                                string.Format("Data Type '{0}' cannot be marked as an Identity field", field.DataType));
-                    }
-                }
-            }
-
-            if (!field.AllowsNulls)
-            {
-                sb.Append("NOT NULL ");
-            }
-
-            if (field.RequireUniqueValue)
-            {
-                sb.Append("UNIQUE ");
-            }
-
-            return sb.ToString();
-        }
-
-        static string[] ReservedWords = new string[]
-        {
-            // TODO: add SQLite reserved words here
-        };
-
-        public override void EnsureCompatibility()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Select<T>(System.Collections.Generic.IEnumerable<FilterCondition> filters)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override object[] Select(Type entityType)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Select<T>(bool fillReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T Select<T>(object primaryKey, bool fillReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Select<T>(string searchFieldName, object matchValue, bool fillReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Select<T>(System.Collections.Generic.IEnumerable<FilterCondition> filters, bool fillReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override object[] Select(Type entityType, bool fillReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Update(object item, bool cascadeUpdates, string fieldName)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Update(object item, string fieldName)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override int Count<T>(System.Collections.Generic.IEnumerable<FilterCondition> filters)
-        {
-            throw new NotImplementedException();
-        }
     }
 }

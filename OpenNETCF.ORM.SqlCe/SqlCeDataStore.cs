@@ -19,14 +19,13 @@ namespace OpenNETCF.ORM
         private int m_maxSize = 128; // Max Database Size defaults to 128MB
 
         private Dictionary<Type, object[]> m_referenceCache = new Dictionary<Type, object[]>();
-        private Dictionary<Type, MethodInfo> m_serializerCache = new Dictionary<Type, MethodInfo>();
-        private Dictionary<Type, MethodInfo> m_deserializerCache = new Dictionary<Type, MethodInfo>();
 
         private string Password { get; set; }
 
         public string FileName { get; protected set; }
 
         protected SqlCeDataStore()
+            : base()
         {
             UseCommandCache = true;
         }
@@ -54,6 +53,11 @@ namespace OpenNETCF.ORM
         protected override DbCommand GetNewCommandObject()
         {
             return new SqlCeCommand();
+        }
+
+        protected override string AutoIncrementFieldIdentifier
+        {
+            get { return "IDENTITY"; }
         }
 
         /// <summary>
@@ -119,36 +123,6 @@ namespace OpenNETCF.ORM
             {
                 DoneWithConnection(connection, true);
             }
-        }
-
-        private MethodInfo GetSerializer(Type itemType)
-        {
-            if (m_serializerCache.ContainsKey(itemType))
-            {
-                return m_serializerCache[itemType];
-            }
-
-            var serializer = itemType.GetMethod("Serialize", BindingFlags.Public | BindingFlags.Instance);
-
-            if (serializer == null) return null;
-
-            m_serializerCache.Add(itemType, serializer);
-            return serializer;
-        }
-
-        private MethodInfo GetDeserializer(Type itemType)
-        {
-            if (m_deserializerCache.ContainsKey(itemType))
-            {
-                return m_deserializerCache[itemType];
-            }
-
-            var deserializer = itemType.GetMethod("Deserialize", BindingFlags.Public | BindingFlags.Instance);
-
-            if (deserializer == null) return null;
-
-            m_deserializerCache.Add(itemType, deserializer);
-            return deserializer;
         }
 
         /// <summary>

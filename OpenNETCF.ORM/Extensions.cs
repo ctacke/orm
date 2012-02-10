@@ -166,7 +166,7 @@ namespace OpenNETCF.ORM
                     return "bigint";
                 case DbType.Int32:
                 case DbType.UInt32:
-                    return "int";
+                    return "integer";
                 case DbType.Int16:
                 case DbType.UInt16:
                     return "smallint";
