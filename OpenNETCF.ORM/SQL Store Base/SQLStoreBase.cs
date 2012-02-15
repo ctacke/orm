@@ -31,25 +31,13 @@ namespace OpenNETCF.ORM
 
         public abstract override bool StoreExists { get; }
 
+        protected abstract string GetPrimaryKeyIndexName(string entityName);
 
         public abstract override void Insert(object item, bool insertReferences);
 
-        //public abstract override T[] Select<T>();
-        //public abstract override T[] Select<T>(bool fillReferences);
-        //public abstract override T Select<T>(object primaryKey);
-        //public abstract override T Select<T>(object primaryKey, bool fillReferences);
-        //public abstract override T[] Select<T>(string searchFieldName, object matchValue);
-        //public abstract override T[] Select<T>(string searchFieldName, object matchValue, bool fillReferences);
-        //public abstract override T[] Select<T>(IEnumerable<FilterCondition> filters);
-        //public abstract override T[] Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences);
-        //public abstract override object[] Select(Type entityType);
-        //public abstract override object[] Select(Type entityType, bool fillReferences);
-
         protected abstract object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences);
 
-        public abstract override void Update(object item);
         public abstract override void Update(object item, bool cascadeUpdates, string fieldName);
-        public abstract override void Update(object item, string fieldName);
 
         public abstract override void Delete(object item);
         public abstract override void Delete<T>(object primaryKey);
@@ -770,8 +758,6 @@ namespace OpenNETCF.ORM
             (Entities[entityName] as SqlEntityInfo).PrimaryKeyIndexName = name;
         }
 
-        protected abstract string GetPrimaryKeyIndexName(string entityName);
-
         protected virtual void CheckOrdinals(string entityName)
         {
             if (Entities[entityName].Fields.OrdinalsAreValid) return;
@@ -908,6 +894,24 @@ namespace OpenNETCF.ORM
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Updates the backing DataStore with the values in the specified entity instance
+        /// </summary>
+        /// <param name="item"></param>
+        /// <remarks>
+        /// The instance provided must have a valid primary key value
+        /// </remarks>
+        public override void Update(object item)
+        {
+            //TODO: is a cascading default of true a good idea?
+            Update(item, true, null);
+        }
+
+        public override void Update(object item, string fieldName)
+        {
+            Update(item, false, fieldName);
         }
     }
 }

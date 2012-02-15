@@ -73,6 +73,36 @@ namespace OpenNETCF.ORM
             } as TCommand;
         }
 
+        private void UpdateIndexCacheForType(string entityName)
+        {
+            // have we already cached this?
+            if (Entities[entityName].IndexNames != null) return;
+
+            // get all iindex names for the type
+            var connection = GetConnection(true);
+            try
+            {
+                string sql = string.Format("SELECT INDEX_NAME FROM information_schema.indexes WHERE (TABLE_NAME = '{0}')", entityName);
+
+                using (SqlCeCommand command = new SqlCeCommand(sql, connection as SqlCeConnection))
+                using (var reader = command.ExecuteReader())
+                {
+                    List<string> nameList = new List<string>();
+
+                    while (reader.Read())
+                    {
+                        nameList.Add(reader.GetString(0));
+                    }
+
+                    Entities[entityName].IndexNames = nameList;
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+        
         protected override object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
         {
             string entityName = m_entities.GetNameForType(objectType);
