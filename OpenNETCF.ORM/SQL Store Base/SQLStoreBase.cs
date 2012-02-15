@@ -44,7 +44,6 @@ namespace OpenNETCF.ORM
         public abstract override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField);
         public abstract override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences);
 
-        public abstract override int Count<T>();
         public abstract override int Count<T>(IEnumerable<FilterCondition> filters);
 
         protected abstract DbCommand GetNewCommandObject();
@@ -1034,6 +1033,78 @@ namespace OpenNETCF.ORM
 
             var keyFieldName = Entities[entityName].Fields.KeyField.FieldName;
             Delete(t, keyFieldName, primaryKey);
+        }
+
+        /// <summary>
+        /// Returns the number of instances of the given type in the DataStore
+        /// </summary>
+        /// <typeparam name="T">Entity type to count</typeparam>
+        /// <returns>The number of instances in the store</returns>
+        public override int Count<T>()
+        {
+            var t = typeof(T);
+            string entityName = m_entities.GetNameForType(t);
+
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(t);
+            }
+
+            var connection = GetConnection(true);
+            try
+            {
+                using (var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+                    command.CommandText = string.Format("SELECT COUNT(*) FROM {0}", entityName);
+                    var count = command.ExecuteScalar();
+                    return Convert.ToInt32(count);
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
+        /// <summary>
+        /// Fetches a sorted list of entities, up to the requested number of entity instances, of the specified type from the DataStore, starting with the specified instance
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="searchFieldName"></param>
+        /// <param name="fetchCount"></param>
+        /// <param name="firstRowOffset"></param>
+        /// <returns></returns>
+        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField)
+        {
+            return Fetch<T>(fetchCount, firstRowOffset, sortField, FieldSearchOrder.Ascending, null, false);
+        }
+
+        /// <summary>
+        /// Fetches up to the requested number of entity instances of the specified type from the DataStore, starting with the first instance
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="fetchCount"></param>
+        /// <returns></returns>
+        public override T[] Fetch<T>(int fetchCount)
+        {
+            var type = typeof(T);
+            var items = Select(type, null, null, fetchCount, 0, false);
+            return items.Cast<T>().ToArray();
+        }
+
+        /// <summary>
+        /// Fetches up to the requested number of entity instances of the specified type from the DataStore, starting with the specified instance
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="fetchCount"></param>
+        /// <param name="firstRowOffset"></param>
+        /// <returns></returns>
+        public override T[] Fetch<T>(int fetchCount, int firstRowOffset)
+        {
+            var type = typeof(T);
+            var items = Select(type, null, null, fetchCount, firstRowOffset, false);
+            return items.Cast<T>().ToArray();
         }
     }
 }

@@ -22,7 +22,6 @@ namespace OpenNETCF.ORM.SQLite
         protected SQLiteDataStore()
             : base()
         {
-//            UseCommandCache = true;
         }
 
         public SQLiteDataStore(string fileName)
@@ -709,45 +708,34 @@ namespace OpenNETCF.ORM.SQLite
             }
         }
 
-        public override void FillReferences(object instance)
+        public override int Count<T>(IEnumerable<FilterCondition> filters)
         {
-            throw new NotSupportedException();
-        }
+            var t = typeof(T);
+            string entityName = m_entities.GetNameForType(t);
 
-        public override T[] Fetch<T>(int fetchCount)
-        {
-            throw new NotImplementedException();
-        }
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(t);
+            }
 
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField)
-        {
-            throw new NotImplementedException();
+            var connection = GetConnection(true);
+            try
+            {
+                using (var command = BuildFilterCommand<SQLiteCommand, SQLiteParameter>(entityName, filters, true))
+                {
+                    command.Connection = connection as SQLiteConnection;
+                    return (int)command.ExecuteScalar();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
         }
 
         public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException("Fetch is not currently supported with this Provider.");
         }
-
-        public override int Count<T>()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override int Count<T>(System.Collections.Generic.IEnumerable<FilterCondition> filters)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override bool Contains(object item)
-        {
-            throw new NotImplementedException();
-        }
-
     }
 }

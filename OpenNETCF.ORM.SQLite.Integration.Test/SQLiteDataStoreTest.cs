@@ -26,6 +26,10 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             store.Insert(itemB);
             store.Insert(itemC);
 
+            // COUNT
+            var count = store.Count<TestItem>();
+            Assert.AreEqual(3, count);
+
             // SELECT
             var item = store.Select<TestItem>("Name", itemB.Name).FirstOrDefault();
             Assert.IsTrue(item.Equals(itemB));
@@ -46,10 +50,22 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             item = store.Select<TestItem>("Name", itemC.Name).FirstOrDefault();
             Assert.IsTrue(item.Equals(itemC));
 
+            // CONTAINS
+            var exists = store.Contains(itemA);
+            Assert.IsTrue(exists);
+
             // DELETE
             store.Delete(itemA);
             item = store.Select<TestItem>("Name", itemA.Name).FirstOrDefault();
             Assert.IsNull(item);
+
+            // CONTAINS
+            exists = store.Contains(itemA);
+            Assert.IsFalse(exists);
+
+            // COUNT
+            count = store.Count<TestItem>();
+            Assert.AreEqual(2, count);
         }
     }
 
