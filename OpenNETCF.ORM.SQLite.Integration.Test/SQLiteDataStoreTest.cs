@@ -47,6 +47,9 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             Assert.IsTrue(item.Equals(itemC));
 
             // DELETE
+            store.Delete(itemA);
+            item = store.Select<TestItem>("Name", itemA.Name).FirstOrDefault();
+            Assert.IsNull(item);
         }
     }
 

@@ -59,6 +59,11 @@ namespace OpenNETCF.ORM.SQLite
             return new SQLiteConnection(ConnectionString);
         }
 
+        protected override DbParameter CreateParameterObject(string parameterName, object parameterValue)
+        {
+            return new SQLiteParameter(parameterName, parameterValue);
+        }
+
         protected override string AutoIncrementFieldIdentifier
         {
             get { return "AUTOINCREMENT"; }
@@ -704,19 +709,9 @@ namespace OpenNETCF.ORM.SQLite
             }
         }
 
-        public override void Delete(object item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Delete<T>(object primaryKey)
-        {
-            throw new NotImplementedException();
-        }
-
         public override void FillReferences(object instance)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public override T[] Fetch<T>(int fetchCount)
@@ -745,16 +740,6 @@ namespace OpenNETCF.ORM.SQLite
         }
 
         public override int Count<T>(System.Collections.Generic.IEnumerable<FilterCondition> filters)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Delete<T>()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Delete<T>(string fieldName, object matchValue)
         {
             throw new NotImplementedException();
         }

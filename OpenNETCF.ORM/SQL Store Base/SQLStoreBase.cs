@@ -39,9 +39,6 @@ namespace OpenNETCF.ORM
 
         public abstract override void Update(object item, bool cascadeUpdates, string fieldName);
 
-        public abstract override void Delete(object item);
-        public abstract override void Delete<T>(object primaryKey);
-
         public abstract override T[] Fetch<T>(int fetchCount);
         public abstract override T[] Fetch<T>(int fetchCount, int firstRowOffset);
         public abstract override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField);
@@ -50,11 +47,9 @@ namespace OpenNETCF.ORM
         public abstract override int Count<T>();
         public abstract override int Count<T>(IEnumerable<FilterCondition> filters);
 
-        public abstract override void Delete<T>();
-        public abstract override void Delete<T>(string fieldName, object matchValue);
-
         protected abstract DbCommand GetNewCommandObject();
         protected abstract DbConnection GetNewConnectionObject();
+        protected abstract DbParameter CreateParameterObject(string parameterName, object parameterValue);
 
         public SQLStoreBase()
         {
@@ -912,6 +907,133 @@ namespace OpenNETCF.ORM
         public override void Update(object item, string fieldName)
         {
             Update(item, false, fieldName);
+        }
+
+        /// <summary>
+        /// Deletes all entity instances of the specified type from the DataStore
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        public override void Delete<T>()
+        {
+            var t = typeof(T);
+            string entityName = m_entities.GetNameForType(t);
+
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(t);
+            }
+
+            // TODO: handle cascade deletes?
+
+            var connection = GetConnection(true);
+            try
+            {
+                using (var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+                    command.CommandText = string.Format("DELETE FROM {0}", entityName);
+                    command.ExecuteNonQuery();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
+        public override void Delete<T>(string fieldName, object matchValue)
+        {
+            Delete(typeof(T), fieldName, matchValue);
+        }
+
+        /// <summary>
+        /// Deletes entities of a given type where the specified field name matches a specified value
+        /// </summary>
+        /// <param name="t"></param>
+        /// <param name="indexName"></param>
+        /// <param name="matchValue"></param>
+        protected void Delete(Type entityType, string fieldName, object matchValue)
+        {
+            string entityName = m_entities.GetNameForType(entityType);
+
+            var connection = GetConnection(true);
+            try
+            {
+                using (var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+                    command.CommandText = string.Format("DELETE FROM {0} WHERE {1} = ?", entityName, fieldName);
+                    var param = CreateParameterObject("@val", matchValue);
+                    command.Parameters.Add(param);
+                    command.ExecuteNonQuery();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
+        /// <summary>
+        /// Deletes the specified entity instance from the DataStore
+        /// </summary>
+        /// <param name="item"></param>
+        /// <remarks>
+        /// The instance provided must have a valid primary key value
+        /// </remarks>
+        public override void Delete(object item)
+        {
+            var type = item.GetType();
+            string entityName = m_entities.GetNameForType(type);
+
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(type);
+            }
+
+            if (Entities[entityName].Fields.KeyField == null)
+            {
+                throw new PrimaryKeyRequiredException("A primary key is required on an Entity in order to perform a Delete");
+            }
+            var keyValue = Entities[entityName].Fields.KeyField.PropertyInfo.GetValue(item, null);
+
+            Delete(type, keyValue);
+        }
+
+        /// <summary>
+        /// Deletes an entity instance with the specified primary key from the DataStore
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="primaryKey"></param>
+        public override void Delete<T>(object primaryKey)
+        {
+            Delete(typeof(T), primaryKey);
+        }
+
+        protected virtual void Delete(Type t, object primaryKey)
+        {
+            string entityName = m_entities.GetNameForType(t);
+
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(t);
+            }
+
+            if (Entities[entityName].Fields.KeyField == null)
+            {
+                throw new PrimaryKeyRequiredException("A primary key is required on an Entity in order to perform a Delete");
+            }
+
+            // handle cascade deletes
+            foreach (var reference in Entities[entityName].References)
+            {
+                if (!reference.CascadeDelete) continue;
+
+                Delete(reference.ReferenceEntityType, reference.ReferenceField, primaryKey);
+            }
+
+            var keyFieldName = Entities[entityName].Fields.KeyField.FieldName;
+            Delete(t, keyFieldName, primaryKey);
         }
     }
 }

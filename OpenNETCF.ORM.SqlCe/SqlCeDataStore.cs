@@ -339,6 +339,11 @@ namespace OpenNETCF.ORM
             }
         }
 
+        protected override DbParameter CreateParameterObject(string parameterName, object parameterValue)
+        {
+            return new SqlCeParameter(parameterName, parameterValue);
+        }
+
         private int GetIdentity(DbConnection connection)
         {
             using (var command = new SqlCeCommand("SELECT @@IDENTITY", connection as SqlCeConnection))
