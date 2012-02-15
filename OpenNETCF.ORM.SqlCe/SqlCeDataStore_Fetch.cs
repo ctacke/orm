@@ -9,33 +9,6 @@ namespace OpenNETCF.ORM
 {
     partial class SqlCeDataStore
     {
-        /// <summary>
-        /// Fetches up to the requested number of entity instances of the specified type from the DataStore, starting with the first instance
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="fetchCount"></param>
-        /// <returns></returns>
-        public override T[] Fetch<T>(int fetchCount)
-        {
-            var type = typeof(T);
-            var items = Select(type, null, null, fetchCount, 0, false);
-            return items.Cast<T>().ToArray();
-        }
-
-        /// <summary>
-        /// Fetches up to the requested number of entity instances of the specified type from the DataStore, starting with the specified instance
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="fetchCount"></param>
-        /// <param name="firstRowOffset"></param>
-        /// <returns></returns>
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset)
-        {
-            var type = typeof(T);
-            var items = Select(type, null, null, fetchCount, firstRowOffset, false);
-            return items.Cast<T>().ToArray();
-        }
-
         public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
             var type = typeof(T);
@@ -233,19 +206,6 @@ namespace OpenNETCF.ORM
                 default:
                     throw new NotSupportedException("Currently only an 'Equals' filter is supported");
             }
-        }
-
-        /// <summary>
-        /// Fetches a sorted list of entities, up to the requested number of entity instances, of the specified type from the DataStore, starting with the specified instance
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="searchFieldName"></param>
-        /// <param name="fetchCount"></param>
-        /// <param name="firstRowOffset"></param>
-        /// <returns></returns>
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField)
-        {
-            return Fetch<T>(fetchCount, firstRowOffset, sortField, FieldSearchOrder.Ascending, null, false);
         }
     }
 }

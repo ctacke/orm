@@ -123,7 +123,6 @@ namespace OpenNETCF.ORM
             }
         }
 
-
         public override int Count<T>(IEnumerable<FilterCondition> filters)
         {
             var t = typeof(T);
@@ -140,37 +139,6 @@ namespace OpenNETCF.ORM
                 using (var command = BuildFilterCommand<SqlCeCommand, SqlCeParameter>(entityName, filters, true))
                 {
                     command.Connection = connection as SqlCeConnection;
-                    return (int)command.ExecuteScalar();
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, true);
-            }
-        }
-
-        /// <summary>
-        /// Returns the number of instances of the given type in the DataStore
-        /// </summary>
-        /// <typeparam name="T">Entity type to count</typeparam>
-        /// <returns>The number of instances in the store</returns>
-        public override int Count<T>()
-        {
-            var t = typeof(T);
-            string entityName = m_entities.GetNameForType(t);
-
-            if (entityName == null)
-            {
-                throw new EntityNotFoundException(t);
-            }
-
-            var connection = GetConnection(true);
-            try
-            {
-                using (var command = new SqlCeCommand())
-                {
-                    command.Connection = connection as SqlCeConnection;
-                    command.CommandText = string.Format("SELECT COUNT(*) FROM {0}", entityName);
                     return (int)command.ExecuteScalar();
                 }
             }
