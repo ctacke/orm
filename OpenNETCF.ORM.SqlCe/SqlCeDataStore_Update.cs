@@ -10,24 +10,6 @@ namespace OpenNETCF.ORM
 {
     partial class SqlCeDataStore
     {
-        /// <summary>
-        /// Updates the backing DataStore with the values in the specified entity instance
-        /// </summary>
-        /// <param name="item"></param>
-        /// <remarks>
-        /// The instance provided must have a valid primary key value
-        /// </remarks>
-        public override void Update(object item)
-        {
-            //TODO: is a cascading default of true a good idea?
-            Update(item, true, null);
-        }
-
-        public override void Update(object item, string fieldName)
-        {
-            Update(item, false, fieldName);
-        }
-
         public override void Update(object item, bool cascadeUpdates, string fieldName)
         {
             object keyValue;
