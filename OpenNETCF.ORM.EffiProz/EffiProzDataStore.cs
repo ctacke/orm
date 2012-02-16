@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Data.EffiProz;
 using System.Data.Common;
+using System.Data;
 
 namespace OpenNETCF.ORM.EffiProz
 {
@@ -33,157 +34,8 @@ namespace OpenNETCF.ORM.EffiProz
             Password = password ?? string.Empty;
         }
 
-        public override void CreateStore()
-        {
-            throw new NotImplementedException();
-        }
 
-        public override void DeleteStore()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void EnsureCompatibility()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override bool StoreExists
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        public override void Insert(object item, bool insertReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Select<T>()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Select<T>(bool fillReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T Select<T>(object primaryKey)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T Select<T>(object primaryKey, bool fillReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Select<T>(string searchFieldName, object matchValue)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Select<T>(string searchFieldName, object matchValue, bool fillReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Select<T>(IEnumerable<FilterCondition> filters)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override object[] Select(Type entityType)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override object[] Select(Type entityType, bool fillReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Update(object item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Update(object item, bool cascadeUpdates, string fieldName)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Update(object item, string fieldName)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Delete(object item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Delete<T>(object primaryKey)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void FillReferences(object instance)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Fetch<T>(int fetchCount)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override int Count<T>()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override int Count<T>(IEnumerable<FilterCondition> filters)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Delete<T>()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Delete<T>(string fieldName, object matchValue)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override bool Contains(object item)
-        {
-            throw new NotImplementedException();
-        }
-
-        protected override DbCommand GetNewCommandObject()
+        protected override IDbCommand GetNewCommandObject()
         {
 #if WINDOWS_PHONE
             return new EfzCommandWrapper();
@@ -192,7 +44,7 @@ namespace OpenNETCF.ORM.EffiProz
 #endif
         }
 
-        protected override DbConnection GetNewConnectionObject()
+        protected override IDbConnection GetNewConnectionObject()
         {
 #if WINDOWS_PHONE
             return new EfzConnectionWrapper(ConnectionString);
@@ -215,6 +67,66 @@ namespace OpenNETCF.ORM.EffiProz
                 }
                 return m_connectionString;
             }
+        }
+
+        protected override string AutoIncrementFieldIdentifier
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        public override void CreateStore()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void DeleteStore()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void EnsureCompatibility()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool StoreExists
+        {
+            get { throw new NotImplementedException(); }
+        }
+
+        protected override string GetPrimaryKeyIndexName(string entityName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Insert(object item, bool insertReferences)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Update(object item, bool cascadeUpdates, string fieldName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override int Count<T>(IEnumerable<FilterCondition> filters)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override IDataParameter CreateParameterObject(string parameterName, object parameterValue)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -1,13 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM", "OpenNETCF.ORM\OpenNETCF.ORM.csproj", "{2D0EA40A-5C80-4477-A901-7648E57BA749}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.CF", "OpenNETCF.ORM\OpenNETCF.ORM.CF.csproj", "{2D0EA40A-5C80-4477-A901-7648E57BA749}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SqlCe", "OpenNETCF.ORM.SqlCe\OpenNETCF.ORM.SqlCe.csproj", "{C0AFC215-58D2-4C3E-A8BC-5671A8E01EC7}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.Xml", "OpenNETCF.ORM.Xml\OpenNETCF.ORM.Xml.csproj", "{0BE65AE6-4E3B-4173-A0FD-619B9C42C899}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.Test", "OpenNETCF.ORM.Test\OpenNETCF.ORM.Test.csproj", "{E40B4449-F45C-48BB-8141-330AFDA0AABB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.Test", "Tests\OpenNETCF.ORM.Test\OpenNETCF.ORM.Test.csproj", "{E40B4449-F45C-48BB-8141-330AFDA0AABB}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{4DD69911-3E41-4222-9813-1843A9C583FB}"
 EndProject
@@ -22,27 +22,27 @@ Global
 		SccNumberOfProjects = 6
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs01
-		SccLocalPath0 = .
-		SccProjectUniqueName1 = OpenNETCF.ORM\\OpenNETCF.ORM.csproj
-		SccProjectTopLevelParentUniqueName1 = OpenNETCF.ORM.sln
-		SccProjectName1 = OpenNETCF.ORM
-		SccLocalPath1 = OpenNETCF.ORM
-		SccProjectUniqueName2 = OpenNETCF.ORM.SqlCe\\OpenNETCF.ORM.SqlCe.csproj
-		SccProjectTopLevelParentUniqueName2 = OpenNETCF.ORM.sln
-		SccProjectName2 = OpenNETCF.ORM.SqlCe
-		SccLocalPath2 = OpenNETCF.ORM.SqlCe
-		SccProjectUniqueName3 = OpenNETCF.ORM.Xml\\OpenNETCF.ORM.Xml.csproj
-		SccProjectTopLevelParentUniqueName3 = OpenNETCF.ORM.sln
-		SccProjectName3 = OpenNETCF.ORM.Xml
-		SccLocalPath3 = OpenNETCF.ORM.Xml
-		SccProjectUniqueName4 = OpenNETCF.ORM.Test\\OpenNETCF.ORM.Test.csproj
-		SccProjectTopLevelParentUniqueName4 = OpenNETCF.ORM.sln
-		SccProjectName4 = OpenNETCF.ORM.Test
-		SccLocalPath4 = OpenNETCF.ORM.Test
-		SccProjectUniqueName5 = OpenNETCF.ORM.EffiProz\\OpenNETCF.ORM.EffiProz.CF.csproj
-		SccProjectTopLevelParentUniqueName5 = OpenNETCF.ORM.sln
-		SccProjectName5 = OpenNETCF.ORM.EffiProz
-		SccLocalPath5 = OpenNETCF.ORM.EffiProz
+		SccProjectUniqueName0 = OpenNETCF.ORM.SqlCe\\OpenNETCF.ORM.SqlCe.csproj
+		SccProjectTopLevelParentUniqueName0 = OpenNETCF.ORM.CF.sln
+		SccProjectName0 = OpenNETCF.ORM.SqlCe
+		SccLocalPath0 = OpenNETCF.ORM.SqlCe
+		SccProjectUniqueName1 = OpenNETCF.ORM.Xml\\OpenNETCF.ORM.Xml.csproj
+		SccProjectTopLevelParentUniqueName1 = OpenNETCF.ORM.CF.sln
+		SccProjectName1 = OpenNETCF.ORM.Xml
+		SccLocalPath1 = OpenNETCF.ORM.Xml
+		SccProjectUniqueName2 = OpenNETCF.ORM.EffiProz\\OpenNETCF.ORM.EffiProz.CF.csproj
+		SccProjectTopLevelParentUniqueName2 = OpenNETCF.ORM.CF.sln
+		SccProjectName2 = OpenNETCF.ORM.EffiProz
+		SccLocalPath2 = OpenNETCF.ORM.EffiProz
+		SccLocalPath3 = .
+		SccProjectUniqueName4 = OpenNETCF.ORM\\OpenNETCF.ORM.CF.csproj
+		SccProjectTopLevelParentUniqueName4 = OpenNETCF.ORM.CF.sln
+		SccProjectName4 = OpenNETCF.ORM
+		SccLocalPath4 = OpenNETCF.ORM
+		SccProjectUniqueName5 = Tests\\OpenNETCF.ORM.Test\\OpenNETCF.ORM.Test.csproj
+		SccProjectTopLevelParentUniqueName5 = OpenNETCF.ORM.CF.sln
+		SccProjectName5 = Tests/OpenNETCF.ORM.Test
+		SccLocalPath5 = Tests\\OpenNETCF.ORM.Test
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

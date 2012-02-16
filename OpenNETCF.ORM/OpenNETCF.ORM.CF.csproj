@@ -74,6 +74,7 @@
     <Compile Include="EntityInfoCollection.cs" />
     <Compile Include="DataStore.cs" />
     <Compile Include="Entity.cs" />
+    <Compile Include="SQL Store Base\SqlFilterCondition.cs" />
     <Compile Include="SqlDateTimeDefault.cs" />
     <Compile Include="FilterCondition.cs" />
     <Compile Include="Interfaces\IDefaultValue.cs" />
