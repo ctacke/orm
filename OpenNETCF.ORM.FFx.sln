@@ -14,11 +14,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		TraceAndTestImpact.testsettings = TraceAndTestImpact.testsettings
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SqlCE.Integration.Test", "OpenNETCF.ORM.SqlCE.Integration.Test\OpenNETCF.ORM.SqlCE.Integration.Test.csproj", "{5A05D8DE-100E-4443-9FBA-BEA87A070732}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SQLite.FFx", "OpenNETCF.ORM.SQLite\OpenNETCF.ORM.SQLite.FFx.csproj", "{750ED0AF-FE89-4EFC-BF7A-C29CBDD8AA7F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SQLite.Integration.Test", "OpenNETCF.ORM.SQLite.Integration.Test\OpenNETCF.ORM.SQLite.Integration.Test.csproj", "{97A3ADC5-EED5-4BC8-BE5B-1FD8DF86A1C3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SQLite.Integration.Test", "Tests\OpenNETCF.ORM.SQLite.Integration.Test\OpenNETCF.ORM.SQLite.Integration.Test.csproj", "{97A3ADC5-EED5-4BC8-BE5B-1FD8DF86A1C3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SqlCE.Integration.Test", "Tests\OpenNETCF.ORM.SqlCE.Integration.Test\OpenNETCF.ORM.SqlCE.Integration.Test.csproj", "{5A05D8DE-100E-4443-9FBA-BEA87A070732}"
 EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
@@ -35,15 +35,15 @@ Global
 		SccProjectUniqueName3 = EntityGenerator\\EntityGenerator.csproj
 		SccProjectName3 = EntityGenerator
 		SccLocalPath3 = EntityGenerator
-		SccProjectUniqueName4 = OpenNETCF.ORM.SqlCE.Integration.Test\\OpenNETCF.ORM.SqlCE.Integration.Test.csproj
-		SccProjectName4 = OpenNETCF.ORM.SqlCE.Integration.Test
-		SccLocalPath4 = OpenNETCF.ORM.SqlCE.Integration.Test
-		SccProjectUniqueName5 = OpenNETCF.ORM.SQLite\\OpenNETCF.ORM.SQLite.FFx.csproj
-		SccProjectName5 = OpenNETCF.ORM.SQLite
-		SccLocalPath5 = OpenNETCF.ORM.SQLite
-		SccProjectUniqueName6 = OpenNETCF.ORM.SQLite.Integration.Test\\OpenNETCF.ORM.SQLite.Integration.Test.csproj
-		SccProjectName6 = OpenNETCF.ORM.SQLite.Integration.Test
-		SccLocalPath6 = OpenNETCF.ORM.SQLite.Integration.Test
+		SccProjectUniqueName4 = OpenNETCF.ORM.SQLite\\OpenNETCF.ORM.SQLite.FFx.csproj
+		SccProjectName4 = OpenNETCF.ORM.SQLite
+		SccLocalPath4 = OpenNETCF.ORM.SQLite
+		SccProjectUniqueName5 = Tests\\OpenNETCF.ORM.SQLite.Integration.Test\\OpenNETCF.ORM.SQLite.Integration.Test.csproj
+		SccProjectName5 = Tests/OpenNETCF.ORM.SQLite.Integration.Test
+		SccLocalPath5 = Tests\\OpenNETCF.ORM.SQLite.Integration.Test
+		SccProjectUniqueName6 = Tests\\OpenNETCF.ORM.SqlCE.Integration.Test\\OpenNETCF.ORM.SqlCE.Integration.Test.csproj
+		SccProjectName6 = Tests/OpenNETCF.ORM.SqlCE.Integration.Test
+		SccLocalPath6 = Tests\\OpenNETCF.ORM.SqlCE.Integration.Test
 	EndGlobalSection
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = OpenNETCF.ORM.FFx.vsmdi
@@ -65,10 +65,6 @@ Global
 		{5BAFE144-30A1-4D9A-A267-1BEE62E45D2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5BAFE144-30A1-4D9A-A267-1BEE62E45D2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5BAFE144-30A1-4D9A-A267-1BEE62E45D2C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5A05D8DE-100E-4443-9FBA-BEA87A070732}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5A05D8DE-100E-4443-9FBA-BEA87A070732}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5A05D8DE-100E-4443-9FBA-BEA87A070732}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5A05D8DE-100E-4443-9FBA-BEA87A070732}.Release|Any CPU.Build.0 = Release|Any CPU
 		{750ED0AF-FE89-4EFC-BF7A-C29CBDD8AA7F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{750ED0AF-FE89-4EFC-BF7A-C29CBDD8AA7F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{750ED0AF-FE89-4EFC-BF7A-C29CBDD8AA7F}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -77,6 +73,10 @@ Global
 		{97A3ADC5-EED5-4BC8-BE5B-1FD8DF86A1C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{97A3ADC5-EED5-4BC8-BE5B-1FD8DF86A1C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{97A3ADC5-EED5-4BC8-BE5B-1FD8DF86A1C3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A05D8DE-100E-4443-9FBA-BEA87A070732}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A05D8DE-100E-4443-9FBA-BEA87A070732}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A05D8DE-100E-4443-9FBA-BEA87A070732}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A05D8DE-100E-4443-9FBA-BEA87A070732}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

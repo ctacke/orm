@@ -72,11 +72,11 @@
     <AndroidResource Include="Resources\Drawable\Icon.png" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\OpenNETCF.ORM.SQLite\OpenNETCF.ORM.SQLite.Android.csproj">
+    <ProjectReference Include="..\..\OpenNETCF.ORM.SQLite\OpenNETCF.ORM.SQLite.Android.csproj">
       <Project>{8225AFAF-2FED-40C8-A602-0432AB17E2E1}</Project>
       <Name>OpenNETCF.ORM.SQLite.Android</Name>
     </ProjectReference>
-    <ProjectReference Include="..\OpenNETCF.ORM\OpenNETCF.ORM.Android.csproj">
+    <ProjectReference Include="..\..\OpenNETCF.ORM\OpenNETCF.ORM.Android.csproj">
       <Project>{F4BE7A66-3E7B-4226-800F-4CABB7252DD1}</Project>
       <Name>OpenNETCF.ORM.Android</Name>
     </ProjectReference>
