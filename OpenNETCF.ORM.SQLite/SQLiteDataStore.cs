@@ -5,11 +5,20 @@ using System.Diagnostics;
 using System.Text;
 using System.Linq;
 using System.Data;
-using System.Data.SQLite;
 using System.Data.Common;
 using System.Collections.Generic;
 using System.Threading;
 using System.Reflection;
+
+#if ANDROID
+// note the case difference between the System.Data.SQLite and Mono's implementation
+using SQLiteCommand = Mono.Data.Sqlite.SqliteCommand;
+using SQLiteConnection = Mono.Data.Sqlite.SqliteConnection;
+using SQLiteParameter = Mono.Data.Sqlite.SqliteParameter;
+using SQLiteDataReader = Mono.Data.Sqlite.SqliteDataReader;
+#else
+using System.Data.SQLite;
+#endif
 
 namespace OpenNETCF.ORM.SQLite
 {
@@ -48,17 +57,17 @@ namespace OpenNETCF.ORM.SQLite
             }
         }
 
-        protected override System.Data.Common.DbCommand GetNewCommandObject()
+        protected override IDbCommand GetNewCommandObject()
         {
             return new SQLiteCommand();
         }
 
-        protected override System.Data.Common.DbConnection GetNewConnectionObject()
+        protected override IDbConnection GetNewConnectionObject()
         {
             return new SQLiteConnection(ConnectionString);
         }
 
-        protected override DbParameter CreateParameterObject(string parameterName, object parameterValue)
+        protected override IDataParameter CreateParameterObject(string parameterName, object parameterValue)
         {
             return new SQLiteParameter(parameterName, parameterValue);
         }
@@ -110,7 +119,7 @@ namespace OpenNETCF.ORM.SQLite
             //       simply use a dictionary keyed by entityname
             var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
             var insertCommand = new SQLiteCommand();
-
+            
             var sbFields = new StringBuilder(string.Format("INSERT INTO {0} (", entityName));
             var sbParams = new StringBuilder( " VALUES (");
 
@@ -284,7 +293,7 @@ namespace OpenNETCF.ORM.SQLite
             }
         }
 
-        private int GetIdentity(DbConnection connection)
+        private int GetIdentity(IDbConnection connection)
         {
             using (var command = new SQLiteCommand("SELECT last_insert_rowid()", connection as SQLiteConnection))
             {
@@ -305,7 +314,7 @@ namespace OpenNETCF.ORM.SQLite
                 {
                     command.CommandText = sql;
                     command.Connection = connection;
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = command.ExecuteReader() as SQLiteDataReader)
                     {
                         if (reader.HasRows)
                         {
@@ -572,7 +581,7 @@ namespace OpenNETCF.ORM.SQLite
 
                     var updateSQL = new StringBuilder(string.Format("UPDATE {0} SET ", entityName));
 
-                    using (var reader = command.ExecuteReader())
+                    using (var reader = command.ExecuteReader() as SQLiteDataReader)
                     {
 
                         if (!reader.HasRows)

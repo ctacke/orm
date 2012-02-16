@@ -81,7 +81,6 @@
     <Compile Include="Constants\DefaultType.cs" />
     <Compile Include="Constants\FieldSearchOrder.cs" />
     <Compile Include="DataStore.cs" />
-    <Compile Include="DbType.cs" />
     <Compile Include="Entity.cs" />
     <Compile Include="EntityInfo.cs" />
     <Compile Include="EntityInfoCollection.cs" />
