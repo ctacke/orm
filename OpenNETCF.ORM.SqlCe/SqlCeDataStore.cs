@@ -48,7 +48,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        protected override DbCommand GetNewCommandObject()
+        protected override IDbCommand GetNewCommandObject()
         {
             return new SqlCeCommand();
         }
@@ -307,12 +307,12 @@ namespace OpenNETCF.ORM
             }
         }
 
-        protected override DbParameter CreateParameterObject(string parameterName, object parameterValue)
+        protected override IDataParameter CreateParameterObject(string parameterName, object parameterValue)
         {
             return new SqlCeParameter(parameterName, parameterValue);
         }
 
-        private int GetIdentity(DbConnection connection)
+        private int GetIdentity(IDbConnection connection)
         {
             using (var command = new SqlCeCommand("SELECT @@IDENTITY", connection as SqlCeConnection))
             {
@@ -404,12 +404,12 @@ namespace OpenNETCF.ORM
             }
         }
 
-        protected override DbConnection GetNewConnectionObject()
+        protected override IDbConnection GetNewConnectionObject()
         {
             return new SqlCeConnection(ConnectionString);
         }
 
-        protected void ValidateIndex(DbConnection connection, string indexName, string tableName, string fieldName, bool ascending)
+        protected void ValidateIndex(IDbConnection connection, string indexName, string tableName, string fieldName, bool ascending)
         {
             var valid = false;
 
@@ -438,7 +438,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        protected void ValidateTable(DbConnection connection, EntityInfo entity)
+        protected void ValidateTable(IDbConnection connection, EntityInfo entity)
         {
             using (var command = new SqlCeCommand())
             {

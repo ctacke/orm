@@ -13,7 +13,7 @@ namespace OpenNETCF.ORM
         where TEntityInfo : EntityInfo, new()
     {
         private List<IndexInfo> m_indexNameCache = new List<IndexInfo>();
-        private DbConnection m_connection;
+        private IDbConnection m_connection;
         private Dictionary<Type, MethodInfo> m_serializerCache = new Dictionary<Type, MethodInfo>();
         private Dictionary<Type, MethodInfo> m_deserializerCache = new Dictionary<Type, MethodInfo>();
         private Dictionary<Type, object[]> m_referenceCache = new Dictionary<Type, object[]>();
@@ -39,16 +39,13 @@ namespace OpenNETCF.ORM
 
         public abstract override void Update(object item, bool cascadeUpdates, string fieldName);
 
-        public abstract override T[] Fetch<T>(int fetchCount);
-        public abstract override T[] Fetch<T>(int fetchCount, int firstRowOffset);
-        public abstract override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField);
         public abstract override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences);
 
         public abstract override int Count<T>(IEnumerable<FilterCondition> filters);
 
-        protected abstract DbCommand GetNewCommandObject();
-        protected abstract DbConnection GetNewConnectionObject();
-        protected abstract DbParameter CreateParameterObject(string parameterName, object parameterValue);
+        protected abstract IDbCommand GetNewCommandObject();
+        protected abstract IDbConnection GetNewConnectionObject();
+        protected abstract IDataParameter CreateParameterObject(string parameterName, object parameterValue);
 
         public SQLStoreBase()
         {
@@ -72,7 +69,7 @@ namespace OpenNETCF.ORM
             GC.SuppressFinalize(this);
         }
 
-        protected virtual DbConnection GetConnection(bool maintenance)
+        protected virtual IDbConnection GetConnection(bool maintenance)
         {
             switch (ConnectionBehavior)
             {
@@ -102,7 +99,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        protected virtual void DoneWithConnection(DbConnection connection, bool maintenance)
+        protected virtual void DoneWithConnection(IDbConnection connection, bool maintenance)
         {
             switch (ConnectionBehavior)
             {
@@ -189,7 +186,7 @@ namespace OpenNETCF.ORM
             "DOUBLE", "OPENROWSET", "WHERE", "DROP", "OPENXML", "WHILE", "DUMP", "OPTION", "WITH", "ELSE", "OR", "WRITETEXT" 
         };
 
-        protected virtual void CreateTable(DbConnection connection, EntityInfo entity)
+        protected virtual void CreateTable(IDbConnection connection, EntityInfo entity)
         {
             StringBuilder sql = new StringBuilder();
 
@@ -266,7 +263,7 @@ namespace OpenNETCF.ORM
             return VerifyIndex(entityName, fieldName, searchOrder, null);
         }
 
-        protected virtual string VerifyIndex(string entityName, string fieldName, FieldSearchOrder searchOrder, DbConnection connection)
+        protected virtual string VerifyIndex(string entityName, string fieldName, FieldSearchOrder searchOrder, IDbConnection connection)
         {
             bool localConnection = false;
             if (connection == null)
@@ -636,7 +633,7 @@ namespace OpenNETCF.ORM
 
         protected virtual TCommand GetSelectCommand<TCommand, TParameter>(string entityName, IEnumerable<FilterCondition> filters, out bool tableDirect)
             where TCommand : DbCommand, new()
-            where TParameter : DbParameter, new()
+            where TParameter : IDataParameter, new()
         {
             tableDirect = false;
             return BuildFilterCommand<TCommand, TParameter>(entityName, filters);
@@ -644,14 +641,14 @@ namespace OpenNETCF.ORM
 
         protected TCommand BuildFilterCommand<TCommand, TParameter>(string entityName, IEnumerable<FilterCondition> filters)
             where TCommand : DbCommand, new()
-            where TParameter : DbParameter, new()
+            where TParameter : IDataParameter, new()
         {
             return BuildFilterCommand<TCommand, TParameter>(entityName, filters, false);
         }
 
         protected TCommand BuildFilterCommand<TCommand, TParameter>(string entityName, IEnumerable<FilterCondition> filters, bool isCount)
             where TCommand : DbCommand, new()
-            where TParameter : DbParameter, new()
+            where TParameter : IDataParameter, new()
         {
             var command = new TCommand();
             command.CommandType = CommandType.Text;
