@@ -1,0 +1,38 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.Android", "OpenNETCF.ORM\OpenNETCF.ORM.Android.csproj", "{F4BE7A66-3E7B-4226-800F-4CABB7252DD1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SQLite.Android", "OpenNETCF.ORM.SQLite\OpenNETCF.ORM.SQLite.Android.csproj", "{8225AFAF-2FED-40C8-A602-0432AB17E2E1}"
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 3
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs01
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = OpenNETCF.ORM.SQLite\\OpenNETCF.ORM.SQLite.Android.csproj
+		SccProjectName1 = OpenNETCF.ORM.SQLite
+		SccLocalPath1 = OpenNETCF.ORM.SQLite
+		SccProjectUniqueName2 = OpenNETCF.ORM\\OpenNETCF.ORM.Android.csproj
+		SccProjectName2 = OpenNETCF.ORM
+		SccLocalPath2 = OpenNETCF.ORM
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F4BE7A66-3E7B-4226-800F-4CABB7252DD1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F4BE7A66-3E7B-4226-800F-4CABB7252DD1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F4BE7A66-3E7B-4226-800F-4CABB7252DD1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F4BE7A66-3E7B-4226-800F-4CABB7252DD1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8225AFAF-2FED-40C8-A602-0432AB17E2E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8225AFAF-2FED-40C8-A602-0432AB17E2E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8225AFAF-2FED-40C8-A602-0432AB17E2E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8225AFAF-2FED-40C8-A602-0432AB17E2E1}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
