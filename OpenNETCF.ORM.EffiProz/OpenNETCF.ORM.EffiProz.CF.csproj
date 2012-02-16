@@ -69,9 +69,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\OpenNETCF.ORM\OpenNETCF.ORM.csproj">
+    <ProjectReference Include="..\OpenNETCF.ORM\OpenNETCF.ORM.CF.csproj">
       <Project>{2D0EA40A-5C80-4477-A901-7648E57BA749}</Project>
-      <Name>OpenNETCF.ORM</Name>
+      <Name>OpenNETCF.ORM.CF</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CompactFramework.CSharp.targets" />

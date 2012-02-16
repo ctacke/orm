@@ -73,15 +73,15 @@
     <Compile Include="XmlStoreTest.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\OpenNETCF.ORM.SqlCe\OpenNETCF.ORM.SqlCe.csproj">
+    <ProjectReference Include="..\..\OpenNETCF.ORM.SqlCe\OpenNETCF.ORM.SqlCe.csproj">
       <Project>{C0AFC215-58D2-4C3E-A8BC-5671A8E01EC7}</Project>
       <Name>OpenNETCF.ORM.SqlCe</Name>
     </ProjectReference>
-    <ProjectReference Include="..\OpenNETCF.ORM.Xml\OpenNETCF.ORM.Xml.csproj">
+    <ProjectReference Include="..\..\OpenNETCF.ORM.Xml\OpenNETCF.ORM.Xml.csproj">
       <Project>{0BE65AE6-4E3B-4173-A0FD-619B9C42C899}</Project>
       <Name>OpenNETCF.ORM.Xml</Name>
     </ProjectReference>
-    <ProjectReference Include="..\OpenNETCF.ORM\OpenNETCF.ORM.csproj">
+    <ProjectReference Include="..\..\OpenNETCF.ORM\OpenNETCF.ORM.CF.csproj">
       <Project>{2D0EA40A-5C80-4477-A901-7648E57BA749}</Project>
       <Name>OpenNETCF.ORM</Name>
     </ProjectReference>
