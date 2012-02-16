@@ -5,7 +5,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.Android", "Op
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SQLite.Android", "OpenNETCF.ORM.SQLite\OpenNETCF.ORM.SQLite.Android.csproj", "{8225AFAF-2FED-40C8-A602-0432AB17E2E1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.TestHarness.Android", "OpenNETCF.ORM.TestHarness.Android\OpenNETCF.ORM.TestHarness.Android.csproj", "{4AF0954F-D6CD-4790-B89F-7561932CA773}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.TestHarness.Android", "Tests\OpenNETCF.ORM.TestHarness.Android\OpenNETCF.ORM.TestHarness.Android.csproj", "{4AF0954F-D6CD-4790-B89F-7561932CA773}"
 EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
@@ -19,9 +19,9 @@ Global
 		SccProjectUniqueName2 = OpenNETCF.ORM\\OpenNETCF.ORM.Android.csproj
 		SccProjectName2 = OpenNETCF.ORM
 		SccLocalPath2 = OpenNETCF.ORM
-		SccProjectUniqueName3 = OpenNETCF.ORM.TestHarness.Android\\OpenNETCF.ORM.TestHarness.Android.csproj
-		SccProjectName3 = OpenNETCF.ORM.TestHarness.Android
-		SccLocalPath3 = OpenNETCF.ORM.TestHarness.Android
+		SccProjectUniqueName3 = Tests\\OpenNETCF.ORM.TestHarness.Android\\OpenNETCF.ORM.TestHarness.Android.csproj
+		SccProjectName3 = Tests/OpenNETCF.ORM.TestHarness.Android
+		SccLocalPath3 = Tests\\OpenNETCF.ORM.TestHarness.Android
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
