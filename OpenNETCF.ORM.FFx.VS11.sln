@@ -1,0 +1,38 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 11
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.FFx.VS11", "OpenNETCF.ORM\OpenNETCF.ORM.FFx.VS11.csproj", "{6E9C7DA3-AD60-4E44-9D3A-7BBD3A20D79F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SqlCe.FFx.VS11", "OpenNETCF.ORM.SqlCe\OpenNETCF.ORM.SqlCe.FFx.VS11.csproj", "{B63F2DF8-E247-402D-A250-2514EF4A08FD}"
+EndProject
+Global
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccLocalPath0 = .
+		SccLocalPath1 = OpenNETCF.ORM.SqlCe
+		SccLocalPath2 = OpenNETCF.ORM
+		SccNumberOfProjects = 3
+		SccProjectName1 = OpenNETCF.ORM.SqlCe
+		SccProjectName2 = OpenNETCF.ORM
+		SccProjectUniqueName1 = OpenNETCF.ORM.SqlCe\\OpenNETCF.ORM.SqlCe.FFx.VS11.csproj
+		SccProjectUniqueName2 = OpenNETCF.ORM\\OpenNETCF.ORM.FFx.VS11.csproj
+		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs01
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6E9C7DA3-AD60-4E44-9D3A-7BBD3A20D79F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E9C7DA3-AD60-4E44-9D3A-7BBD3A20D79F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E9C7DA3-AD60-4E44-9D3A-7BBD3A20D79F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E9C7DA3-AD60-4E44-9D3A-7BBD3A20D79F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
