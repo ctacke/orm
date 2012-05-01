@@ -906,6 +906,28 @@ namespace OpenNETCF.ORM
         }
 
         /// <summary>
+        /// Deletes all rows from the specified Table
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        public virtual void TruncateTable(string tableName)
+        {
+            var connection = GetConnection(true);
+            try
+            {
+                using (var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+                    command.CommandText = string.Format("DELETE FROM {0}", tableName);
+                    command.ExecuteNonQuery();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
+        /// <summary>
         /// Deletes all entity instances of the specified type from the DataStore
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -921,20 +943,7 @@ namespace OpenNETCF.ORM
 
             // TODO: handle cascade deletes?
 
-            var connection = GetConnection(true);
-            try
-            {
-                using (var command = GetNewCommandObject())
-                {
-                    command.Connection = connection;
-                    command.CommandText = string.Format("DELETE FROM {0}", entityName);
-                    command.ExecuteNonQuery();
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, true);
-            }
+            TruncateTable(entityName);
         }
 
         public override void Delete<T>(string fieldName, object matchValue)
