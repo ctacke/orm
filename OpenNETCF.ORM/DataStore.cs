@@ -36,11 +36,26 @@ namespace OpenNETCF.ORM
         public event EventHandler<EntityUpdateArgs> BeforeUpdate;
         public event EventHandler<EntityUpdateArgs> AfterUpdate;
         public abstract void OnUpdate(object item, bool cascadeUpdates, string fieldName);
-        
-        public abstract void Delete(object item);
-        public abstract void Delete<T>(object primaryKey);
-        public abstract void Delete<T>();
-        public abstract void Delete<T>(string fieldName, object matchValue);
+
+        public event EventHandler<EntityDeleteArgs> BeforeDelete;
+        public event EventHandler<EntityDeleteArgs> AfterDelete;
+        public abstract void OnDelete(object item);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <remarks>This method does <b>not</b> Fire the Before/AfterDelete events</remarks>
+        public abstract void Delete<T>() where T : new();
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="fieldName"></param>
+        /// <param name="matchValue"></param>
+        /// <remarks>This method does <b>not</b> Fire the Before/AfterDelete events</remarks>
+        public abstract void Delete<T>(string fieldName, object matchValue) where T : new();
         
         public abstract void FillReferences(object instance);
         public abstract T[] Fetch<T>(int fetchCount) where T : new();
@@ -56,6 +71,48 @@ namespace OpenNETCF.ORM
         {
         }
 
+        public void Delete(object item)
+        {
+            OnBeforeDelete(item);
+            OnDelete(item);
+            OnAfterDelete(item);
+        }
+
+        /// <summary>
+        /// Deletes the specified entity instance from the DataStore
+        /// </summary>
+        /// <param name="item"></param>
+        /// <remarks>
+        /// The instance provided must have a valid primary key value
+        /// </remarks>
+        public void Delete<T>(object primaryKey)
+            where T : new()
+        {
+            var item = Select<T>(primaryKey);
+
+            if (item != null)
+            {
+                Delete(item);
+            }
+        }
+
+        public virtual void OnBeforeDelete(object item)
+        {
+            var handler = BeforeDelete;
+            if (handler != null)
+            {
+                handler(this, new EntityDeleteArgs(item));
+            }
+        }
+
+        public virtual void OnAfterDelete(object item)
+        {
+            var handler = AfterDelete;
+            if (handler != null)
+            {
+                handler(this, new EntityDeleteArgs(item));
+            }
+        }
 
         /// <summary>
         /// Updates the backing DataStore with the values in the specified entity instance

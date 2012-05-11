@@ -9,16 +9,46 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
     public class SqlCeDataStoreTest
     {
         public TestContext TestContext { get; set; }
+
         [TestMethod()]
         [DeploymentItem("OpenNETCF.ORM.SqlCe.dll")]
         public void SimpleCRUDTest()
         {
+            bool beforeInsert = false;
+            bool afterInsert = false;
+            bool beforeUpdate = false;
+            bool afterUpdate = false;
+            bool beforeDelete = false;
+            bool afterDelete = false;
+
             var store = new SqlCeDataStore("test.sdf");
             store.AddType<TestItem>();
             store.CreateStore();
 
-            store.BeforeUpdate += new EventHandler<EntityUpdateArgs>(store_BeforeUpdate);
-            store.AfterUpdate += new EventHandler<EntityUpdateArgs>(store_AfterUpdate);
+            store.BeforeInsert += delegate
+            {
+                beforeInsert = true;
+            };
+            store.AfterInsert += delegate
+            {
+                afterInsert = true;
+            };
+            store.BeforeUpdate += delegate
+            {
+                beforeUpdate = true;
+            };
+            store.AfterUpdate += delegate
+            {
+                afterUpdate = true;
+            };
+            store.BeforeDelete += delegate
+            {
+                beforeDelete = true;
+            };
+            store.AfterDelete += delegate
+            {
+                afterDelete = true;
+            };
             
             var itemA = new TestItem("ItemA");
             var itemB = new TestItem("ItemB");
@@ -26,6 +56,9 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
 
             // INSERT
             store.Insert(itemA);
+            Assert.IsTrue(beforeInsert, "BeforeInsert never fired");
+            Assert.IsTrue(afterInsert, "AfterInsert never fired");
+
             store.Insert(itemB);
             store.Insert(itemC);
 
@@ -48,8 +81,8 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             itemC.TS = new TimeSpan(8, 23, 30);
             store.Update(itemC);
 
-            Assert.IsTrue(m_beforeUpdate, "BeforeUpdate never fired");
-            Assert.IsTrue(m_afterUpdate, "AfterUpdate never fired");
+            Assert.IsTrue(beforeUpdate, "BeforeUpdate never fired");
+            Assert.IsTrue(afterUpdate, "AfterUpdate never fired");
 
             item = store.Select<TestItem>("Name", "ItemC").FirstOrDefault();
             Assert.IsNull(item);
@@ -62,6 +95,8 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
 
             // DELETE
             store.Delete(itemA);
+            Assert.IsTrue(beforeDelete, "BeforeDelete never fired");
+            Assert.IsTrue(afterDelete, "AfterDelete never fired");
             item = store.Select<TestItem>("Name", itemA.Name).FirstOrDefault();
             Assert.IsNull(item);
 
@@ -72,19 +107,6 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             // COUNT
             count = store.Count<TestItem>();
             Assert.AreEqual(2, count);
-        }
-
-        private bool m_beforeUpdate = false;
-        private bool m_afterUpdate = false;
-
-        void store_AfterUpdate(object sender, EntityUpdateArgs e)
-        {
-            m_afterUpdate = true;
-        }
-
-        void store_BeforeUpdate(object sender, EntityUpdateArgs e)
-        {
-            m_beforeUpdate = true;
         }
     }
 

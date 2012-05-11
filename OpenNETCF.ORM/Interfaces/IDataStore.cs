@@ -44,9 +44,9 @@ namespace OpenNETCF.ORM
         void Update(object item, string fieldName);
 
         void Delete(object item);
-        void Delete<T>(object primaryKey);
-        void Delete<T>();
-        void Delete<T>(string fieldName, object matchValue);
+        void Delete<T>(object primaryKey) where T : new();
+        void Delete<T>() where T : new();
+        void Delete<T>(string fieldName, object matchValue) where T : new();
 
         T[] Fetch<T>(int fetchCount) where T : new();
         T[] Fetch<T>(int fetchCount, int firstRowOffset) where T : new();
