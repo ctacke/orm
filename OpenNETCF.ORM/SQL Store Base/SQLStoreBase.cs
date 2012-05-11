@@ -710,7 +710,7 @@ namespace OpenNETCF.ORM
             command.CommandText = sql;
             command.Parameters.AddRange(@params.ToArray());
 
-            if (UseCommandCache)
+            if ((UseCommandCache) && (!isCount))
             {
                 lock (CommandCache)
                 {
