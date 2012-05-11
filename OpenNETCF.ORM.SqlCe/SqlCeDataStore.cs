@@ -155,7 +155,7 @@ namespace OpenNETCF.ORM
         /// <remarks>
         /// If the entity has an identity field, calling Insert will populate that field with the identity vale vefore returning
         /// </remarks>
-        public override void Insert(object item, bool insertReferences)
+        public override void OnInsert(object item, bool insertReferences)
         {
             var itemType = item.GetType();
             string entityName = m_entities.GetNameForType(itemType);

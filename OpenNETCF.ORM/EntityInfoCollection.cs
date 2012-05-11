@@ -6,7 +6,7 @@ using System.Text;
 namespace OpenNETCF.ORM
 {
     public class EntityInfoCollection<TEntityInfo> : IEnumerable<TEntityInfo>
-        where TEntityInfo : EntityInfo
+        where TEntityInfo : IEntityInfo
     {
         private Dictionary<string, TEntityInfo> m_entities = new Dictionary<string, TEntityInfo>();
         private Dictionary<Type, string> m_typeToNameMap = new Dictionary<Type, string>();

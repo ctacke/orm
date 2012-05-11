@@ -17,6 +17,9 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             store.AddType<TestItem>();
             store.CreateStore();
 
+            store.BeforeUpdate += new EventHandler<EntityUpdateArgs>(store_BeforeUpdate);
+            store.AfterUpdate += new EventHandler<EntityUpdateArgs>(store_AfterUpdate);
+            
             var itemA = new TestItem("ItemA");
             var itemB = new TestItem("ItemB");
             var itemC = new TestItem("ItemC");
@@ -45,6 +48,9 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             itemC.TS = new TimeSpan(8, 23, 30);
             store.Update(itemC);
 
+            Assert.IsTrue(m_beforeUpdate, "BeforeUpdate never fired");
+            Assert.IsTrue(m_afterUpdate, "AfterUpdate never fired");
+
             item = store.Select<TestItem>("Name", "ItemC").FirstOrDefault();
             Assert.IsNull(item);
             item = store.Select<TestItem>("Name", itemC.Name).FirstOrDefault();
@@ -66,6 +72,19 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             // COUNT
             count = store.Count<TestItem>();
             Assert.AreEqual(2, count);
+        }
+
+        private bool m_beforeUpdate = false;
+        private bool m_afterUpdate = false;
+
+        void store_AfterUpdate(object sender, EntityUpdateArgs e)
+        {
+            m_afterUpdate = true;
+        }
+
+        void store_BeforeUpdate(object sender, EntityUpdateArgs e)
+        {
+            m_beforeUpdate = true;
         }
     }
 

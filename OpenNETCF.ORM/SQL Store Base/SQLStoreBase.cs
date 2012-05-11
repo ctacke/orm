@@ -33,11 +33,11 @@ namespace OpenNETCF.ORM
 
         protected abstract string GetPrimaryKeyIndexName(string entityName);
 
-        public abstract override void Insert(object item, bool insertReferences);
+        public abstract override void OnInsert(object item, bool insertReferences);
 
         protected abstract object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences);
 
-        public abstract override void Update(object item, bool cascadeUpdates, string fieldName);
+        public abstract override void OnUpdate(object item, bool cascadeUpdates, string fieldName);
 
         public abstract override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences);
 
@@ -885,24 +885,6 @@ namespace OpenNETCF.ORM
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// Updates the backing DataStore with the values in the specified entity instance
-        /// </summary>
-        /// <param name="item"></param>
-        /// <remarks>
-        /// The instance provided must have a valid primary key value
-        /// </remarks>
-        public override void Update(object item)
-        {
-            //TODO: is a cascading default of true a good idea?
-            Update(item, true, null);
-        }
-
-        public override void Update(object item, string fieldName)
-        {
-            Update(item, false, fieldName);
         }
 
         /// <summary>
