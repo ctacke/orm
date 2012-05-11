@@ -59,11 +59,13 @@
     <Compile Include="Entity.cs" />
     <Compile Include="EntityInfo.cs" />
     <Compile Include="EntityInfoCollection.cs" />
+    <Compile Include="EventArgs.cs" />
     <Compile Include="Exceptions.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="FilterCondition.cs" />
     <Compile Include="Interfaces\IDataStore.cs" />
     <Compile Include="Interfaces\IDefaultValue.cs" />
+    <Compile Include="Interfaces\IEntityInfo.cs" />
     <Compile Include="Interfaces\ITableEntity.cs" />
     <Compile Include="KeyScheme.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
