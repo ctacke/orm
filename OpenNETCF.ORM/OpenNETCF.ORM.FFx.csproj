@@ -80,6 +80,7 @@
     <Compile Include="Attributes\ReferenceAttributeCollection.cs" />
     <Compile Include="Constants\DefaultType.cs" />
     <Compile Include="Constants\FieldSearchOrder.cs" />
+    <Compile Include="EventArgs.cs" />
     <Compile Include="DataStore.cs" />
     <Compile Include="Entity.cs" />
     <Compile Include="EntityInfo.cs" />
