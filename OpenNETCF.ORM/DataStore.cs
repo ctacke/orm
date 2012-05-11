@@ -7,32 +7,6 @@ using System.Diagnostics;
 
 namespace OpenNETCF.ORM
 {
-    public class EntityUpdateArgs : EventArgs
-    {
-        internal EntityUpdateArgs(object item, bool cascadeUpdates, string fieldName) 
-        {
-            Item = item;
-            CascadeUpdates = cascadeUpdates;
-            FieldName = fieldName;
-        }
-
-        public object Item { get; set; }
-        public bool CascadeUpdates { get; set; }
-        public string FieldName { get; set; }
-    }
-
-    public class EntityInsertArgs : EventArgs
-    {
-        internal EntityInsertArgs(object item, bool insertReferences)
-        {
-            Item = item;
-            InsertReferences = insertReferences;
-        }
-
-        public object Item { get; set; }
-        public bool InsertReferences { get; set; }
-    }
-
     public abstract class DataStore<TEntityInfo> : IDataStore
         where TEntityInfo : EntityInfo, new()
     {
@@ -135,7 +109,7 @@ namespace OpenNETCF.ORM
 
         public virtual void OnBeforeInsert(object item, bool insertReferences)
         {
-            var handler = AfterInsert;
+            var handler = BeforeInsert;
             if (handler != null)
             {
                 handler(this, new EntityInsertArgs(item, insertReferences));
