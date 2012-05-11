@@ -84,7 +84,7 @@ namespace OpenNETCF.ORM.Xml
             return serializer;
         }
 
-        public override void Insert(object item, bool insertReferences)
+        public override void OnInsert(object item, bool insertReferences)
         {          
             XmlSerializer serializer = GetSerializer(item.GetType());
 
@@ -142,11 +142,6 @@ namespace OpenNETCF.ORM.Xml
         }
 
         public override T[] Select<T>(string searchFieldName, object matchValue)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Update(object item)
         {
             throw new NotImplementedException();
         }
@@ -231,12 +226,7 @@ namespace OpenNETCF.ORM.Xml
             throw new NotImplementedException();
         }
 
-        public override void Update(object item, bool cascadeUpdates, string fieldName)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Update(object item, string fieldName)
+        public override void OnUpdate(object item, bool cascadeUpdates, string fieldName)
         {
             throw new NotImplementedException();
         }

@@ -99,7 +99,7 @@ namespace OpenNETCF.ORM.EffiProz
             throw new NotImplementedException();
         }
 
-        public override void Insert(object item, bool insertReferences)
+        public override void OnInsert(object item, bool insertReferences)
         {
             throw new NotImplementedException();
         }
@@ -109,7 +109,7 @@ namespace OpenNETCF.ORM.EffiProz
             throw new NotImplementedException();
         }
 
-        public override void Update(object item, bool cascadeUpdates, string fieldName)
+        public override void OnUpdate(object item, bool cascadeUpdates, string fieldName)
         {
             throw new NotImplementedException();
         }

@@ -67,6 +67,7 @@
     <Compile Include="Attributes\ReferenceAttribute.cs" />
     <Compile Include="Constants\DefaultType.cs" />
     <Compile Include="Constants\FieldSearchOrder.cs" />
+    <Compile Include="EventArgs.cs" />
     <Compile Include="Exceptions.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Attributes\FieldAttributeCollection.cs" />
@@ -74,6 +75,7 @@
     <Compile Include="EntityInfoCollection.cs" />
     <Compile Include="DataStore.cs" />
     <Compile Include="Entity.cs" />
+    <Compile Include="Interfaces\IEntityInfo.cs" />
     <Compile Include="SQL Store Base\SqlFilterCondition.cs" />
     <Compile Include="SqlDateTimeDefault.cs" />
     <Compile Include="FilterCondition.cs" />
