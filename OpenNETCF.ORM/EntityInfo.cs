@@ -5,7 +5,7 @@ using System.Text;
 
 namespace OpenNETCF.ORM
 {
-    public class EntityInfo
+    public class EntityInfo : IEntityInfo
     {
         protected EntityInfo()
         {

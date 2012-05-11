@@ -152,7 +152,7 @@ namespace OpenNETCF.ORM.SQLite
         /// <remarks>
         /// If the entity has an identity field, calling Insert will populate that field with the identity vale vefore returning
         /// </remarks>
-        public override void Insert(object item, bool insertReferences)
+        public override void OnInsert(object item, bool insertReferences)
         {
             var itemType = item.GetType();
             string entityName = m_entities.GetNameForType(itemType);
@@ -543,7 +543,7 @@ namespace OpenNETCF.ORM.SQLite
             throw new NotImplementedException();
         }
 
-        public override void Update(object item, bool cascadeUpdates, string fieldName)
+        public override void OnUpdate(object item, bool cascadeUpdates, string fieldName)
         {
             object keyValue;
             var changeDetected = false;

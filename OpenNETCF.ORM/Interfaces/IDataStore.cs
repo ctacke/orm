@@ -8,9 +8,13 @@ namespace OpenNETCF.ORM
 {
     public interface IDataStore
     {
+        event EventHandler<EntityInsertArgs> BeforeInsert;
+        event EventHandler<EntityInsertArgs> AfterInsert;
+        event EventHandler<EntityUpdateArgs> BeforeUpdate;
+        event EventHandler<EntityUpdateArgs> AfterUpdate;
+
         void AddType<T>();
         void AddType(Type entityType);
-
         void DiscoverTypes(Assembly containingAssembly);
 
         void CreateStore();
@@ -20,7 +24,8 @@ namespace OpenNETCF.ORM
 
         void Insert(object item);
 
-        EntityInfo GetEntityInfo(string entityName);
+        IEntityInfo GetEntityInfo(string entityName);
+        IEntityInfo[] GetEntityInfo();
 
         T[] Select<T>() where T : new();
         T[] Select<T>(bool fillReferences) where T : new();

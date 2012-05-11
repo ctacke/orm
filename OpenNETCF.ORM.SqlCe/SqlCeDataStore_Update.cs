@@ -10,7 +10,7 @@ namespace OpenNETCF.ORM
 {
     partial class SqlCeDataStore
     {
-        public override void Update(object item, bool cascadeUpdates, string fieldName)
+        public override void OnUpdate(object item, bool cascadeUpdates, string fieldName)
         {
             object keyValue;
             var itemType = item.GetType();

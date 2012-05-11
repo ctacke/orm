@@ -7,6 +7,32 @@ using System.Diagnostics;
 
 namespace OpenNETCF.ORM
 {
+    public class EntityUpdateArgs : EventArgs
+    {
+        internal EntityUpdateArgs(object item, bool cascadeUpdates, string fieldName) 
+        {
+            Item = item;
+            CascadeUpdates = cascadeUpdates;
+            FieldName = fieldName;
+        }
+
+        public object Item { get; set; }
+        public bool CascadeUpdates { get; set; }
+        public string FieldName { get; set; }
+    }
+
+    public class EntityInsertArgs : EventArgs
+    {
+        internal EntityInsertArgs(object item, bool insertReferences)
+        {
+            Item = item;
+            InsertReferences = insertReferences;
+        }
+
+        public object Item { get; set; }
+        public bool InsertReferences { get; set; }
+    }
+
     public abstract class DataStore<TEntityInfo> : IDataStore
         where TEntityInfo : EntityInfo, new()
     {
@@ -18,7 +44,9 @@ namespace OpenNETCF.ORM
         public abstract bool StoreExists { get; }
         public abstract void EnsureCompatibility();
 
-        public abstract void Insert(object item, bool insertReferences);
+        public event EventHandler<EntityInsertArgs> BeforeInsert;
+        public event EventHandler<EntityInsertArgs> AfterInsert;
+        public abstract void OnInsert(object item, bool insertReferences);
 
         public abstract T[] Select<T>() where T : new();
         public abstract T[] Select<T>(bool fillReferences) where T : new();
@@ -30,13 +58,15 @@ namespace OpenNETCF.ORM
         public abstract T[] Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences) where T : new();
         public abstract object[] Select(Type entityType);
         public abstract object[] Select(Type entityType, bool fillReferences);
-        
-        public abstract void Update(object item);
-        public abstract void Update(object item, bool cascadeUpdates, string fieldName);
-        public abstract void Update(object item, string fieldName);
+
+        public event EventHandler<EntityUpdateArgs> BeforeUpdate;
+        public event EventHandler<EntityUpdateArgs> AfterUpdate;
+        public abstract void OnUpdate(object item, bool cascadeUpdates, string fieldName);
         
         public abstract void Delete(object item);
         public abstract void Delete<T>(object primaryKey);
+        public abstract void Delete<T>();
+        public abstract void Delete<T>(string fieldName, object matchValue);
         
         public abstract void FillReferences(object instance);
         public abstract T[] Fetch<T>(int fetchCount) where T : new();
@@ -46,12 +76,79 @@ namespace OpenNETCF.ORM
 
         public abstract int Count<T>();
         public abstract int Count<T>(IEnumerable<FilterCondition> filters);
-        public abstract void Delete<T>();
-        public abstract void Delete<T>(string fieldName, object matchValue);
         public abstract bool Contains(object item);
 
         public DataStore()
         {
+        }
+
+
+        /// <summary>
+        /// Updates the backing DataStore with the values in the specified entity instance
+        /// </summary>
+        /// <param name="item"></param>
+        /// <remarks>
+        /// The instance provided must have a valid primary key value
+        /// </remarks>
+        public void Update(object item)
+        {
+            //TODO: is a cascading default of true a good idea?
+            Update(item, true, null);
+        }
+
+        public void Update(object item, string fieldName)
+        {
+            Update(item, false, fieldName);
+        }
+
+        public void Update(object item, bool cascadeUpdates, string fieldName)
+        {
+            OnBeforeUpdate(item, cascadeUpdates, fieldName);
+            OnUpdate(item, cascadeUpdates, fieldName);
+            OnAfterUpdate(item, cascadeUpdates, fieldName);
+        }
+
+        public virtual void OnBeforeUpdate(object item, bool cascadeUpdates, string fieldName) 
+        {
+            var handler = BeforeUpdate;
+            if (handler != null)
+            {
+                handler(this, new EntityUpdateArgs(item, cascadeUpdates, fieldName));
+            }
+        }
+
+        public virtual void OnAfterUpdate(object item, bool cascadeUpdates, string fieldName)
+        {
+            var handler = AfterUpdate;
+            if (handler != null)
+            {
+                handler(this, new EntityUpdateArgs(item, cascadeUpdates, fieldName));
+            }
+        }
+
+        public void Insert(object item, bool insertReferences)
+        {
+            OnBeforeInsert(item, insertReferences);
+            OnInsert(item, insertReferences);
+            OnAfterInsert(item, insertReferences);
+        }
+
+        public virtual void OnBeforeInsert(object item, bool insertReferences)
+        {
+            var handler = AfterInsert;
+            if (handler != null)
+            {
+                handler(this, new EntityInsertArgs(item, insertReferences));
+            }
+        }
+
+        public virtual void OnAfterInsert(object item, bool insertReferences)
+        {
+            var handler = AfterInsert;
+            if (handler != null)
+            {
+                handler(this, new EntityInsertArgs(item, insertReferences));
+            }
         }
 
         public EntityInfoCollection<TEntityInfo> Entities 
@@ -59,9 +156,14 @@ namespace OpenNETCF.ORM
             get { return m_entities; }
         }
 
-        public EntityInfo GetEntityInfo(string entityName)
+        public IEntityInfo GetEntityInfo(string entityName)
         {
             return Entities[entityName];
+        }
+
+        public IEntityInfo[] GetEntityInfo()
+        {
+            return Entities.ToArray();
         }
 
         public void AddType<T>()
