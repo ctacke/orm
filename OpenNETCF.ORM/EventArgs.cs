@@ -32,4 +32,14 @@ namespace OpenNETCF.ORM
         public object Item { get; set; }
         public bool InsertReferences { get; set; }
     }
+
+    public class EntityDeleteArgs : EventArgs
+    {
+        internal EntityDeleteArgs(object item)
+        {
+            Item = item;
+        }
+
+        public object Item { get; set; }
+    }
 }

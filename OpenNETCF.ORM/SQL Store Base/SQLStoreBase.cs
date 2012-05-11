@@ -968,7 +968,7 @@ namespace OpenNETCF.ORM
         /// <remarks>
         /// The instance provided must have a valid primary key value
         /// </remarks>
-        public override void Delete(object item)
+        public override void OnDelete(object item)
         {
             var type = item.GetType();
             string entityName = m_entities.GetNameForType(type);
@@ -985,16 +985,6 @@ namespace OpenNETCF.ORM
             var keyValue = Entities[entityName].Fields.KeyField.PropertyInfo.GetValue(item, null);
 
             Delete(type, keyValue);
-        }
-
-        /// <summary>
-        /// Deletes an entity instance with the specified primary key from the DataStore
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="primaryKey"></param>
-        public override void Delete<T>(object primaryKey)
-        {
-            Delete(typeof(T), primaryKey);
         }
 
         protected virtual void Delete(Type t, object primaryKey)

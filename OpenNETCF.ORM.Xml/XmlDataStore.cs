@@ -146,12 +146,7 @@ namespace OpenNETCF.ORM.Xml
             throw new NotImplementedException();
         }
 
-        public override void Delete(object item)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Delete<T>(object primaryKey)
+        public override void OnDelete(object item)
         {
             throw new NotImplementedException();
         }
