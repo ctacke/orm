@@ -12,6 +12,8 @@ namespace OpenNETCF.ORM
     {
         protected EntityInfoCollection<TEntityInfo> m_entities = new EntityInfoCollection<TEntityInfo>();
 
+        public event EventHandler<EntityTypeAddedArgs> EntityTypeAdded;
+
         // TODO: maybe move these to another object since they're more "admin" related?
         public abstract void CreateStore();
         public abstract void DeleteStore();
@@ -286,6 +288,14 @@ namespace OpenNETCF.ORM
             }
 
             m_entities.Add(map);
+
+            var handler = EntityTypeAdded;
+            if (handler != null)
+            {
+                var info = this.Entities[attr.NameInStore];
+                var args = new EntityTypeAddedArgs(info);
+                handler(this, args);
+            }
         }
 
         public void DiscoverTypes(Assembly containingAssembly)

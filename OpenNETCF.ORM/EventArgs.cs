@@ -7,6 +7,16 @@ using System.Diagnostics;
 
 namespace OpenNETCF.ORM
 {
+    public class EntityTypeAddedArgs : EventArgs
+    {
+        internal EntityTypeAddedArgs(IEntityInfo info) 
+        {
+            EntityInfo = info;
+        }
+
+        public IEntityInfo EntityInfo { get; set; }
+    }
+
     public class EntityUpdateArgs : EventArgs
     {
         internal EntityUpdateArgs(object item, bool cascadeUpdates, string fieldName) 
