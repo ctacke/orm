@@ -8,6 +8,7 @@ namespace OpenNETCF.ORM
 {
     public interface IDataStore
     {
+        event EventHandler<EntityTypeAddedArgs> EntityTypeAdded;
         event EventHandler<EntityInsertArgs> BeforeInsert;
         event EventHandler<EntityInsertArgs> AfterInsert;
         event EventHandler<EntityUpdateArgs> BeforeUpdate;

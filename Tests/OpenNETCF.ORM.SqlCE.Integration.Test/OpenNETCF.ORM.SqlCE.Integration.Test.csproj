@@ -61,11 +61,11 @@
     <Shadow Include="Test References\OpenNETCF.ORM.SqlCe.accessor" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\OpenNETCF.ORM.SqlCe\OpenNETCF.ORM.SqlCe.FFx.csproj">
+    <ProjectReference Include="..\..\OpenNETCF.ORM.SqlCe\OpenNETCF.ORM.SqlCe.FFx.csproj">
       <Project>{B63F2DF8-E247-402D-A250-2514EF4A08FD}</Project>
       <Name>OpenNETCF.ORM.SqlCe.FFx</Name>
     </ProjectReference>
-    <ProjectReference Include="..\OpenNETCF.ORM\OpenNETCF.ORM.FFx.csproj">
+    <ProjectReference Include="..\..\OpenNETCF.ORM\OpenNETCF.ORM.FFx.csproj">
       <Project>{6E9C7DA3-AD60-4E44-9D3A-7BBD3A20D79F}</Project>
       <Name>OpenNETCF.ORM.FFx</Name>
     </ProjectReference>
