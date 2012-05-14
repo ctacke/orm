@@ -20,9 +20,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SQLite.Integr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SqlCE.Integration.Test", "Tests\OpenNETCF.ORM.SqlCE.Integration.Test\OpenNETCF.ORM.SqlCE.Integration.Test.csproj", "{5A05D8DE-100E-4443-9FBA-BEA87A070732}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.Unit.Test", "Tests\OpenNETCF.ORM.Unit.Test\OpenNETCF.ORM.Unit.Test.csproj", "{DC2441D9-A0C3-4339-8437-4731B118A71C}"
+EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 7
+		SccNumberOfProjects = 8
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs01
 		SccLocalPath0 = .
@@ -44,6 +46,9 @@ Global
 		SccProjectUniqueName6 = Tests\\OpenNETCF.ORM.SqlCE.Integration.Test\\OpenNETCF.ORM.SqlCE.Integration.Test.csproj
 		SccProjectName6 = Tests/OpenNETCF.ORM.SqlCE.Integration.Test
 		SccLocalPath6 = Tests\\OpenNETCF.ORM.SqlCE.Integration.Test
+		SccProjectUniqueName7 = Tests\\OpenNETCF.ORM.Unit.Test\\OpenNETCF.ORM.Unit.Test.csproj
+		SccProjectName7 = Tests/OpenNETCF.ORM.Unit.Test
+		SccLocalPath7 = Tests\\OpenNETCF.ORM.Unit.Test
 	EndGlobalSection
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = OpenNETCF.ORM.FFx.vsmdi
@@ -77,6 +82,10 @@ Global
 		{5A05D8DE-100E-4443-9FBA-BEA87A070732}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5A05D8DE-100E-4443-9FBA-BEA87A070732}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5A05D8DE-100E-4443-9FBA-BEA87A070732}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DC2441D9-A0C3-4339-8437-4731B118A71C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DC2441D9-A0C3-4339-8437-4731B118A71C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DC2441D9-A0C3-4339-8437-4731B118A71C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DC2441D9-A0C3-4339-8437-4731B118A71C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
