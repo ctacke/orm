@@ -14,6 +14,8 @@ namespace OpenNETCF.ORM
         event EventHandler<EntityUpdateArgs> BeforeUpdate;
         event EventHandler<EntityUpdateArgs> AfterUpdate;
 
+        string Name { get; }
+
         void AddType<T>();
         void AddType(Type entityType);
         void DiscoverTypes(Assembly containingAssembly);

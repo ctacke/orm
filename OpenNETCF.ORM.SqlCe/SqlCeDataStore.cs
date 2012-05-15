@@ -48,6 +48,11 @@ namespace OpenNETCF.ORM
             }
         }
 
+        public override string Name
+        {
+            get { return FileName; }
+        }
+
         protected override IDbCommand GetNewCommandObject()
         {
             return new SqlCeCommand();

@@ -73,6 +73,11 @@ namespace OpenNETCF.ORM
         {
         }
 
+        public virtual string Name
+        {
+            get { return "Unanamed Data Store"; }
+        }
+
         public void Delete(object item)
         {
             OnBeforeDelete(item);
