@@ -67,6 +67,9 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             Assert.AreEqual(3, count);
 
             // SELECT
+            var items = store.Select<TestItem>();
+            Assert.AreEqual(3, items.Count());
+
             var item = store.Select<TestItem>("Name", itemB.Name).FirstOrDefault();
             Assert.IsTrue(item.Equals(itemB));
 

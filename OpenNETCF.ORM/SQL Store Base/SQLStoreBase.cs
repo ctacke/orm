@@ -665,46 +665,49 @@ namespace OpenNETCF.ORM
                 sb = new StringBuilder(string.Format("SELECT * FROM {0}", entityName));
             }
 
-            for (int i = 0; i < filters.Count(); i++)
+            if (filters != null)
             {
-                sb.Append(i == 0 ? " WHERE " : " AND ");
-
-                var filter = filters.ElementAt(i);
-                sb.Append("[" + filter.FieldName + "]");
-
-                switch (filters.ElementAt(i).Operator)
+                for (int i = 0; i < filters.Count(); i++)
                 {
-                    case FilterCondition.FilterOperator.Equals:
-                        if ((filter.Value == null) || (filter.Value == DBNull.Value))
-                        {
-                            sb.Append(" IS NULL ");
-                            continue;
-                        }
-                        sb.Append(" = ");
-                        break;
-                    case FilterCondition.FilterOperator.Like:
-                        sb.Append(" LIKE ");
-                        break;
-                    case FilterCondition.FilterOperator.LessThan:
-                        sb.Append(" < ");
-                        break;
-                    case FilterCondition.FilterOperator.GreaterThan:
-                        sb.Append(" > ");
-                        break;
-                    default:
-                        throw new NotSupportedException();
+                    sb.Append(i == 0 ? " WHERE " : " AND ");
+
+                    var filter = filters.ElementAt(i);
+                    sb.Append("[" + filter.FieldName + "]");
+
+                    switch (filters.ElementAt(i).Operator)
+                    {
+                        case FilterCondition.FilterOperator.Equals:
+                            if ((filter.Value == null) || (filter.Value == DBNull.Value))
+                            {
+                                sb.Append(" IS NULL ");
+                                continue;
+                            }
+                            sb.Append(" = ");
+                            break;
+                        case FilterCondition.FilterOperator.Like:
+                            sb.Append(" LIKE ");
+                            break;
+                        case FilterCondition.FilterOperator.LessThan:
+                            sb.Append(" < ");
+                            break;
+                        case FilterCondition.FilterOperator.GreaterThan:
+                            sb.Append(" > ");
+                            break;
+                        default:
+                            throw new NotSupportedException();
+                    }
+
+                    string paramName = string.Format("@p{0}", i);
+                    sb.Append(paramName);
+
+                    var param = new TParameter()
+                    {
+                        ParameterName = paramName,
+                        Value = filter.Value ?? DBNull.Value
+                    };
+
+                    @params.Add(param);
                 }
-
-                string paramName = string.Format("@p{0}", i);
-                sb.Append(paramName);
-
-                var param = new TParameter()
-                {
-                    ParameterName = paramName,
-                    Value = filter.Value ?? DBNull.Value
-                };
-
-                @params.Add(param);
             }
             var sql = sb.ToString();
             command.CommandText = sql;

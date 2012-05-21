@@ -68,6 +68,9 @@ namespace OpenNETCF.ORM.TestHarness.Android
 
 
             // SELECT
+            var items = store.Select<TestItem>();
+            if (items.Count() != 3) Debugger.Break();
+
             var item = store.Select<TestItem>("Name", itemB.Name).FirstOrDefault();
             //Assert.IsTrue(item.Equals(itemB));
 
