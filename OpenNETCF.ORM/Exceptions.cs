@@ -24,7 +24,7 @@ namespace OpenNETCF.ORM
     public class ReservedWordException : Exception
     {
         public ReservedWordException(string word)
-            : base(string.Format("'{0}' is a reserved word.  It cannot be used for an Entity or Field name. Rename the entity or adjust its attributes.", word))
+            : base(string.Format("'{0}' is a reserved word.  It cannot be used for an Entity or Field name. Rename the entity/field or adjust its attributes.", word))
         {
         }
     }
