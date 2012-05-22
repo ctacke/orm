@@ -484,8 +484,24 @@ namespace OpenNETCF.ORM.SQLite
                                         // SQLite automatically makes auto-increment fields 64-bit, so this works around that behavior
                                         field.PropertyInfo.SetValue(item, Convert.ToInt32(value), null);
                                     }
+                                    else if (value is Int64)
+                                    {
+                                        // SQLite is "interesting" in that its 'integer' has a strong affinity toward 64-bit, so int and uit properties
+                                        // end up as 64-bit fields.  When we query those back, we must convert to put them intot he property or we crash hard
+                                        if(field.PropertyInfo.PropertyType.Equals(typeof(UInt32)))
+                                        {
+                                            var t = value.GetType();
+                                            field.PropertyInfo.SetValue(item, Convert.ToUInt32(value), null);
+                                        }
+                                        else// if (field.PropertyInfo.PropertyType.Equals(typeof(Int32)))
+                                        {
+                                            var t = value.GetType();
+                                            field.PropertyInfo.SetValue(item, Convert.ToInt32(value), null);
+                                        }
+                                    }
                                     else
                                     {
+                                        var t = value.GetType();
                                         field.PropertyInfo.SetValue(item, value, null);
                                     }
                                 }

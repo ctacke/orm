@@ -51,6 +51,8 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             };
             
             var itemA = new TestItem("ItemA");
+            itemA.UUID = Guid.NewGuid();
+            itemA.Test = 5;
             var itemB = new TestItem("ItemB");
             var itemC = new TestItem("ItemC");
 
@@ -130,6 +132,12 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
 
         [Field]
         public string Name { get; set; }
+
+        [Field]
+        public Guid? UUID { get; set; }
+
+        [Field]
+        public int Test { get; set; }
 
         [Field]
         public string Address { get; set; }
