@@ -18,6 +18,12 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             store.CreateStore();
 
             var itemA = new TestItem("ItemA");
+            itemA.UUID = Guid.NewGuid();
+            itemA.ITest = 5;
+            itemA.FTest = 3.14F;
+            itemA.DBTest = 1.4D;
+            itemA.DETest = 2.678M;
+
             var itemB = new TestItem("ItemB");
             var itemC = new TestItem("ItemC");
 
@@ -31,6 +37,9 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             Assert.AreEqual(3, count);
 
             // SELECT
+            var items = store.Select<TestItem>();
+            Assert.AreEqual(3, items.Count());
+
             var item = store.Select<TestItem>("Name", itemB.Name).FirstOrDefault();
             Assert.IsTrue(item.Equals(itemB));
 
@@ -88,7 +97,22 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
         public string Name { get; set; }
 
         [Field]
+        public Guid? UUID { get; set; }
+
+        [Field]
+        public int ITest { get; set; }
+
+        [Field]
         public string Address { get; set; }
+
+        [Field]
+        public float FTest { get; set; }
+
+        [Field]
+        public double DBTest { get; set; }
+
+        [Field(Scale = 2)]
+        public decimal DETest { get; set; }
 
         [Field]
         public TimeSpan TS { get; set; }

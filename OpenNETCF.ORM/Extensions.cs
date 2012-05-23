@@ -44,6 +44,8 @@ namespace OpenNETCF.ORM
                     return isNullable ? typeof(DateTime?) : typeof(DateTime);
                 case DbType.Decimal:
                     return isNullable ? typeof(decimal?) : typeof(decimal);
+                case DbType.Single:
+                    return isNullable ? typeof(float?) : typeof(float);
                 case DbType.Double:
                     return isNullable ? typeof(double?) : typeof(double);
                 case DbType.Int64:
@@ -88,6 +90,9 @@ namespace OpenNETCF.ORM
                     return DbType.DateTime;
                 case "System.TimeSpan":
                     return DbType.Int64;
+
+                case "System.Single":
+                    return DbType.Single;
 
                 case "System.Decimal":
                     return DbType.Decimal;
@@ -142,6 +147,8 @@ namespace OpenNETCF.ORM
                     return DbType.Byte;
                 case "numeric":
                     return DbType.Decimal;
+                case "real":
+                    return DbType.Single;
                 case "float":
                     return DbType.Double;
                 case "uniqueidentifier":
@@ -180,9 +187,10 @@ namespace OpenNETCF.ORM
                     return "image";
                 case DbType.Byte:
                     return "tinyint";
-
                 case DbType.Decimal:
                     return "numeric";
+                case DbType.Single:
+                    return "real";
                 case DbType.Double:
                     return "float";
                 case DbType.Guid:

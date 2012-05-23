@@ -484,19 +484,37 @@ namespace OpenNETCF.ORM.SQLite
                                         // SQLite automatically makes auto-increment fields 64-bit, so this works around that behavior
                                         field.PropertyInfo.SetValue(item, Convert.ToInt32(value), null);
                                     }
-                                    else if (value is Int64)
+                                    else if ((value is Int64) || (value is double))
                                     {
-                                        // SQLite is "interesting" in that its 'integer' has a strong affinity toward 64-bit, so int and uit properties
-                                        // end up as 64-bit fields.  When we query those back, we must convert to put them intot he property or we crash hard
+                                        // SQLite is "interesting" in that its 'integer' has a strong affinity toward 64-bit, so int and uint properties
+                                        // end up as 64-bit fields.  Decimals have a strong affinity toward 'double', so float properties
+                                        // end up as 'double'. Even more fun is that a decimal value '0' will come back as an int64
+                                        
+                                        // When we query those back, we must convert to put them into the property or we crash hard
                                         if(field.PropertyInfo.PropertyType.Equals(typeof(UInt32)))
                                         {
                                             var t = value.GetType();
                                             field.PropertyInfo.SetValue(item, Convert.ToUInt32(value), null);
                                         }
-                                        else// if (field.PropertyInfo.PropertyType.Equals(typeof(Int32)))
+                                        else if (field.PropertyInfo.PropertyType.Equals(typeof(Int32)))
                                         {
                                             var t = value.GetType();
                                             field.PropertyInfo.SetValue(item, Convert.ToInt32(value), null);
+                                        }
+                                        else if (field.PropertyInfo.PropertyType.Equals(typeof(decimal)))
+                                        {
+                                            var t = value.GetType();
+                                            field.PropertyInfo.SetValue(item, Convert.ToDecimal(value), null);
+                                        }
+                                        else if (field.PropertyInfo.PropertyType.Equals(typeof(float)))
+                                        {
+                                            var t = value.GetType();
+                                            field.PropertyInfo.SetValue(item, Convert.ToSingle(value), null);
+                                        }
+                                        else
+                                        {
+                                            var t = value.GetType();
+                                            field.PropertyInfo.SetValue(item, value, null);
                                         }
                                     }
                                     else

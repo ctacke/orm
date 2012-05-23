@@ -52,7 +52,11 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             
             var itemA = new TestItem("ItemA");
             itemA.UUID = Guid.NewGuid();
-            itemA.Test = 5;
+            itemA.ITest = 5;
+            itemA.FTest = 3.14F;
+            itemA.DBTest = 1.4D;
+            itemA.DETest = 2.678M;
+
             var itemB = new TestItem("ItemB");
             var itemC = new TestItem("ItemC");
 
@@ -137,10 +141,19 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
         public Guid? UUID { get; set; }
 
         [Field]
-        public int Test { get; set; }
+        public int ITest { get; set; }
 
         [Field]
         public string Address { get; set; }
+
+        [Field]
+        public float FTest { get; set; }
+
+        [Field]
+        public double DBTest { get; set; }
+
+        [Field(Scale=2)]
+        public decimal DETest { get; set; }
 
         [Field]
         public TimeSpan TS { get; set; }
