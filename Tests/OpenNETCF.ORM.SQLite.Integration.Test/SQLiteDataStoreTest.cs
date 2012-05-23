@@ -93,7 +93,7 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
         [Field(IsPrimaryKey = true)]
         public int ID { get; set; }
 
-        [Field]
+        [Field(SearchOrder=FieldSearchOrder.Ascending)]
         public string Name { get; set; }
 
         [Field]

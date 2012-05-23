@@ -371,6 +371,64 @@ namespace OpenNETCF.ORM.SQLite
             }
         }
 
+        protected override string VerifyIndex(string entityName, string fieldName, FieldSearchOrder searchOrder, IDbConnection connection)
+        {
+            bool localConnection = false;
+            if (connection == null)
+            {
+                localConnection = true;
+                connection = GetConnection(true);
+            }
+            try
+            {
+                var indexName = string.Format("ORM_IDX_{0}_{1}_{2}", entityName, fieldName,
+                    searchOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+
+                if (m_indexNameCache.FirstOrDefault(ii => ii.Name == indexName) != null) return indexName;
+
+                using (var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+
+                    var sql = string.Format("SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = '{0}'", indexName);
+                    command.CommandText = sql;
+
+                    var i = (long)command.ExecuteScalar();
+
+                    if (i == 0)
+                    {
+                        sql = string.Format("CREATE INDEX {0} ON {1}({2} {3})",
+                            indexName,
+                            entityName,
+                            fieldName,
+                            searchOrder == FieldSearchOrder.Descending ? "DESC" : string.Empty);
+
+                        Debug.WriteLine(sql);
+
+                        command.CommandText = sql;
+                        command.ExecuteNonQuery();
+                    }
+
+                    var indexinfo = new IndexInfo
+                    {
+                        Name = indexName,
+                        MaxCharLength = -1
+                    };
+
+                    m_indexNameCache.Add(indexinfo);
+                }
+
+                return indexName;
+            }
+            finally
+            {
+                if (localConnection)
+                {
+                    DoneWithConnection(connection, true);
+                }
+            }
+        }
+
         protected override object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
         {
             string entityName = m_entities.GetNameForType(objectType);

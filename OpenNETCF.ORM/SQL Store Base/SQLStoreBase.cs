@@ -12,7 +12,7 @@ namespace OpenNETCF.ORM
     public abstract class SQLStoreBase<TEntityInfo> : DataStore<TEntityInfo>, IDisposable
         where TEntityInfo : EntityInfo, new()
     {
-        private List<IndexInfo> m_indexNameCache = new List<IndexInfo>();
+        protected List<IndexInfo> m_indexNameCache = new List<IndexInfo>();
         private IDbConnection m_connection;
         private Dictionary<Type, MethodInfo> m_serializerCache = new Dictionary<Type, MethodInfo>();
         private Dictionary<Type, MethodInfo> m_deserializerCache = new Dictionary<Type, MethodInfo>();
