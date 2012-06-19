@@ -33,6 +33,20 @@ namespace OpenNETCF.ORM
         public int Ordinal { get; set; }
         public FieldSearchOrder SearchOrder { get; set; }
         public IDefaultValue Default { get; set; }
+        
+        private bool? m_isTimeSpan;
+
+        public bool IsTimespan
+        {
+            get 
+            {
+                if(!m_isTimeSpan.HasValue)
+                {
+                    m_isTimeSpan = PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>();
+                }
+                return m_isTimeSpan.Value;
+            }
+        }
 
         /// <summary>
         /// rowversion or timestamp time for Sql Server

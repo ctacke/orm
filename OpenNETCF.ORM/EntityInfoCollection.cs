@@ -8,7 +8,7 @@ namespace OpenNETCF.ORM
     public class EntityInfoCollection<TEntityInfo> : IEnumerable<TEntityInfo>
         where TEntityInfo : IEntityInfo
     {
-        private Dictionary<string, TEntityInfo> m_entities = new Dictionary<string, TEntityInfo>();
+        private Dictionary<string, TEntityInfo> m_entities = new Dictionary<string, TEntityInfo>(StringComparer.InvariantCultureIgnoreCase);
         private Dictionary<Type, string> m_typeToNameMap = new Dictionary<Type, string>();
 
         internal EntityInfoCollection()
@@ -45,7 +45,7 @@ namespace OpenNETCF.ORM
 
         public TEntityInfo this[string entityName]
         {
-            get { return m_entities[entityName.ToLower()]; }
+            get { return m_entities[entityName]; }
         }
     }
 }
