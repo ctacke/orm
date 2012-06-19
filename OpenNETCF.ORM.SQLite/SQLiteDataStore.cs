@@ -492,7 +492,10 @@ namespace OpenNETCF.ORM.SQLite
                                 continue;
                             }
 
-                            object item = Activator.CreateInstance(objectType);
+                            // create the actual object instance
+                            // this is faster than Activator.CreateInstance starting at call #2 for the type
+                            var ctor = GetConstructorForType(objectType);
+                            object item = ctor.Invoke(null);
                             object rowPK = null;
 
                             // autofill references if desired
@@ -531,7 +534,7 @@ namespace OpenNETCF.ORM.SQLite
                                         // sql stores this an 8-byte array
                                         field.PropertyInfo.SetValue(item, BitConverter.ToInt64((byte[])value, 0), null);
                                     }
-                                    else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
+                                    else if (field.IsTimespan)
                                     {
                                         // SQL Compact doesn't support Time, so we're convert to ticks in both directions
                                         var valueAsTimeSpan = new TimeSpan((long)value);

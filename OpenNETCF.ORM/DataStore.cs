@@ -335,5 +335,19 @@ namespace OpenNETCF.ORM
                    where selector(e)
                    select e).ToArray();
         }
+
+        private Dictionary<Type, ConstructorInfo> m_ctorCache = new Dictionary<Type, ConstructorInfo>();
+
+        protected internal ConstructorInfo GetConstructorForType(Type objectType)
+        {
+            if (m_ctorCache.ContainsKey(objectType))
+            {
+                return m_ctorCache[objectType];
+            }
+
+            var ctor = objectType.GetConstructor(new Type[] { });
+            m_ctorCache.Add(objectType, ctor);
+            return ctor;
+        }
     }
 }
