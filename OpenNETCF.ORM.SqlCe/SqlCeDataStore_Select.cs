@@ -202,7 +202,7 @@ namespace OpenNETCF.ORM
                                 results.Seek(DbSeekOptions.FirstEqual, new object[] { matchValue });
                             }
                         }
-
+                         
                         while (results.Read())
                         {
                             if (currentOffset < firstRowOffset)
@@ -239,6 +239,12 @@ namespace OpenNETCF.ORM
                             var ctor = GetConstructorForType(objectType);
                             object item = ctor.Invoke(null);
                             object rowPK = null;
+
+                            // autofill references if desired
+                            if (referenceFields == null)
+                            {
+                                referenceFields = Entities[entityName].References.ToArray();
+                            }
 
                             // if the entity type changed since the last Select call, re-cache some items (perf improvements)
                             if (m_lastEntity != entityName)
