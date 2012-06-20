@@ -15,6 +15,7 @@ namespace OpenNETCF.ORM
         private string m_lastEntity;
         private FieldAttributeCollection m_fields;
         private ReferenceAttribute[] m_references;
+        private Dictionary<Type, MethodInfo> m_createProxies = new Dictionary<Type, MethodInfo>();
 
         protected override TCommand GetSelectCommand<TCommand, TParameter>(string entityName, IEnumerable<FilterCondition> filters, out bool tableDirect)
         {
@@ -106,6 +107,38 @@ namespace OpenNETCF.ORM
             {
                 DoneWithConnection(connection, true);
             }
+        }
+
+        private object CreateEntityInstance(Type objectType, FieldAttributeCollection fields, SqlCeResultSet results, out bool fieldsSet)
+        {
+            MethodInfo proxy;
+
+            if (!m_createProxies.ContainsKey(objectType))
+            {
+                proxy = objectType.GetMethod("ORM_CreateProxy", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance);
+
+                if (proxy == null)
+                {
+                    // no proxy method, add an item to the cache so we never look again
+                    m_createProxies.Add(objectType, null);
+                }
+                else
+                {
+                    m_createProxies.Add(objectType, proxy);
+                }
+            }
+
+            proxy = m_createProxies[objectType];
+            if (proxy == null)
+            {
+                // no create proxy exists, create the item and let the caller know it needs to fill the fields
+                fieldsSet = false;
+                return Activator.CreateInstance(objectType);
+            }
+
+            var item = proxy.Invoke(null, new object[] { fields, results });
+            fieldsSet = true;
+            return item;
         }
 
         protected override object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
@@ -234,12 +267,6 @@ namespace OpenNETCF.ORM
                                 }
                             }
 
-                            // create the actual object instance
-                            // this is faster than Activator.CreateInstance starting at call #2 for the type
-                            var ctor = GetConstructorForType(objectType);
-                            object item = ctor.Invoke(null);
-                            object rowPK = null;
-
                             // autofill references if desired
                             if (referenceFields == null)
                             {
@@ -254,9 +281,20 @@ namespace OpenNETCF.ORM
                                 m_lastEntity = entityName;
                             }
 
-                            // fill in the entity field values
-                            PopulateFields(entityName, m_fields, results, item, fillReferences);
+                            object rowPK = null;
 
+                            // create the actual object instance
+                            // this is faster than Activator.CreateInstance starting at call #2 for the type
+                            bool fieldsSet;
+                            object item = CreateEntityInstance(objectType, m_fields, results, out fieldsSet);
+                            //var ctor = GetConstructorForType(objectType);
+                            //object item = ctor.Invoke(null);
+
+                            if (!fieldsSet)
+                            {
+                                // fill in the entity field values
+                                PopulateFields(entityName, m_fields, results, item, fillReferences);
+                            }
                             // autofill references if desired
                             if ((fillReferences) && (referenceFields.Length > 0))
                             {
