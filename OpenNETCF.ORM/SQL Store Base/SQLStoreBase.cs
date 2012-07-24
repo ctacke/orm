@@ -36,6 +36,7 @@ namespace OpenNETCF.ORM
         public abstract override void OnInsert(object item, bool insertReferences);
 
         protected abstract object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences);
+        public abstract override DynamicEntity[] Select(string entityName);
 
         public abstract override void OnUpdate(object item, bool cascadeUpdates, string fieldName);
 
@@ -186,7 +187,7 @@ namespace OpenNETCF.ORM
             "DOUBLE", "OPENROWSET", "WHERE", "DROP", "OPENXML", "WHILE", "DUMP", "OPTION", "WITH", "ELSE", "OR", "WRITETEXT" 
         };
 
-        protected virtual void CreateTable(IDbConnection connection, EntityInfo entity)
+        protected virtual void CreateTable(IDbConnection connection, IEntityInfo entity)
         {
             StringBuilder sql = new StringBuilder();
 
@@ -438,6 +439,11 @@ namespace OpenNETCF.ORM
 
         protected virtual MethodInfo GetSerializer(Type itemType)
         {
+            if(itemType.Equals(typeof(DynamicEntity)))
+            {
+                throw new NotSupportedException("Object Field serialization not supported for DynamicEntities");
+            }
+
             if (m_serializerCache.ContainsKey(itemType))
             {
                 return m_serializerCache[itemType];
@@ -859,7 +865,7 @@ namespace OpenNETCF.ORM
                 // get the lookup field
                 var childEntityName = m_entities.GetNameForType(reference.ReferenceEntityType);
 
-                System.Collections.ArrayList children = new System.Collections.ArrayList();
+                var children = new List<object>();
 
                 // now look for those that match our pk
                 foreach (var child in referenceItems[reference])
@@ -873,7 +879,8 @@ namespace OpenNETCF.ORM
                         children.Add(child);
                     }
                 }
-                var carr = children.ToArray(reference.ReferenceEntityType);
+                var carr = children.ConvertAll(reference.ReferenceEntityType);
+
                 if (reference.PropertyInfo.PropertyType.IsArray)
                 {
                     reference.PropertyInfo.SetValue(instance, carr, null);
@@ -918,6 +925,11 @@ namespace OpenNETCF.ORM
         /// <typeparam name="T"></typeparam>
         public override void Delete<T>()
         {
+            if (typeof(T).Equals(typeof(DynamicEntity)))
+            {
+                throw new ArgumentException("DynamicEntities must be deleted with one of the other Delete overloads.");
+            }
+
             var t = typeof(T);
             string entityName = m_entities.GetNameForType(t);
 
@@ -933,19 +945,36 @@ namespace OpenNETCF.ORM
 
         public override void Delete<T>(string fieldName, object matchValue)
         {
-            Delete(typeof(T), fieldName, matchValue);
+            if (typeof(T).Equals(typeof(DynamicEntity)))
+            {
+                throw new ArgumentException("DynamicEntities must be deleted with one of the other Delete overloads.");
+            }
+
+            string entityName = m_entities.GetNameForType(typeof(T));
+
+            Delete(entityName, fieldName, matchValue);
         }
 
         /// <summary>
         /// Deletes entities of a given type where the specified field name matches a specified value
         /// </summary>
-        /// <param name="t"></param>
+        /// <param name="entityType"></param>
         /// <param name="indexName"></param>
         /// <param name="matchValue"></param>
         protected void Delete(Type entityType, string fieldName, object matchValue)
         {
+            if (entityType.Equals(typeof(DynamicEntity)))
+            {
+                throw new ArgumentException("DynamicEntities must be deleted with one of the other Delete overloads.");
+            }
+
             string entityName = m_entities.GetNameForType(entityType);
 
+            Delete(entityName, fieldName, matchValue);
+        }
+
+        public override void Delete(string entityName, string fieldName, object matchValue)
+        {
             var connection = GetConnection(true);
             try
             {
@@ -994,9 +1023,14 @@ namespace OpenNETCF.ORM
         {
             string entityName = m_entities.GetNameForType(t);
 
+            Delete(entityName, primaryKey);
+        }
+
+        public override void Delete(string entityName, object primaryKey)
+        {
             if (entityName == null)
             {
-                throw new EntityNotFoundException(t);
+                throw new EntityNotFoundException(entityName);
             }
 
             if (Entities[entityName].Fields.KeyField == null)
@@ -1013,7 +1047,7 @@ namespace OpenNETCF.ORM
             }
 
             var keyFieldName = Entities[entityName].Fields.KeyField.FieldName;
-            Delete(t, keyFieldName, primaryKey);
+            Delete(entityName, keyFieldName, primaryKey);
         }
 
         /// <summary>

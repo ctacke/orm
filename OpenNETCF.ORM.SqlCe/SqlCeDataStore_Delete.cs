@@ -42,7 +42,7 @@ namespace OpenNETCF.ORM
                     command.Connection = connection as SqlCeConnection;
                     command.CommandText = entityName;
                     command.CommandType = CommandType.TableDirect;
-                    command.IndexName = Entities[entityName].PrimaryKeyIndexName;
+                    command.IndexName = ((SqlEntityInfo)Entities[entityName]).PrimaryKeyIndexName;
 
                     using (var results = command.ExecuteResultSet(ResultSetOptions.Scrollable | ResultSetOptions.Updatable))
                     {

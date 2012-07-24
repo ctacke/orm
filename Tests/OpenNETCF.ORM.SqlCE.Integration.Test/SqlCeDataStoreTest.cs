@@ -11,7 +11,7 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
         public TestContext TestContext { get; set; }
 
         [TestMethod()]
-        [DeploymentItem("OpenNETCF.ORM.SqlCe.dll")]
+//        [DeploymentItem("OpenNETCF.ORM.SqlCe.dll")]
         public void SimpleCRUDTest()
         {
             bool beforeInsert = false;

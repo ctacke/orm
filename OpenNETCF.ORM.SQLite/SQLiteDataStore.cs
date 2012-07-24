@@ -340,7 +340,7 @@ namespace OpenNETCF.ORM.SQLite
         private void UpdateIndexCacheForType(string entityName)
         {
             // have we already cached this?
-            if (Entities[entityName].IndexNames != null) return;
+            if (((SqlEntityInfo)Entities[entityName]).IndexNames != null) return;
 
             // get all iindex names for the type
             var connection = GetConnection(true);
@@ -361,7 +361,7 @@ namespace OpenNETCF.ORM.SQLite
                             nameList.Add(reader.GetString(0));
                         }
 
-                        Entities[entityName].IndexNames = nameList;
+                        ((SqlEntityInfo)Entities[entityName]).IndexNames = nameList;
                     }
                 }
             }
@@ -840,6 +840,11 @@ namespace OpenNETCF.ORM.SQLite
         public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
             throw new NotSupportedException("Fetch is not currently supported with this Provider.");
+        }
+
+        public override DynamicEntity[] Select(string entityName)
+        {
+            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
         }
     }
 }

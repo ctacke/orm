@@ -153,6 +153,40 @@ namespace OpenNETCF.ORM
             }
         }
 
+        private void SetInstanceValue(FieldAttribute field, object instance, object value)
+        {
+            if (instance is DynamicEntity)
+            {
+                ((DynamicEntity)instance).Fields[field.FieldName] = value;
+            }
+            else
+            {
+                field.PropertyInfo.SetValue(instance, value, null);
+            }
+        }
+
+        private object GetInstanceValue(FieldAttribute field, object instance)
+        {
+            object value;
+            if (instance is DynamicEntity)
+            {
+                value = ((DynamicEntity)instance).Fields[field.FieldName];
+            }
+            else
+            {
+                value = field.PropertyInfo.GetValue(instance, null);
+            }
+
+            if (value is TimeSpan)
+            {
+                return ((TimeSpan)value).Ticks;
+            }
+
+            if (value == null) return DBNull.Value;
+
+            return value;
+        }
+
         /// <summary>
         /// Inserts the provided entity instance into the underlying data store.
         /// </summary>
@@ -162,8 +196,17 @@ namespace OpenNETCF.ORM
         /// </remarks>
         public override void OnInsert(object item, bool insertReferences)
         {
+            string entityName;
             var itemType = item.GetType();
-            string entityName = m_entities.GetNameForType(itemType);
+
+            if (item is DynamicEntity)
+            {
+                entityName = (item as DynamicEntity).EntityName;
+            }
+            else
+            {
+                entityName = m_entities.GetNameForType(itemType);
+            }
 
             if (entityName == null)
             {
@@ -188,60 +231,7 @@ namespace OpenNETCF.ORM
                     {
                         var record = results.CreateRecord();
 
-                        var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
-
-                        foreach (var field in Entities[entityName].Fields)
-                        {
-                            if((keyScheme == KeyScheme.Identity) && field.IsPrimaryKey)
-                            {
-                                identity = field;
-                            }
-                            else if (field.DataType == DbType.Object)
-                            {
-                                // get serializer
-                                var serializer = GetSerializer(itemType);
-
-                                if (serializer == null)
-                                {
-                                    throw new MissingMethodException(
-                                        string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
-                                        field.FieldName, entityName));
-                                }
-                                var value = serializer.Invoke(item, new object[] { field.FieldName });
-                                if (value == null)
-                                {
-                                    record.SetValue(field.Ordinal, DBNull.Value);
-                                }
-                                else
-                                {
-                                    record.SetValue(field.Ordinal, value);
-                                }
-                            }
-                            else if (field.IsRowVersion)
-                            {
-                                // read-only, so do nothing
-                            }
-                            else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
-                            {
-                                // SQL Compact doesn't support Time, so we're convert to a DateTime both directions
-                                var value = field.PropertyInfo.GetValue(item, null);
-
-                                if (value == null)
-                                {
-                                    record.SetValue(field.Ordinal, DBNull.Value);
-                                }
-                                else
-                                {
-                                    var timespanTicks = ((TimeSpan)value).Ticks;
-                                    record.SetValue(field.Ordinal, timespanTicks);
-                                }
-                            }
-                            else
-                            {
-                                var value = field.PropertyInfo.GetValue(item, null);
-                                record.SetValue(field.Ordinal, value);
-                            }
-                        }
+                        FillEntity(record.SetValue, entityName, itemType, item, out identity);
 
                         results.Insert(record);
 
@@ -249,11 +239,13 @@ namespace OpenNETCF.ORM
                         if (identity != null)
                         {
                             var id = GetIdentity(connection);
-                            identity.PropertyInfo.SetValue(item, id, null);
+                            SetInstanceValue(identity, item, id);
                         }
 
                         if (insertReferences)
                         {
+                            var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
+
                             // cascade insert any References
                             // do this last because we need the PK from above
                             foreach (var reference in Entities[entityName].References)
@@ -309,6 +301,53 @@ namespace OpenNETCF.ORM
             finally
             {
                 DoneWithConnection(connection, false);
+            }
+        }
+
+        private void FillEntity(Action<int, object> setter, string entityName, Type itemType, object item, out FieldAttribute identity)
+        {
+            // The reason for this somewhat convoluted Action parameter is that while the SqlCeUpdateableRecord (from Insert) 
+            // and SqlCeResultSet (from Update) both contain a SetValue method, they don't share it on any common
+            // interface.  using an Action allows us to share this code anyway.
+            identity = null;
+
+            var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
+
+            foreach (var field in Entities[entityName].Fields)
+            {
+                if ((keyScheme == KeyScheme.Identity) && field.IsPrimaryKey)
+                {
+                    identity = field;
+                }
+                else if (field.DataType == DbType.Object)
+                {
+                    // get serializer
+                    var serializer = GetSerializer(itemType);
+
+                    if (serializer == null)
+                    {
+                        throw new MissingMethodException(
+                            string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
+                            field.FieldName, entityName));
+                    }
+                    var value = serializer.Invoke(item, new object[] { field.FieldName });
+                    if (value == null)
+                    {
+                        setter(field.Ordinal, DBNull.Value);
+                    }
+                    else
+                    {
+                        setter(field.Ordinal, value);
+                    }
+                }
+                else if (field.IsRowVersion)
+                {
+                    // read-only, so do nothing
+                }
+                else
+                {
+                    setter(field.Ordinal, GetInstanceValue(field, item));
+                }
             }
         }
 
@@ -443,7 +482,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        protected void ValidateTable(IDbConnection connection, EntityInfo entity)
+        protected void ValidateTable(IDbConnection connection, IEntityInfo entity)
         {
             using (var command = new SqlCeCommand())
             {

@@ -10,11 +10,33 @@ namespace OpenNETCF.ORM
 {
     partial class SqlCeDataStore
     {
+        private object GetKeyValue(FieldAttribute field, object item)
+        {
+            if (item is DynamicEntity)
+            {
+                return ((DynamicEntity)item).Fields[field.FieldName];
+            }
+            else
+            {
+                return field.PropertyInfo.GetValue(item, null);
+            }
+        }
+
         public override void OnUpdate(object item, bool cascadeUpdates, string fieldName)
         {
             object keyValue;
             var itemType = item.GetType();
-            string entityName = m_entities.GetNameForType(itemType);
+
+            string entityName;
+
+            if (itemType.Equals(typeof(DynamicEntity)))
+            {
+                entityName = ((DynamicEntity)item).EntityName;
+            }
+            else
+            {
+                entityName = m_entities.GetNameForType(itemType);
+            }
 
             if (entityName == null)
             {
@@ -37,11 +59,11 @@ namespace OpenNETCF.ORM
                     command.Connection = connection as SqlCeConnection;
                     command.CommandText = entityName;
                     command.CommandType = CommandType.TableDirect;
-                    command.IndexName = Entities[entityName].PrimaryKeyIndexName;
+                    command.IndexName = ((SqlEntityInfo)Entities[entityName]).PrimaryKeyIndexName;
 
                     using (var results = command.ExecuteResultSet(ResultSetOptions.Scrollable | ResultSetOptions.Updatable))
                     {
-                        keyValue = Entities[entityName].Fields.KeyField.PropertyInfo.GetValue(item, null);
+                        keyValue = GetKeyValue(Entities[entityName].Fields.KeyField, item);
 
                         // seek on the PK
                         var found = results.Seek(DbSeekOptions.BeforeEqual, new object[] { keyValue });
@@ -53,59 +75,8 @@ namespace OpenNETCF.ORM
                         }
 
                         results.Read();
-
-                        // update the values
-                        foreach (var field in Entities[entityName].Fields)
-                        {
-                            // do not update PK fields
-                            if (field.IsPrimaryKey)
-                            {
-                                continue;
-                            }
-                            else if (fieldName != null && field.FieldName != fieldName)
-                            {
-                                continue; // if we pass in a field name, skip over any fields that don't match
-                            }
-                            else if (field.DataType == DbType.Object)
-                            {
-                                // get serializer
-                                var serializer = GetSerializer(itemType);
-
-                                if (serializer == null)
-                                {
-                                    throw new MissingMethodException(
-                                        string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
-                                        field.FieldName, entityName));
-                                }
-                                var value = serializer.Invoke(item, new object[] { field.FieldName });
-                                results.SetValue(field.Ordinal, value);
-                            }
-                            else if (field.IsRowVersion)
-                            {
-                                // read-only, so do nothing
-                            }
-                            else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
-                            {
-                                // SQL Compact doesn't support Time, so we're convert to ticks in both directions
-                                var value = field.PropertyInfo.GetValue(item, null);
-                                if (value == null)
-                                {
-                                    results.SetValue(field.Ordinal, DBNull.Value);
-                                }
-                                else
-                                {
-                                    var ticks = ((TimeSpan)value).Ticks;
-                                    results.SetValue(field.Ordinal, ticks);
-                                }
-                            }
-                            else
-                            {
-                                var value = field.PropertyInfo.GetValue(item, null);
-
-                                // TODO: should we update only if it's changed?  Does it really matter at this point?
-                                results.SetValue(field.Ordinal, value);
-                            }
-                        }
+                        FieldAttribute id;
+                        FillEntity(results.SetValue, entityName, itemType, item, out id);
 
                         results.Update();
                     }

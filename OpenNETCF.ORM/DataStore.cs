@@ -10,7 +10,7 @@ namespace OpenNETCF.ORM
     public abstract class DataStore<TEntityInfo> : IDataStore
         where TEntityInfo : EntityInfo, new()
     {
-        protected EntityInfoCollection<TEntityInfo> m_entities = new EntityInfoCollection<TEntityInfo>();
+        protected EntityInfoCollection m_entities = new EntityInfoCollection();
 
         public event EventHandler<EntityTypeAddedArgs> EntityTypeAdded;
 
@@ -34,6 +34,7 @@ namespace OpenNETCF.ORM
         public abstract T[] Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences) where T : new();
         public abstract object[] Select(Type entityType);
         public abstract object[] Select(Type entityType, bool fillReferences);
+        public abstract DynamicEntity[] Select(string entityName);
 
         public event EventHandler<EntityUpdateArgs> BeforeUpdate;
         public event EventHandler<EntityUpdateArgs> AfterUpdate;
@@ -58,7 +59,10 @@ namespace OpenNETCF.ORM
         /// <param name="matchValue"></param>
         /// <remarks>This method does <b>not</b> Fire the Before/AfterDelete events</remarks>
         public abstract void Delete<T>(string fieldName, object matchValue) where T : new();
-        
+
+        public abstract void Delete(string entityName, object primaryKey);
+        public abstract void Delete(string entityName, string fieldName, object matchValue);
+
         public abstract void FillReferences(object instance);
         public abstract T[] Fetch<T>(int fetchCount) where T : new();
         public abstract T[] Fetch<T>(int fetchCount, int firstRowOffset) where T : new();
@@ -189,7 +193,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public EntityInfoCollection<TEntityInfo> Entities 
+        public EntityInfoCollection Entities 
         {
             get { return m_entities; }
         }
@@ -212,6 +216,34 @@ namespace OpenNETCF.ORM
         public void AddType(Type entityType)
         {
             AddType(entityType, true);
+        }
+
+        //private Dictionary<string, DynamicEntity> m_dynamicDefinitions = new Dictionary<string, DynamicEntity>(StringComparer.InvariantCultureIgnoreCase);
+
+        public void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition)
+        {
+            // verify this is a unique entity name
+            // check the type-defined entities
+            lock (m_entities)
+            {
+                var existing = m_entities.FirstOrDefault(e => e.EntityName == entityDefinition.EntityName);
+                if (existing != null)
+                {
+                    throw new EntityAlreadyExistsException(entityDefinition.EntityName);
+                }
+            }
+            //lock (m_dynamicDefinitions)
+            //{
+            //    // check the dynamic entities
+            //    if (m_dynamicDefinitions.ContainsKey(entityDefinition.EntityName))
+            //    {
+            //        throw new EntityAlreadyExistsException(entityDefinition.EntityName);
+            //    }
+
+            //    m_dynamicDefinitions.Add(entityDefinition.EntityName, entityDefinition);
+            //}
+            m_entities.Add(entityDefinition);
+            // TODO: build the table if necessary 
         }
 
         private void AddType(Type entityType, bool verifyInterface)

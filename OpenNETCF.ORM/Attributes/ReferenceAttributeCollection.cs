@@ -24,11 +24,11 @@ namespace OpenNETCF.ORM
             get { return m_references.Count; }
         }
 
-        public ReferenceAttribute this[Type referenceType, string referenceFieldName]
+        public ReferenceAttribute this[Type referenceType, string referenceName, string referenceFieldName]
         {
             get 
             {
-                int hash = referenceType.Name.GetHashCode() | referenceFieldName.GetHashCode();
+                int hash = referenceName.GetHashCode() | referenceType.Name.GetHashCode() | referenceFieldName.GetHashCode();
                 return m_references[hash]; 
             }
         }

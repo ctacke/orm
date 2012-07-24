@@ -18,6 +18,7 @@ namespace OpenNETCF.ORM
 
         void AddType<T>();
         void AddType(Type entityType);
+        void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition);
         void DiscoverTypes(Assembly containingAssembly);
 
         void CreateStore();
@@ -41,12 +42,15 @@ namespace OpenNETCF.ORM
         object[] Select(Type entityType);
         object[] Select(Type entityType, bool fillReferences);
         T[] Select<T>(Func<T, bool> selector) where T : new();
+        DynamicEntity[] Select(string entityName);
 
         void Update(object item);
         void Update(object item, bool cascadeUpdates, string fieldName);
         void Update(object item, string fieldName);
 
         void Delete(object item);
+        void Delete(string entityName, object primaryKey);
+        void Delete(string entityName, string fieldName, object matchValue);
         void Delete<T>(object primaryKey) where T : new();
         void Delete<T>() where T : new();
         void Delete<T>(string fieldName, object matchValue) where T : new();
