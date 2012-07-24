@@ -1,21 +1,12 @@
-﻿using System;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
+﻿#if WINDOWS_PHONE
 
 namespace System.Data.Common
 {
-#if WINDOWS_PHONE
-    public interface DbConnection : IDisposable
+    public interface IDbConnection : IDisposable
     {
         void Open();
         void Close();
     }
-#endif
 }
+
+#endif

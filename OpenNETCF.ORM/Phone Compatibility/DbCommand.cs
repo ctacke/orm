@@ -1,25 +1,23 @@
-﻿using System;
-using System.Net;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Ink;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Animation;
-using System.Windows.Shapes;
+﻿
+#if WINDOWS_PHONE
 
 namespace System.Data.Common
 {
-#if WINDOWS_PHONE
-    public interface DbCommand : IDisposable
+    public interface IDbCommand : IDisposable
     {
-        string CommandText { get;  set; }
-        DbConnection Connection { set; }
+        string CommandText { get; set; }
+        IDbConnection Connection { set; }
+        CommandType CommandType { get; set; }
+        DbParameterCollection Parameters { get; }
 
         int ExecuteNonQuery();
         object ExecuteScalar();
         DbDataReader ExecuteReader();
     }
-#endif
+
+    public interface DbCommand : IDbCommand
+    {
+    }
 }
+
+#endif

@@ -8,6 +8,30 @@ namespace OpenNETCF.ORM
 {
     public static class Extensions
     {
+        public static T[] ConvertAll<T>(this Array input)
+        {
+            var output = new T[input.Length];
+
+            for (int i = 0; i < output.Length; i++)
+            {
+                output[i] = (T)input.GetValue(i);
+            }
+
+            return output;
+        }
+
+        public static object[] ConvertAll(this List<object> input, Type targetType)
+        {
+            var output = new object[input.Count];
+
+            for (int i = 0; i < output.Length; i++)
+            {
+                output[i] = Convert.ChangeType(input[i], targetType, null);
+            }
+
+            return output;
+        }
+
         internal static bool IsNullable(this Type type)
         {
             if (!type.IsGenericType) return false;

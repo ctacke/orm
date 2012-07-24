@@ -75,14 +75,14 @@ namespace OpenNETCF.ORM
             {
                 CommandText = entityName,
                 CommandType = CommandType.TableDirect,
-                IndexName = indexName ?? Entities[entityName].PrimaryKeyIndexName
+                IndexName = indexName ?? ((SqlEntityInfo)Entities[entityName]).PrimaryKeyIndexName
             } as TCommand;
         }
 
         private void UpdateIndexCacheForType(string entityName)
         {
             // have we already cached this?
-            if (Entities[entityName].IndexNames != null) return;
+            if (((SqlEntityInfo)Entities[entityName]).IndexNames != null) return;
 
             // get all iindex names for the type
             var connection = GetConnection(true);
@@ -100,7 +100,7 @@ namespace OpenNETCF.ORM
                         nameList.Add(reader.GetString(0));
                     }
 
-                    Entities[entityName].IndexNames = nameList;
+                    ((SqlEntityInfo)Entities[entityName]).IndexNames = nameList;
                 }
             }
             finally
@@ -109,9 +109,23 @@ namespace OpenNETCF.ORM
             }
         }
 
-        private object CreateEntityInstance(Type objectType, FieldAttributeCollection fields, SqlCeResultSet results, out bool fieldsSet)
+        private object CreateEntityInstance(string entityName, Type objectType, FieldAttributeCollection fields, SqlCeResultSet results, out bool fieldsSet)
         {
             MethodInfo proxy;
+
+            if(objectType.Equals(typeof(DynamicEntity)))
+            {
+                var entity = new DynamicEntity(entityName, fields);
+
+                foreach(var field in entity.Fields)
+                {
+                    // we should probably cache these ordinals
+                    field.Value = results[field.Name];
+                }
+
+                fieldsSet = true;
+                return entity;
+            }
 
             if (!m_createProxies.ContainsKey(objectType))
             {
@@ -149,6 +163,18 @@ namespace OpenNETCF.ORM
             {
                 throw new EntityNotFoundException(objectType);
             }
+
+            return Select(entityName, objectType, filters, fetchCount, firstRowOffset, fillReferences);
+        }
+
+        public override DynamicEntity[] Select(string entityName)
+        {
+            var e = Select(entityName, typeof(DynamicEntity), null, -1, -1, false);
+            return e.ConvertAll<DynamicEntity>();// Array.ConvertAll(e, item => (DynamicEntity)item);
+        }
+
+        private object[] Select(string entityName, Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
+        {
 
             UpdateIndexCacheForType(entityName);
 
@@ -188,7 +214,7 @@ namespace OpenNETCF.ORM
                         var sqlfilter = filter as SqlFilterCondition;
                         if ((sqlfilter != null) && (sqlfilter.PrimaryKey))
                         {
-                            searchOrdinal = Entities[entityName].PrimaryKeyOrdinal;
+                            searchOrdinal = ((SqlEntityInfo)Entities[entityName]).PrimaryKeyOrdinal;
                         }
                     }
 
@@ -283,12 +309,8 @@ namespace OpenNETCF.ORM
 
                             object rowPK = null;
 
-                            // create the actual object instance
-                            // this is faster than Activator.CreateInstance starting at call #2 for the type
                             bool fieldsSet;
-                            object item = CreateEntityInstance(objectType, m_fields, results, out fieldsSet);
-                            //var ctor = GetConstructorForType(objectType);
-                            //object item = ctor.Invoke(null);
+                            object item = CreateEntityInstance(entityName, objectType, m_fields, results, out fieldsSet);
 
                             if (!fieldsSet)
                             {

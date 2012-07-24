@@ -1,13 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.CF", "OpenNETCF.ORM\OpenNETCF.ORM.CF.csproj", "{2D0EA40A-5C80-4477-A901-7648E57BA749}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SqlCe", "OpenNETCF.ORM.SqlCe\OpenNETCF.ORM.SqlCe.csproj", "{C0AFC215-58D2-4C3E-A8BC-5671A8E01EC7}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.Xml", "OpenNETCF.ORM.Xml\OpenNETCF.ORM.Xml.csproj", "{0BE65AE6-4E3B-4173-A0FD-619B9C42C899}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.Test", "Tests\OpenNETCF.ORM.Test\OpenNETCF.ORM.Test.csproj", "{E40B4449-F45C-48BB-8141-330AFDA0AABB}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Core", "Core", "{4DD69911-3E41-4222-9813-1843A9C583FB}"
 EndProject
@@ -17,69 +11,50 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests and Samples", "Tests 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.EffiProz.CF", "OpenNETCF.ORM.EffiProz\OpenNETCF.ORM.EffiProz.CF.csproj", "{3852EBE0-64C1-4656-9CE8-E81BECABA5B7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.CF", "OpenNETCF.ORM\OpenNETCF.ORM.CF.csproj", "{2D0EA40A-5C80-4477-A901-7648E57BA749}"
+EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 6
+		SccNumberOfProjects = 4
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs01
-		SccProjectUniqueName0 = OpenNETCF.ORM.SqlCe\\OpenNETCF.ORM.SqlCe.csproj
-		SccProjectTopLevelParentUniqueName0 = OpenNETCF.ORM.CF.sln
-		SccProjectName0 = OpenNETCF.ORM.SqlCe
-		SccLocalPath0 = OpenNETCF.ORM.SqlCe
-		SccProjectUniqueName1 = OpenNETCF.ORM.Xml\\OpenNETCF.ORM.Xml.csproj
-		SccProjectTopLevelParentUniqueName1 = OpenNETCF.ORM.CF.sln
-		SccProjectName1 = OpenNETCF.ORM.Xml
-		SccLocalPath1 = OpenNETCF.ORM.Xml
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = OpenNETCF.ORM.SqlCe\\OpenNETCF.ORM.SqlCe.csproj
+		SccProjectTopLevelParentUniqueName1 = OpenNETCF.ORM.sln
+		SccProjectName1 = OpenNETCF.ORM.SqlCe
+		SccLocalPath1 = OpenNETCF.ORM.SqlCe
 		SccProjectUniqueName2 = OpenNETCF.ORM.EffiProz\\OpenNETCF.ORM.EffiProz.CF.csproj
-		SccProjectTopLevelParentUniqueName2 = OpenNETCF.ORM.CF.sln
+		SccProjectTopLevelParentUniqueName2 = OpenNETCF.ORM.sln
 		SccProjectName2 = OpenNETCF.ORM.EffiProz
 		SccLocalPath2 = OpenNETCF.ORM.EffiProz
-		SccLocalPath3 = .
-		SccProjectUniqueName4 = OpenNETCF.ORM\\OpenNETCF.ORM.CF.csproj
-		SccProjectTopLevelParentUniqueName4 = OpenNETCF.ORM.CF.sln
-		SccProjectName4 = OpenNETCF.ORM
-		SccLocalPath4 = OpenNETCF.ORM
-		SccProjectUniqueName5 = Tests\\OpenNETCF.ORM.Test\\OpenNETCF.ORM.Test.csproj
-		SccProjectTopLevelParentUniqueName5 = OpenNETCF.ORM.CF.sln
-		SccProjectName5 = Tests/OpenNETCF.ORM.Test
-		SccLocalPath5 = Tests\\OpenNETCF.ORM.Test
+		SccProjectUniqueName3 = OpenNETCF.ORM\\OpenNETCF.ORM.CF.csproj
+		SccProjectTopLevelParentUniqueName3 = OpenNETCF.ORM.sln
+		SccProjectName3 = OpenNETCF.ORM
+		SccLocalPath3 = OpenNETCF.ORM
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{2D0EA40A-5C80-4477-A901-7648E57BA749}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2D0EA40A-5C80-4477-A901-7648E57BA749}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2D0EA40A-5C80-4477-A901-7648E57BA749}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2D0EA40A-5C80-4477-A901-7648E57BA749}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C0AFC215-58D2-4C3E-A8BC-5671A8E01EC7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C0AFC215-58D2-4C3E-A8BC-5671A8E01EC7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C0AFC215-58D2-4C3E-A8BC-5671A8E01EC7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C0AFC215-58D2-4C3E-A8BC-5671A8E01EC7}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0BE65AE6-4E3B-4173-A0FD-619B9C42C899}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0BE65AE6-4E3B-4173-A0FD-619B9C42C899}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0BE65AE6-4E3B-4173-A0FD-619B9C42C899}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0BE65AE6-4E3B-4173-A0FD-619B9C42C899}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E40B4449-F45C-48BB-8141-330AFDA0AABB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{E40B4449-F45C-48BB-8141-330AFDA0AABB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{E40B4449-F45C-48BB-8141-330AFDA0AABB}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
-		{E40B4449-F45C-48BB-8141-330AFDA0AABB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{E40B4449-F45C-48BB-8141-330AFDA0AABB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{E40B4449-F45C-48BB-8141-330AFDA0AABB}.Release|Any CPU.Deploy.0 = Release|Any CPU
 		{3852EBE0-64C1-4656-9CE8-E81BECABA5B7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{3852EBE0-64C1-4656-9CE8-E81BECABA5B7}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3852EBE0-64C1-4656-9CE8-E81BECABA5B7}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3852EBE0-64C1-4656-9CE8-E81BECABA5B7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2D0EA40A-5C80-4477-A901-7648E57BA749}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2D0EA40A-5C80-4477-A901-7648E57BA749}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2D0EA40A-5C80-4477-A901-7648E57BA749}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2D0EA40A-5C80-4477-A901-7648E57BA749}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{2D0EA40A-5C80-4477-A901-7648E57BA749} = {4DD69911-3E41-4222-9813-1843A9C583FB}
-		{0BE65AE6-4E3B-4173-A0FD-619B9C42C899} = {4EDC816A-1CE8-460D-B1BA-555B2189B753}
 		{C0AFC215-58D2-4C3E-A8BC-5671A8E01EC7} = {4EDC816A-1CE8-460D-B1BA-555B2189B753}
 		{3852EBE0-64C1-4656-9CE8-E81BECABA5B7} = {4EDC816A-1CE8-460D-B1BA-555B2189B753}
-		{E40B4449-F45C-48BB-8141-330AFDA0AABB} = {1E20BBD4-8142-4BE7-B5F9-5061B88CB61F}
 	EndGlobalSection
 EndGlobal

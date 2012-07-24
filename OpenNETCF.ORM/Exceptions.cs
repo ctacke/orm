@@ -29,10 +29,23 @@ namespace OpenNETCF.ORM
         }
     }
 
+    public class EntityAlreadyExistsException : Exception
+    {
+        public EntityAlreadyExistsException(string entityName)
+            : base(string.Format("An entity with name '{0}' already exisits in the Store", entityName))
+        {
+        }
+    }
+
     public class EntityNotFoundException : Exception
     {
         public EntityNotFoundException(Type type)
             : base(string.Format("Entity Type '{0}' not found. Is your Store up to date?", type.Name))
+        {
+        }
+
+        public EntityNotFoundException(string entityName)
+            : base(string.Format("Entity Type '{0}' not found. Is your Store up to date?", entityName))
         {
         }
     }

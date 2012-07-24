@@ -36,7 +36,7 @@ namespace OpenNETCF.ORM
             }
             else
             {
-                indexName = Entities[entityName].PrimaryKeyIndexName;
+                indexName = ((SqlEntityInfo)Entities[entityName]).PrimaryKeyIndexName;
             }
 
             var connection = GetConnection(false);

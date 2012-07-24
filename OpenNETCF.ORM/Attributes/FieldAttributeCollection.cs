@@ -12,28 +12,50 @@ namespace OpenNETCF.ORM
 
         public bool OrdinalsAreValid { get; set; }
         public FieldAttribute KeyField { get; private set; }
-        
+
         internal FieldAttributeCollection()
         {
             OrdinalsAreValid = false;
             KeyField = null;
         }
 
-        internal void Add(FieldAttribute attribute)
+        internal FieldAttributeCollection(IEnumerable<FieldAttribute> fields)
         {
-            if (attribute.IsPrimaryKey)
+            OrdinalsAreValid = false;
+            KeyField = null;
+
+            AddRange(fields);
+        }
+
+        internal void AddRange(IEnumerable<FieldAttribute> fields)
+        {
+            lock (m_fields)
             {
-                if (KeyField == null)
+                foreach (var f in fields)
                 {
-                    KeyField = attribute;
-                }
-                else
-                {
-                    throw new MutiplePrimaryKeyException(KeyField.FieldName);
+                    Add(f);
                 }
             }
+        }
 
-            m_fields.Add(attribute.FieldName.ToLower(), attribute);
+        internal void Add(FieldAttribute attribute)
+        {
+            lock (m_fields)
+            {
+                if (attribute.IsPrimaryKey)
+                {
+                    if (KeyField == null)
+                    {
+                        KeyField = attribute;
+                    }
+                    else
+                    {
+                        throw new MutiplePrimaryKeyException(KeyField.FieldName);
+                    }
+                }
+
+                m_fields.Add(attribute.FieldName.ToLower(), attribute);
+            }
         }
 
         public int Count

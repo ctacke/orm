@@ -80,6 +80,10 @@
     <Compile Include="Attributes\ReferenceAttributeCollection.cs" />
     <Compile Include="Constants\DefaultType.cs" />
     <Compile Include="Constants\FieldSearchOrder.cs" />
+    <Compile Include="Dynamics\DynamicEntity.cs" />
+    <Compile Include="Dynamics\FieldCollection.cs" />
+    <Compile Include="Dynamics\FieldValue.cs" />
+    <Compile Include="Dynamics\DynamicEntityDefinition.cs" />
     <Compile Include="EventArgs.cs" />
     <Compile Include="DataStore.cs" />
     <Compile Include="Entity.cs" />
@@ -117,6 +121,7 @@
       <Install>true</Install>
     </BootstrapperPackage>
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -39,7 +39,7 @@ namespace OpenNETCF.ORM
 
         public override int GetHashCode()
         {
-            return ReferenceEntityType.Name.GetHashCode() | ReferenceField.GetHashCode();
+            return PropertyInfo.Name.GetHashCode() | ReferenceEntityType.Name.GetHashCode() | ReferenceField.GetHashCode();
         }
     }
 }

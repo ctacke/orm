@@ -5,17 +5,16 @@ using System.Text;
 
 namespace OpenNETCF.ORM
 {
-    public class EntityInfoCollection<TEntityInfo> : IEnumerable<TEntityInfo>
-        where TEntityInfo : IEntityInfo
+    public class EntityInfoCollection : IEnumerable<IEntityInfo>
     {
-        private Dictionary<string, TEntityInfo> m_entities = new Dictionary<string, TEntityInfo>(StringComparer.InvariantCultureIgnoreCase);
+        private Dictionary<string, IEntityInfo> m_entities = new Dictionary<string, IEntityInfo>(StringComparer.InvariantCultureIgnoreCase);
         private Dictionary<Type, string> m_typeToNameMap = new Dictionary<Type, string>();
 
         internal EntityInfoCollection()
         {
         }
 
-        internal void Add(TEntityInfo map)
+        internal void Add(IEntityInfo map)
         {
             string key = map.EntityName.ToLower();
 
@@ -23,7 +22,12 @@ namespace OpenNETCF.ORM
             if (m_entities.ContainsKey(key)) return;
 
             m_entities.Add(key, map);
-            m_typeToNameMap.Add(map.EntityType, map.EntityName);
+            
+            // dynamic entities have no underlying EntityType
+            if (map.EntityType != typeof(DynamicEntityDefinition))
+            {
+                m_typeToNameMap.Add(map.EntityType, map.EntityName);
+            }
         }
 
         public string GetNameForType(Type type)
@@ -33,7 +37,7 @@ namespace OpenNETCF.ORM
             return m_typeToNameMap[type];
         }
 
-        public IEnumerator<TEntityInfo> GetEnumerator()
+        public IEnumerator<IEntityInfo> GetEnumerator()
         {
             return m_entities.Values.GetEnumerator();
         }
@@ -43,7 +47,7 @@ namespace OpenNETCF.ORM
             return m_entities.Values.GetEnumerator();
         }
 
-        public TEntityInfo this[string entityName]
+        public IEntityInfo this[string entityName]
         {
             get { return m_entities[entityName]; }
         }
