@@ -16,6 +16,12 @@ using SQLiteCommand = Mono.Data.Sqlite.SqliteCommand;
 using SQLiteConnection = Mono.Data.Sqlite.SqliteConnection;
 using SQLiteParameter = Mono.Data.Sqlite.SqliteParameter;
 using SQLiteDataReader = Mono.Data.Sqlite.SqliteDataReader;
+#elif WINDOWS_PHONE
+// ah the joys of an open-source project changing cases on us
+using SQLiteConnection = Community.CsharpSqlite.SQLiteClient.SqliteConnection;
+using SQLiteCommand = Community.CsharpSqlite.SQLiteClient.SqliteCommand;
+using SQLiteParameter = Community.CsharpSqlite.SQLiteClient.SqliteParameter;
+using SQLiteDataReader = Community.CsharpSqlite.SQLiteClient.SqliteDataReader;
 #else
 using System.Data.SQLite;
 #endif
@@ -27,7 +33,7 @@ namespace OpenNETCF.ORM
         private string m_connectionString;
 
         public string FileName { get; protected set; }
-
+        
         protected SQLiteDataStore()
             : base()
         {
@@ -84,8 +90,9 @@ namespace OpenNETCF.ORM
                 throw new StoreAlreadyExistsException();
             }
 
+#if(!WINDOWS_PHONE)
             SQLiteConnection.CreateFile(FileName);
-
+#endif
             var connection = GetConnection(true);
             try
             {
@@ -133,7 +140,8 @@ namespace OpenNETCF.ORM
                 sbFields.Append("[" + field.FieldName + "],");
                 sbParams.Append("?,");
 
-                insertCommand.Parameters.Add(new SQLiteParameter(field.FieldName));
+                // TODO; verify that the 2-parameter method work on non-Phone implementations
+                insertCommand.Parameters.Add(new SQLiteParameter(field.FieldName, field.DataType));
             }
 
             // replace trailing commas

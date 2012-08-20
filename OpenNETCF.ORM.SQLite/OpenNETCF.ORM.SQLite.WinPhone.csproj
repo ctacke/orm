@@ -45,10 +45,16 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Community.CsharpSqlite.WP">
-      <HintPath>references\Community.CsharpSqlite.WP.dll</HintPath>
+    <Reference Include="Community.CsharpSqlite.SQLiteClient.WP">
+      <HintPath>references\WinPhone\Community.CsharpSqlite.SQLiteClient.WP.dll</HintPath>
+    </Reference>
+    <Reference Include="Community.CsharpSqlite.WinPhone">
+      <HintPath>references\WinPhone\Community.CsharpSqlite.WinPhone.dll</HintPath>
     </Reference>
     <Reference Include="mscorlib" />
+    <Reference Include="System.Data.Ersatz.WinPhone">
+      <HintPath>references\WinPhone\System.Data.Ersatz.WinPhone.dll</HintPath>
+    </Reference>
     <Reference Include="System.Windows" />
     <Reference Include="system" />
     <Reference Include="System.Core" />
@@ -61,7 +67,6 @@
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SQLiteDataStore.cs" />
-    <Compile Include="SQLiteEntityInfo.cs" />
     <Compile Include="SQLiteException.cs" />
   </ItemGroup>
   <ItemGroup>
