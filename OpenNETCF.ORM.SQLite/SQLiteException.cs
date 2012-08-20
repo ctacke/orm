@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 
-namespace OpenNETCF.ORM.SQLite
+namespace OpenNETCF.ORM
 {
     public class SQLiteException : Exception
     {

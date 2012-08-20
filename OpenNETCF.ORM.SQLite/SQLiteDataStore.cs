@@ -20,9 +20,9 @@ using SQLiteDataReader = Mono.Data.Sqlite.SqliteDataReader;
 using System.Data.SQLite;
 #endif
 
-namespace OpenNETCF.ORM.SQLite
+namespace OpenNETCF.ORM
 {
-    public class SQLiteDataStore : SQLStoreBase<SQLiteEntityInfo>, IDisposable
+    public class SQLiteDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
     {
         private string m_connectionString;
 

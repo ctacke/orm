@@ -326,6 +326,8 @@ namespace OpenNETCF.ORM
 
             m_entities.Add(map);
 
+            AfterAddEntityType(entityType);
+
             var handler = EntityTypeAdded;
             if (handler != null)
             {
@@ -333,6 +335,10 @@ namespace OpenNETCF.ORM
                 var args = new EntityTypeAddedArgs(info);
                 handler(this, args);
             }
+        }
+
+        protected virtual void AfterAddEntityType(Type entityType)
+        {
         }
 
         public void DiscoverTypes(Assembly containingAssembly)

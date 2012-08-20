@@ -2,7 +2,6 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
-using OpenNETCF.ORM.Xml;
 using System.Reflection;
 using OpenNETCF.ORM.Test.Entities;
 
