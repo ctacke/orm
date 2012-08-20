@@ -7,7 +7,7 @@ namespace OpenNETCF.ORM
 {
     public class EntityInfo : IEntityInfo
     {
-        protected EntityInfo()
+        public EntityInfo()
         {
             Fields = new FieldAttributeCollection();
             References = new ReferenceAttributeCollection();

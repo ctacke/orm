@@ -1,0 +1,176 @@
+﻿using System;
+using System.Linq;
+using System.Collections.Generic;
+using System.Text;
+
+namespace OpenNETCF.ORM
+{
+    public abstract class DataStoreValidator
+    {
+        protected IDataStore Store { get; private set; }
+
+        protected abstract IDataStore CreateStoreFile();
+
+        private TestItem[] TestItems { get; set; }
+
+        public DataStoreValidator()
+        {
+            CreateTestItems();
+
+            Store = CreateStoreFile();
+            if (Store.StoreExists)
+            {
+                Store.DeleteStore();
+            }
+        }
+
+        public string StoreType
+        {
+            get { return Store.GetType().Name; }
+        }
+
+        private void CreateTestItems()
+        {
+            TestItems = new TestItem[] 
+            {
+                new TestItem("ItemA")
+                {
+                    UUID = Guid.NewGuid(),
+                    ITest = 5,
+                    FTest = 3.14F,
+                    DBTest = 1.4D,
+                    DETest = 2.678M,
+                },
+                new TestItem("ItemB"),
+                new TestItem("ItemC")
+            };
+        }
+
+        public virtual bool DoStoreSpecificValidation()
+        {
+            return true;
+        }
+
+        public bool DoCreateStore()
+        {
+            try
+            {
+                Store.AddType<TestItem>();
+                Store.CreateStore();
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public bool DoInserts()
+        {
+            try
+            {
+                for (int i = 0; i < TestItems.Length; i++)
+                {
+                    Store.Insert(TestItems[i]);
+                }
+
+                var count = Store.Count<TestItem>();
+
+                if(count != TestItems.Length) return false;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public bool DoSelects()
+        {
+            try
+            {
+                var items = Store.Select<TestItem>();
+                if(items.Count() != TestItems.Length) return false;
+
+                // pull by field
+                for (int i = 0; i < TestItems.Length; i++)
+                {
+                    var item = Store.Select<TestItem>("Name", TestItems[i].Name).FirstOrDefault();
+                    if (!item.Equals(TestItems[i])) return false;
+                }
+
+                // pull by PK
+                for (int i = 0; i < TestItems.Length; i++)
+                {
+                    var item = Store.Select<TestItem>(TestItems[i].ID);
+                    if (!item.Equals(TestItems[i])) return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public bool DoUpdates()
+        {
+            try
+            {
+                // rename item 2
+                TestItems[2].Name = "NewItem";
+                TestItems[2].Address = "Changed Address";
+                TestItems[2].TS = new TimeSpan(8, 23, 30);
+                Store.Update(TestItems[2]);
+
+                // pulling by the old name should return null
+                var item = Store.Select<TestItem>("Name", "ItemC").FirstOrDefault();
+                if (item != null) return false;
+                // check by the new name - it should return a value that is equivalent to item 2
+                item = Store.Select<TestItem>("Name", TestItems[2].Name).FirstOrDefault();
+                if (!item.Equals(TestItems[2])) return false;
+
+                // validate the Contains method
+                foreach (var i in TestItems)
+                {
+                    if (!Store.Contains(i)) return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public bool DoDeletes()
+        {
+            try
+            {
+                // delete the first item from the store
+                Store.Delete(TestItems[0]);
+
+                // make sure it's gone by selecting a field
+                var item = Store.Select<TestItem>("Name", TestItems[0].Name).FirstOrDefault();
+                if(item != null) return false;
+
+                // make sure Contains returns false
+                if(Store.Contains(TestItems[0])) return false;
+
+                // make sure the count decremented
+                var count = Store.Count<TestItem>();
+                if(count != TestItems.Length - 1) return false;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+
+            return true;
+        }
+    }
+}
