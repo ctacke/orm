@@ -45,7 +45,16 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Community.CsharpSqlite.SQLiteClient.WP">
+      <HintPath>..\OpenNETCF.ORM.SQLite\references\WinPhone\Community.CsharpSqlite.SQLiteClient.WP.dll</HintPath>
+    </Reference>
+    <Reference Include="Community.CsharpSqlite.WinPhone">
+      <HintPath>..\OpenNETCF.ORM.SQLite\references\WinPhone\Community.CsharpSqlite.WinPhone.dll</HintPath>
+    </Reference>
     <Reference Include="mscorlib" />
+    <Reference Include="System.Data.Ersatz.WinPhone">
+      <HintPath>..\OpenNETCF.ORM.SQLite\references\WinPhone\System.Data.Ersatz.WinPhone.dll</HintPath>
+    </Reference>
     <Reference Include="System.Windows" />
     <Reference Include="system" />
     <Reference Include="System.Core" />
@@ -80,17 +89,24 @@
     <Compile Include="Interfaces\IEntityInfo.cs" />
     <Compile Include="Interfaces\ITableEntity.cs" />
     <Compile Include="KeyScheme.cs" />
-    <Compile Include="Phone Compatibility\DbType.cs" />
-    <Compile Include="Phone Compatibility\DbParameter.cs" />
-    <Compile Include="Phone Compatibility\DbCommand.cs" />
-    <Compile Include="Phone Compatibility\DbConnection.cs" />
-    <Compile Include="Phone Compatibility\DbDataReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SQL Store Base\ConnectionBehavior.cs" />
     <Compile Include="SQL Store Base\SqlEntityInfo.cs" />
     <Compile Include="SQL Store Base\SqlFilterCondition.cs" />
     <Compile Include="SQL Store Base\SQLStoreBase.cs" />
     <Compile Include="SqlDateTimeDefault.cs" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <None Include="Phone Compatibility\DbCommand.cs">
+      <SubType>Code</SubType>
+    </None>
+    <None Include="Phone Compatibility\DbConnection.cs">
+      <SubType>Code</SubType>
+    </None>
+    <None Include="Phone Compatibility\DbDataReader.cs">
+      <SubType>Code</SubType>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\Silverlight for Phone\$(TargetFrameworkVersion)\Microsoft.Silverlight.$(TargetFrameworkProfile).Overrides.targets" />
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\Silverlight for Phone\$(TargetFrameworkVersion)\Microsoft.Silverlight.CSharp.targets" />
