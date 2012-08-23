@@ -44,6 +44,8 @@ namespace OpenNETCF.ORM
         public event EventHandler<EntityDeleteArgs> AfterDelete;
         public abstract void OnDelete(object item);
 
+        protected abstract void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility);
+
         /// <summary>
         /// 
         /// </summary>
@@ -222,28 +224,41 @@ namespace OpenNETCF.ORM
 
         public void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition)
         {
+            RegisterDynamicEntity(entityDefinition, false);
+        }
+
+        public void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition, bool ensureCompatibility)
+        {
+            if (entityDefinition.Fields.Count == 0)
+            {
+                throw new ArgumentException("EntityDefinition must contain at least one field");
+            }
+
             // verify this is a unique entity name
             // check the type-defined entities
             lock (m_entities)
             {
                 var existing = m_entities.FirstOrDefault(e => e.EntityName == entityDefinition.EntityName);
+
                 if (existing != null)
                 {
-                    throw new EntityAlreadyExistsException(entityDefinition.EntityName);
+                    if (!ensureCompatibility)
+                    {
+                        throw new EntityAlreadyExistsException(entityDefinition.EntityName);
+                    }
+                    else
+                    {
+                        m_entities[entityDefinition.EntityName] = entityDefinition;
+                    }
+                }
+                else
+                {
+                    m_entities.Add(entityDefinition);
                 }
             }
-            //lock (m_dynamicDefinitions)
-            //{
-            //    // check the dynamic entities
-            //    if (m_dynamicDefinitions.ContainsKey(entityDefinition.EntityName))
-            //    {
-            //        throw new EntityAlreadyExistsException(entityDefinition.EntityName);
-            //    }
 
-            //    m_dynamicDefinitions.Add(entityDefinition.EntityName, entityDefinition);
-            //}
-            m_entities.Add(entityDefinition);
-            // TODO: build the table if necessary 
+
+            OnDynamicEntityRegistration(entityDefinition, ensureCompatibility);
         }
 
         private void AddType(Type entityType, bool verifyInterface)

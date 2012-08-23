@@ -39,11 +39,14 @@ namespace OpenNETCF.ORM.Integration.Test
 
             var definition = new DynamicEntityDefinition("People", fieldList, KeyScheme.Identity);
 
-            IDataStore store = new SqlCeDataStore(Path.Combine(TestContext.TestDir, "test.sdf"));
+            var store = new SqlCeDataStore(Path.Combine(TestContext.TestDir, "test.sdf"));
+            store.CreateStore();
+
+            Assert.IsFalse(store.TableExists(definition.EntityName));
 
             store.RegisterDynamicEntity(definition);
 
-            store.CreateStore();
+            Assert.IsTrue(store.TableExists(definition.EntityName));
 
             var entity = new DynamicEntity("People");
             entity.Fields["FirstName"] = "John";
@@ -80,6 +83,20 @@ namespace OpenNETCF.ORM.Integration.Test
 
             items = store.Select("People");
             DumpData(items);
+
+            // now let's change the structure and see what happens
+            fieldList.Add(new FieldAttribute()
+            {
+                FieldName = "Middle_Name",
+                DataType = System.Data.DbType.Double,
+                AllowsNulls = true // this has to be true to add a column
+            });
+
+            var newDefinition = new DynamicEntityDefinition("People", fieldList, KeyScheme.Identity);
+
+            store.RegisterDynamicEntity(newDefinition, true);
+
+            items = store.Select("People");
 
         }
 

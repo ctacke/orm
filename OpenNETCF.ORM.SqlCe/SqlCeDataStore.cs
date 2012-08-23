@@ -418,7 +418,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public int MaxDatabaseSizeInMB 
+        public int MaxDatabaseSizeInMB
         {
             get { return m_maxSize; }
             set
@@ -482,65 +482,82 @@ namespace OpenNETCF.ORM
             }
         }
 
-        protected void ValidateTable(IDbConnection connection, IEntityInfo entity)
+        public override bool TableExists(string tableName)
         {
+            var connection = GetConnection(true);
+            try
+            {
+                using (var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+                    var sql = string.Format("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '{0}'", tableName);
+                    command.CommandText = sql;
+                    var count = Convert.ToInt32(command.ExecuteScalar());
+
+                    return (count > 0);
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
+        protected override void ValidateTable(IDbConnection connection, IEntityInfo entity)
+        {
+            // prevent caches reads of entitiy fields
+            m_lastEntity = null;
+
+            // first make sure the table exists
+            if (!TableExists(entity.EntityAttribute.NameInStore))
+            {
+                CreateTable(connection, entity);
+                return;
+            }
+
             using (var command = new SqlCeCommand())
             {
                 command.Connection = connection as SqlCeConnection;
 
-                // first make sure the table exists
-                var sql = string.Format("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '{0}'", entity.EntityAttribute.NameInStore);
-
-                command.CommandText = sql;
-
-                var count = Convert.ToInt32(command.ExecuteScalar());
-
-                if (count == 0)
+                foreach (var field in entity.Fields)
                 {
-                    CreateTable(connection, entity);
-                }
-                else
-                {
-                    foreach (var field in entity.Fields)
+                    if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
                     {
-                        if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
+                        throw new ReservedWordException(field.FieldName);
+                    }
+
+                    // yes, I realize hard-coded ordinals are not a good practice, but the SQL isn't changing, it's method specific
+                    var sql = string.Format("SELECT column_name, "  // 0
+                          + "data_type, "                       // 1
+                          + "character_maximum_length, "        // 2
+                          + "numeric_precision, "               // 3
+                          + "numeric_scale, "                   // 4
+                          + "is_nullable "
+                          + "FROM information_schema.columns "
+                          + "WHERE (table_name = '{0}' AND column_name = '{1}')",
+                          entity.EntityAttribute.NameInStore, field.FieldName);
+
+                    command.CommandText = sql;
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.Read())
                         {
-                            throw new ReservedWordException(field.FieldName);
+                            // field doesn't exist - we must create it
+                            var alter = new StringBuilder(string.Format("ALTER TABLE {0} ", entity.EntityAttribute.NameInStore));
+                            alter.Append(string.Format("ADD [{0}] {1} {2}",
+                                field.FieldName,
+                                GetFieldDataTypeString(entity.EntityName, field),
+                                GetFieldCreationAttributes(entity.EntityAttribute, field)));
+
+                            using (var altercmd = new SqlCeCommand(alter.ToString(), connection as SqlCeConnection))
+                            {
+                                altercmd.ExecuteNonQuery();
+                            }
                         }
-
-                        // yes, I realize hard-coded ordinals are not a good practice, but the SQL isn't changing, it's method specific
-                        sql = string.Format("SELECT column_name, "  // 0
-                              + "data_type, "                       // 1
-                              + "character_maximum_length, "        // 2
-                              + "numeric_precision, "               // 3
-                              + "numeric_scale, "                   // 4
-                              + "is_nullable "
-                              + "FROM information_schema.columns "
-                              + "WHERE (table_name = '{0}' AND column_name = '{1}')",
-                              entity.EntityAttribute.NameInStore, field.FieldName);
-
-                        command.CommandText = sql;
-
-                        using (var reader = command.ExecuteReader())
+                        else
                         {
-                            if (!reader.Read())
-                            {
-                                // field doesn't exist - we must create it
-                                var alter = new StringBuilder(string.Format("ALTER TABLE {0} ", entity.EntityAttribute.NameInStore));
-                                alter.Append(string.Format("ADD [{0}] {1} {2}",
-                                    field.FieldName,
-                                    GetFieldDataTypeString(entity.EntityName, field),
-                                    GetFieldCreationAttributes(entity.EntityAttribute, field)));
-
-                                using (var altercmd = new SqlCeCommand(alter.ToString(), connection as SqlCeConnection))
-                                {
-                                    altercmd.ExecuteNonQuery();
-                                }
-                            }
-                            else
-                            {
-                                // TODO: verify field length, etc.
-                            }
+                            // TODO: verify field length, etc.
                         }
                     }
                 }
