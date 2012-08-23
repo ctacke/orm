@@ -379,6 +379,91 @@ namespace OpenNETCF.ORM
             }
         }
 
+        public override bool TableExists(string tableName)
+        {
+            var connection = GetConnection(true);
+            try
+            {
+                using (var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+                    var sql = string.Format("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '{0}'", tableName);
+                    command.CommandText = sql;
+                    var count = Convert.ToInt32(command.ExecuteScalar());
+
+                    return (count > 0);
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
+        protected override void ValidateTable(IDbConnection connection, IEntityInfo entity)
+        {
+            // first make sure the table exists
+            if (!TableExists(entity.EntityAttribute.NameInStore))
+            {
+                CreateTable(connection, entity);
+                return;
+            }
+            
+            throw new NotImplementedException();
+
+            // NOTE: THIS IS COPIED FROM THE SQL CE IMPLEMENTAION
+            // THE SQL IS NOT RIGHT AND NEEDS FIXING, WHICH IS WHY IT'S COMMENTED OUT
+
+
+            //using (var command = new SQLiteCommand())
+            //{
+            //    command.Connection = connection as SQLiteConnection;
+
+            //    foreach (var field in entity.Fields)
+            //    {
+            //        if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
+            //        {
+            //            throw new ReservedWordException(field.FieldName);
+            //        }
+
+            //        // yes, I realize hard-coded ordinals are not a good practice, but the SQL isn't changing, it's method specific
+            //        var sql = string.Format("SELECT column_name, "  // 0
+            //              + "data_type, "                       // 1
+            //              + "character_maximum_length, "        // 2
+            //              + "numeric_precision, "               // 3
+            //              + "numeric_scale, "                   // 4
+            //              + "is_nullable "
+            //              + "FROM information_schema.columns "
+            //              + "WHERE (table_name = '{0}' AND column_name = '{1}')",
+            //              entity.EntityAttribute.NameInStore, field.FieldName);
+
+            //        command.CommandText = sql;
+
+            //        using (var reader = command.ExecuteReader())
+            //        {
+            //            if (!reader.Read())
+            //            {
+            //                // field doesn't exist - we must create it
+            //                var alter = new StringBuilder(string.Format("ALTER TABLE {0} ", entity.EntityAttribute.NameInStore));
+            //                alter.Append(string.Format("ADD [{0}] {1} {2}",
+            //                    field.FieldName,
+            //                    GetFieldDataTypeString(entity.EntityName, field),
+            //                    GetFieldCreationAttributes(entity.EntityAttribute, field)));
+
+            //                using (var altercmd = new SQLiteCommand(alter.ToString(), connection as SQLiteConnection))
+            //                {
+            //                    altercmd.ExecuteNonQuery();
+            //                }
+            //            }
+            //            else
+            //            {
+            //                // TODO: verify field length, etc.
+            //            }
+            //        }
+            //    }
+            //}
+        }
+
         protected override string VerifyIndex(string entityName, string fieldName, FieldSearchOrder searchOrder, IDbConnection connection)
         {
             bool localConnection = false;
@@ -641,11 +726,6 @@ namespace OpenNETCF.ORM
             return items.ToArray();
         }
         
-        public override void EnsureCompatibility()
-        {
-            throw new NotImplementedException();
-        }
-
         public override void OnUpdate(object item, bool cascadeUpdates, string fieldName)
         {
             object keyValue;
@@ -852,6 +932,12 @@ namespace OpenNETCF.ORM
 
         public override DynamicEntity[] Select(string entityName)
         {
+            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
+        }
+
+        protected override void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility)
+        {
+            // TODO: just delete this method when implemented, the SqlDataStore base will create the table
             throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
         }
     }

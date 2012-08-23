@@ -50,6 +50,7 @@ namespace OpenNETCF.ORM
         public IEntityInfo this[string entityName]
         {
             get { return m_entities[entityName]; }
+            internal set { m_entities[entityName] = value; }
         }
     }
 }

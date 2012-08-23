@@ -27,7 +27,7 @@ namespace OpenNETCF.ORM
 
         public abstract override void CreateStore();
         public abstract override void DeleteStore();
-        public abstract override void EnsureCompatibility();
+        protected abstract void ValidateTable(IDbConnection connection, IEntityInfo entity);
 
         public abstract override bool StoreExists { get; }
 
@@ -196,7 +196,7 @@ namespace OpenNETCF.ORM
                 throw new ReservedWordException(entity.EntityName);
             }
 
-            sql.AppendFormat("CREATE TABLE {0} (", entity.EntityName);
+            sql.AppendFormat("CREATE TABLE [{0}] (", entity.EntityName);
 
             int count = entity.Fields.Count;
 
@@ -290,7 +290,7 @@ namespace OpenNETCF.ORM
 
                     if (i == 0)
                     {
-                        sql = string.Format("CREATE INDEX {0} ON {1}({2} {3})",
+                        sql = string.Format("CREATE INDEX {0} ON [{1}]({2} {3})",
                             indexName,
                             entityName,
                             fieldName,
@@ -664,11 +664,11 @@ namespace OpenNETCF.ORM
 
             if (isCount)
             {
-                sb = new StringBuilder(string.Format("SELECT COUNT(*) FROM {0}", entityName));
+                sb = new StringBuilder(string.Format("SELECT COUNT(*) FROM [{0}]", entityName));
             }
             else
             {
-                sb = new StringBuilder(string.Format("SELECT * FROM {0}", entityName));
+                sb = new StringBuilder(string.Format("SELECT * FROM [{0}]", entityName));
             }
 
             if (filters != null)
@@ -768,7 +768,7 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 {
                     command.Connection = connection;
-                    command.CommandText = string.Format("SELECT * FROM {0}", entityName);
+                    command.CommandText = string.Format("SELECT * FROM [{0}]", entityName);
 
                     using (var reader = command.ExecuteReader())
                     {
@@ -909,7 +909,7 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 {
                     command.Connection = connection;
-                    command.CommandText = string.Format("DELETE FROM {0}", tableName);
+                    command.CommandText = string.Format("DELETE FROM [{0}]", tableName);
                     command.ExecuteNonQuery();
                 }
             }
@@ -918,6 +918,29 @@ namespace OpenNETCF.ORM
                 DoneWithConnection(connection, true);
             }
         }
+
+        public abstract bool TableExists(string tableName);
+
+        public virtual void DropTable(string tableName)
+        {
+            if (!TableExists(tableName)) return;
+
+            var connection = GetConnection(true);
+            try
+            {
+                using (var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+                    command.CommandText = string.Format("DROP TABLE [{0}]", tableName);
+                    command.ExecuteNonQuery();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
 
         /// <summary>
         /// Deletes all entity instances of the specified type from the DataStore
@@ -981,7 +1004,7 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 {
                     command.Connection = connection;
-                    command.CommandText = string.Format("DELETE FROM {0} WHERE {1} = ?", entityName, fieldName);
+                    command.CommandText = string.Format("DELETE FROM [{0}] WHERE {1} = ?", entityName, fieldName);
                     var param = CreateParameterObject("@val", matchValue);
                     command.Parameters.Add(param);
                     command.ExecuteNonQuery();
@@ -1071,7 +1094,7 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 {
                     command.Connection = connection;
-                    command.CommandText = string.Format("SELECT COUNT(*) FROM {0}", entityName);
+                    command.CommandText = string.Format("SELECT COUNT(*) FROM [{0}]", entityName);
                     var count = command.ExecuteScalar();
                     return Convert.ToInt32(count);
                 }
@@ -1120,6 +1143,63 @@ namespace OpenNETCF.ORM
             var type = typeof(T);
             var items = Select(type, null, null, fetchCount, firstRowOffset, false);
             return items.Cast<T>().ToArray();
+        }
+
+        protected override void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility)
+        {
+            if (definition.EntityName.Contains(' '))
+            {
+                throw new ArgumentException("Entity Names cannot contain spaces");
+            }
+
+            var connection = GetConnection(true);
+            try
+            {
+                // this will exist because the caller inserted it
+                var entity = Entities[definition.EntityName];
+
+                if (!TableExists(definition.EntityName))
+                {
+                    CreateTable(connection, entity);
+                }
+                else
+                {
+                    ValidateTable(connection, entity);
+                }
+
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
+
+        /// <summary>
+        /// Ensures that the underlying database tables contain all of the Fields to represent the known entities.
+        /// This is useful if you need to add a Field to an existing store.  Just add the Field to the Entity, then 
+        /// call EnsureCompatibility to have the field added to the database.
+        /// </summary>
+        public override void EnsureCompatibility()
+        {
+            if (!StoreExists)
+            {
+                CreateStore();
+                return;
+            }
+
+            var connection = GetConnection(true);
+            try
+            {
+                foreach (var entity in this.Entities)
+                {
+                    ValidateTable(connection, entity);
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
         }
     }
 }
