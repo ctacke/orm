@@ -159,14 +159,13 @@ namespace OpenNETCF.ORM
                     return DbType.Int32;
                 case "smallint":
                     return DbType.Int16;
+                case "ntext":
                 case "nvarchar":
                     return DbType.String;
                 case "nchar":
                     return DbType.StringFixedLength;
                 case "bit":
                     return DbType.Boolean;
-                case "image":
-                    return DbType.Object;
                 case "tinyint":
                     return DbType.Byte;
                 case "numeric":
@@ -177,8 +176,9 @@ namespace OpenNETCF.ORM
                     return DbType.Double;
                 case "uniqueidentifier":
                     return DbType.Guid;
-                case "ntext":
-                    return DbType.Binary; // TODO: verify this
+                case "image":
+                case "binary":
+                    return DbType.Binary;
                 default:
                     throw new NotSupportedException(
                         string.Format("Unable to determine convert string '{0}' to DbType", dbTypeName));
@@ -219,7 +219,8 @@ namespace OpenNETCF.ORM
                     return "float";
                 case DbType.Guid:
                     return "uniqueidentifier";
-
+                case DbType.Binary:
+                    return "image";
                 default:
                     throw new NotSupportedException(
                         string.Format("Unable to determine convert DbType '{0}' to string", type.ToString()));
