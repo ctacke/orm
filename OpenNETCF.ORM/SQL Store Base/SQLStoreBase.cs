@@ -23,6 +23,9 @@ namespace OpenNETCF.ORM
         public int DefaultVarBinaryLength { get; set; }
         protected abstract string AutoIncrementFieldIdentifier { get; }
 
+        private const int MaxSizedStringLength = 4000;
+        private const int MaxSizedBinaryLength = 8000;
+
         public ConnectionBehavior ConnectionBehavior { get; set; }
 
         public abstract override void CreateStore();
@@ -364,12 +367,17 @@ namespace OpenNETCF.ORM
             if (field.DataType == DbType.Binary)
             {
                 // default to varbinary unless a Length is specifically supplied and it is >= 8000
-                if (field.Length >= 8000)
+                if (field.Length >= MaxSizedBinaryLength)
                 {
                     return "image";
                 }
                 // if no length was supplied, default to DefaultVarBinaryLength (8000)
                 return string.Format("varbinary({0})", field.Length == 0 ? DefaultVarBinaryLength : field.Length);
+            }
+
+            if ((field.DataType == DbType.String) && (field.Length > MaxSizedStringLength))
+            {
+                return "ntext";
             }
 
             return field.DataType.ToSqlTypeString();
@@ -384,7 +392,10 @@ namespace OpenNETCF.ORM
                 case DbType.String:
                     if (field.Length > 0)
                     {
-                        sb.AppendFormat("({0}) ", field.Length);
+                        if (field.Length <= MaxSizedStringLength)
+                        {
+                            sb.AppendFormat("({0}) ", field.Length);
+                        }
                     }
                     else
                     {
