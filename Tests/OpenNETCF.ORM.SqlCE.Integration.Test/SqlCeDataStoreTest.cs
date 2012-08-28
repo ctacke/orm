@@ -88,6 +88,8 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             itemC.Name = "NewItem";
             itemC.Address = "Changed Address";
             itemC.TS = new TimeSpan(8, 23, 30);
+            itemC.BigString = "little string";
+
             store.Update(itemC);
 
             Assert.IsTrue(beforeUpdate, "BeforeUpdate never fired");
@@ -157,6 +159,9 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
 
         [Field]
         public TimeSpan TS { get; set; }
+
+        [Field(Length=int.MaxValue)]
+        public string BigString { get; set; }
 
         public bool Equals(TestItem other)
         {
