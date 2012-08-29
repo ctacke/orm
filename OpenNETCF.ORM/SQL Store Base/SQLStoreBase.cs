@@ -241,6 +241,7 @@ namespace OpenNETCF.ORM
             {
                 command.CommandText = sql.ToString();
                 command.Connection = connection;
+                command.Transaction = CurrentTransaction;
                 int i = command.ExecuteNonQuery();
             }
 
