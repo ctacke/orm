@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
+using System.Data;
 
 namespace OpenNETCF.ORM
 {
@@ -17,7 +18,9 @@ namespace OpenNETCF.ORM
         string Name { get; }
 
         void AddType<T>();
+        void AddType<T>(bool ensureCompatibility);
         void AddType(Type entityType);
+        void AddType(Type entityType, bool ensureCompatibility);
         void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition);
         void DiscoverTypes(Assembly containingAssembly);
 
@@ -66,5 +69,10 @@ namespace OpenNETCF.ORM
         bool Contains(object item);
 
         void FillReferences(object instance);
+
+       void BeginTransaction(IsolationLevel isolationLevel);
+       void BeginTransaction();
+       void Commit();
+       void Rollback();
     }
 }

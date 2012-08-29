@@ -43,6 +43,7 @@ namespace OpenNETCF.ORM
                     command.CommandText = entityName;
                     command.CommandType = CommandType.TableDirect;
                     command.IndexName = ((SqlEntityInfo)Entities[entityName]).PrimaryKeyIndexName;
+                    command.Transaction = CurrentTransaction as SqlCeTransaction;
 
                     using (var results = command.ExecuteResultSet(ResultSetOptions.Scrollable | ResultSetOptions.Updatable))
                     {
