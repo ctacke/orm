@@ -195,6 +195,7 @@ namespace OpenNETCF.ORM
 
                 command = GetSelectCommand<SqlCeCommand, SqlCeParameter>(entityName, filters, out tableDirect);
                 command.Connection = connection as SqlCeConnection;
+                command.Transaction = CurrentTransaction as SqlCeTransaction;
 
                 int searchOrdinal = -1;
                 ResultSetOptions options = ResultSetOptions.Scrollable;

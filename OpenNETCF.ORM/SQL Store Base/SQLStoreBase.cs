@@ -51,11 +51,17 @@ namespace OpenNETCF.ORM
         protected abstract IDbConnection GetNewConnectionObject();
         protected abstract IDataParameter CreateParameterObject(string parameterName, object parameterValue);
 
+        protected IDbTransaction CurrentTransaction { get; set; }
+
+        private object m_transactionSyncRoot = new object();
+
         public SQLStoreBase()
         {
             DefaultStringFieldSize = 200;
             DefaultNumericFieldPrecision = 16;
             DefaultVarBinaryLength = 8000;
+
+            ConnectionBehavior = ORM.ConnectionBehavior.HoldMaintenance;
         }
 
         ~SQLStoreBase()
@@ -137,6 +143,7 @@ namespace OpenNETCF.ORM
                 {
                     command.CommandText = sql;
                     command.Connection = connection;
+                    command.Transaction = CurrentTransaction;
                     return command.ExecuteNonQuery();
                 }
             }
@@ -162,6 +169,7 @@ namespace OpenNETCF.ORM
                 {
                     command.Connection = connection;
                     command.CommandText = sql;
+                    command.Transaction = CurrentTransaction;
                     return command.ExecuteScalar();
                 }
             }
@@ -1156,6 +1164,35 @@ namespace OpenNETCF.ORM
             return items.Cast<T>().ToArray();
         }
 
+        protected override void AfterAddEntityType(Type entityType, bool ensureCompatibility)
+        {
+            if ((StoreExists) && (ensureCompatibility))
+            {
+                var connection = GetConnection(true);
+                try
+                {
+                    var name = Entities.GetNameForType(entityType);
+
+                    // this will exist because the caller inserted it
+                    var entity = Entities[name];
+
+                    if (!TableExists(name))
+                    {
+                        CreateTable(connection, entity);
+                    }
+                    else
+                    {
+                        ValidateTable(connection, entity);
+                    }
+
+                }
+                finally
+                {
+                    DoneWithConnection(connection, true);
+                }
+            }
+        }
+
         protected override void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility)
         {
             if (definition.EntityName.Contains(' '))
@@ -1210,6 +1247,70 @@ namespace OpenNETCF.ORM
             finally
             {
                 DoneWithConnection(connection, true);
+            }
+        }
+
+        private ConnectionBehavior m_nonTransactionConnectionBehavior;
+
+        public override void BeginTransaction(IsolationLevel isolationLevel)
+        {
+            lock (m_transactionSyncRoot)
+            {
+                if (CurrentTransaction != null)
+                {
+                    throw new InvalidOperationException("Parallel transactions are not supported");
+                }
+
+                // we must escalate the connection behavior for the transaction to remain valid
+                if (ConnectionBehavior != ORM.ConnectionBehavior.Persistent)
+                {
+                    m_nonTransactionConnectionBehavior = ConnectionBehavior;
+                    ConnectionBehavior = ORM.ConnectionBehavior.Persistent;
+                }
+
+
+                if (m_connection == null)
+                {
+                    // force creation of the persistent connection
+                    var c = GetConnection(false);
+                    DoneWithConnection(c, false);
+                }
+
+                CurrentTransaction = m_connection.BeginTransaction(isolationLevel);
+            }
+        }
+
+        public override void Commit()
+        {
+            if (CurrentTransaction == null)
+            {
+                throw new InvalidOperationException();
+            }
+
+            lock (m_transactionSyncRoot)
+            {
+                CurrentTransaction.Commit();
+                CurrentTransaction.Dispose();
+                CurrentTransaction = null;
+                // revert connection behavior if we escalated
+                ConnectionBehavior = m_nonTransactionConnectionBehavior;
+            }
+        }
+
+        public override void Rollback()
+        {
+            if (CurrentTransaction == null)
+            {
+                throw new InvalidOperationException();
+            }
+
+            lock (m_transactionSyncRoot)
+            {
+                CurrentTransaction.Rollback();
+                CurrentTransaction.Dispose();
+                CurrentTransaction = null;
+                // revert connection behavior if we escalated
+                ConnectionBehavior = m_nonTransactionConnectionBehavior;
             }
         }
     }

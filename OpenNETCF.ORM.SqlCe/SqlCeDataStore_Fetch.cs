@@ -48,6 +48,7 @@ namespace OpenNETCF.ORM
                     command.CommandType = CommandType.TableDirect;
                     command.IndexName = indexName;
                     command.Connection = connection as SqlCeConnection;
+                    command.Transaction = CurrentTransaction as SqlCeTransaction;
 
                     int count = 0;
                     int currentOffset = 0;

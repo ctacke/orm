@@ -90,7 +90,20 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             itemC.TS = new TimeSpan(8, 23, 30);
             itemC.BigString = "little string";
 
+            // test rollback
+            store.BeginTransaction();
             store.Update(itemC);
+            item = store.Select<TestItem>(3);
+            Assert.IsTrue(item.Name == itemC.Name);
+            store.Rollback();
+
+            item = store.Select<TestItem>(3);
+            Assert.IsTrue(item.Name != itemC.Name);
+
+            // test commit
+            store.BeginTransaction(System.Data.IsolationLevel.Unspecified);
+            store.Update(itemC);
+            store.Commit();
 
             Assert.IsTrue(beforeUpdate, "BeforeUpdate never fired");
             Assert.IsTrue(afterUpdate, "AfterUpdate never fired");
@@ -118,7 +131,33 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             // COUNT
             count = store.Count<TestItem>();
             Assert.AreEqual(2, count);
+
+            // this will *not* create the table
+            store.AddType<LateAddItem>();
+
+            Exception expected = null;
+            try
+            {
+                var newitems = store.Select<LateAddItem>(false);
+            }
+            catch (Exception ex)
+            {
+                expected = ex;
+            }
+
+            Assert.IsNotNull(expected);
+
         }
+    }
+
+    [Entity(KeyScheme = KeyScheme.Identity)]
+    public class LateAddItem
+    {
+        [Field(IsPrimaryKey = true)]
+        public int ID { get; set; }
+
+        [Field]
+        public string Name { get; set; }
     }
 
     [Entity(KeyScheme = KeyScheme.Identity)]

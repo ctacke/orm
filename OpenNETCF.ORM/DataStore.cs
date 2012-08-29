@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
 using System.Diagnostics;
+using System.Data;
 
 namespace OpenNETCF.ORM
 {
@@ -212,12 +213,22 @@ namespace OpenNETCF.ORM
 
         public void AddType<T>()
         {
-            AddType(typeof(T), true);
+            AddType<T>(true);
+        }
+
+        public void AddType<T>(bool ensureCompatibility)
+        {
+            AddType(typeof(T), true, ensureCompatibility);
         }
 
         public void AddType(Type entityType)
         {
             AddType(entityType, true);
+        }
+
+        public void AddType(Type entityType, bool ensureCompatibility)
+        {
+            AddType(entityType, true, ensureCompatibility);
         }
 
         //private Dictionary<string, DynamicEntity> m_dynamicDefinitions = new Dictionary<string, DynamicEntity>(StringComparer.InvariantCultureIgnoreCase);
@@ -261,7 +272,7 @@ namespace OpenNETCF.ORM
             OnDynamicEntityRegistration(entityDefinition, ensureCompatibility);
         }
 
-        private void AddType(Type entityType, bool verifyInterface)
+        private void AddType(Type entityType, bool verifyInterface, bool ensureCompatibility)
         {
             var attr = (from a in entityType.GetCustomAttributes(true)
                         where a.GetType().Equals(typeof(EntityAttribute))
@@ -341,7 +352,7 @@ namespace OpenNETCF.ORM
 
             m_entities.Add(map);
 
-            AfterAddEntityType(entityType);
+            AfterAddEntityType(entityType, ensureCompatibility);
 
             var handler = EntityTypeAdded;
             if (handler != null)
@@ -352,7 +363,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        protected virtual void AfterAddEntityType(Type entityType)
+        protected virtual void AfterAddEntityType(Type entityType, bool ensureCompatibility)
         {
         }
 
@@ -401,6 +412,26 @@ namespace OpenNETCF.ORM
             var ctor = objectType.GetConstructor(new Type[] { });
             m_ctorCache.Add(objectType, ctor);
             return ctor;
+        }
+
+        public virtual void BeginTransaction()
+        {
+            BeginTransaction(IsolationLevel.Unspecified);
+        }
+
+        public virtual void BeginTransaction(IsolationLevel isolationLevel)
+        {
+            throw new NotSupportedException("Transactions are not supported by this provider");
+        }
+
+        public virtual void Commit()
+        {
+            throw new NotSupportedException("Transactions are not supported by this provider");
+        }
+
+        public virtual void Rollback()
+        {
+            throw new NotSupportedException("Transactions are not supported by this provider");
         }
     }
 }
