@@ -20,13 +20,13 @@ namespace OpenNETCF.ORM
             return output;
         }
 
-        public static object[] ConvertAll(this List<object> input, Type targetType)
+        public static Array ConvertAll(this List<object> input, Type targetType)
         {
-            var output = new object[input.Count];
-
+            var output = Array.CreateInstance(targetType, input.Count);
+            
             for (int i = 0; i < output.Length; i++)
             {
-                output[i] = Convert.ChangeType(input[i], targetType, null);
+                output.SetValue(Convert.ChangeType(input[i], targetType, null), i);
             }
 
             return output;
