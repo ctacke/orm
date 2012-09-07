@@ -16,12 +16,14 @@ using SQLiteCommand = Mono.Data.Sqlite.SqliteCommand;
 using SQLiteConnection = Mono.Data.Sqlite.SqliteConnection;
 using SQLiteParameter = Mono.Data.Sqlite.SqliteParameter;
 using SQLiteDataReader = Mono.Data.Sqlite.SqliteDataReader;
+using SQLiteTransaction = Mono.Data.Sqlite.SqliteTransaction;
 #elif WINDOWS_PHONE
 // ah the joys of an open-source project changing cases on us
 using SQLiteConnection = Community.CsharpSqlite.SQLiteClient.SqliteConnection;
 using SQLiteCommand = Community.CsharpSqlite.SQLiteClient.SqliteCommand;
 using SQLiteParameter = Community.CsharpSqlite.SQLiteClient.SqliteParameter;
 using SQLiteDataReader = Community.CsharpSqlite.SQLiteClient.SqliteDataReader;
+using SQLiteTransaction = Community.CsharpSqlite.SQLiteClient.SqliteTransaction;
 #else
 using System.Data.SQLite;
 #endif
@@ -173,11 +175,10 @@ namespace OpenNETCF.ORM
             var connection = GetConnection(false);
             try
             {
-                //                CheckOrdinals(entityName);
-
                 FieldAttribute identity = null;
                 var command = GetInsertCommand(entityName);
                 command.Connection = connection as SQLiteConnection;
+                command.Transaction = CurrentTransaction as SQLiteTransaction;
 
                 var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
 
@@ -322,6 +323,7 @@ namespace OpenNETCF.ORM
                 {
                     command.CommandText = sql;
                     command.Connection = connection;
+                    command.Transaction = CurrentTransaction;
                     using (var reader = command.ExecuteReader() as SQLiteDataReader)
                     {
                         if (reader.HasRows)
@@ -360,6 +362,7 @@ namespace OpenNETCF.ORM
                 {
                     command.Connection = connection;
                     command.CommandText = sql;
+                    command.Transaction = CurrentTransaction;
                     using (var reader = command.ExecuteReader())
                     {
                         List<string> nameList = new List<string>();
@@ -389,6 +392,7 @@ namespace OpenNETCF.ORM
                     command.Connection = connection;
                     var sql = string.Format("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '{0}'", tableName);
                     command.CommandText = sql;
+                    command.Transaction = CurrentTransaction;
                     var count = Convert.ToInt32(command.ExecuteScalar());
 
                     return (count > 0);
@@ -499,6 +503,7 @@ namespace OpenNETCF.ORM
                         Debug.WriteLine(sql);
 
                         command.CommandText = sql;
+                        command.Transaction = CurrentTransaction;
                         command.ExecuteNonQuery();
                     }
 
@@ -544,6 +549,7 @@ namespace OpenNETCF.ORM
                 bool tableDirect;
                 command = GetSelectCommand<SQLiteCommand, SQLiteParameter>(entityName, filters, out tableDirect);
                 command.Connection = connection as SQLiteConnection;
+                command.Transaction = CurrentTransaction as SQLiteTransaction;
 
                 int searchOrdinal = -1;
             //    ResultSetOptions options = ResultSetOptions.Scrollable;
@@ -761,6 +767,7 @@ namespace OpenNETCF.ORM
 
                     command.CommandType = CommandType.Text;
                     command.Parameters.Add(new SQLiteParameter("@keyparam", keyValue));
+                    command.Transaction = CurrentTransaction;
 
                     var updateSQL = new StringBuilder(string.Format("UPDATE {0} SET ", entityName));
 
@@ -863,6 +870,7 @@ namespace OpenNETCF.ORM
                                 insertCommand.Parameters.Add(new SQLiteParameter("@keyparam", keyValue));
                                 insertCommand.CommandText = updateSQL.ToString();
                                 insertCommand.Connection = connection;
+                                insertCommand.Transaction = CurrentTransaction;
                                 insertCommand.ExecuteNonQuery();
                             }
                         }

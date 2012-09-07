@@ -9,8 +9,9 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
     public class SQLiteDataStoreTest
     {
         public TestContext TestContext { get; set; }
+
         [TestMethod()]
-        [DeploymentItem("OpenNETCF.ORM.SqlCe.dll")]
+        [DeploymentItem("SQLite.Interop.dll")]
         public void SimpleCRUDTest()
         {
             var store = new SQLiteDataStore("test.db");
@@ -76,7 +77,63 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             count = store.Count<TestItem>();
             Assert.AreEqual(2, count);
         }
+
+        [TestMethod()]
+        [DeploymentItem("SQLite.Interop.dll")]
+        public void SimpleReferenceTest()
+        {
+            var store = new SQLiteDataStore("test.db");
+            store.AddType<Author>();
+            store.AddType<Book>();
+            store.CreateStore();
+
+            var dumas = new Author() { Name = "Alexadre Dumas" };
+            store.Insert(dumas);
+
+            store.Insert(
+                new Book()
+                {
+                    AuthorID = dumas.ID,
+                    Title = "The Count of Monte Cristo"
+                });
+
+            store.Insert(
+                new Book()
+                {
+                    AuthorID = dumas.ID,
+                    Title = "The Three Musketeers"
+                });
+
+            var authors = store.Select<Author>(true);
+        }
     }
+
+    [Entity(KeyScheme = KeyScheme.Identity)]
+    public class Author
+    {
+        [Field(IsPrimaryKey = true)]
+        public int ID { get; set; }
+
+        [Field]
+        public string Name { get; set; }
+
+        [Reference(typeof(Book), "AuthorID")]
+        Book[] Books { get; set; }
+    }
+
+    [Entity(KeyScheme = KeyScheme.Identity)]
+    public class Book
+    {
+        [Field(IsPrimaryKey = true)]
+        public int ID { get; set; }
+
+        [Field]
+        public int AuthorID { get; set; }
+
+        [Field]
+        public string Title { get; set; }
+    }
+
 
     [Entity(KeyScheme=KeyScheme.Identity)]
     public class TestItem : IEquatable<TestItem>

@@ -894,7 +894,8 @@ namespace OpenNETCF.ORM
 
                     // this seems "backward" because childKey may turn out null, 
                     // so doing it backwards (keyValue.Equals instead of childKey.Equals) prevents a null referenceexception
-                    if (keyValue.Equals(childKey))
+                    // we have to do the conversion becasue SQLite will have one of these as a 32-bit and the other as a 64-bit, and "Equals" will turn out false
+                    if (keyValue.Equals(Convert.ChangeType(childKey, keyValue.GetType(), null)))
                     {
                         children.Add(child);
                     }
@@ -904,6 +905,7 @@ namespace OpenNETCF.ORM
                 if (reference.PropertyInfo.PropertyType.IsArray)
                 {
                     reference.PropertyInfo.SetValue(instance, carr, null);
+//                    reference.PropertyInfo.SetValue(instance, Convert.ChangeType(carr, reference.PropertyInfo.PropertyType), null);
                 }
                 else
                 {
