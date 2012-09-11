@@ -153,40 +153,6 @@ namespace OpenNETCF.ORM
             }
         }
 
-        private void SetInstanceValue(FieldAttribute field, object instance, object value)
-        {
-            if (instance is DynamicEntity)
-            {
-                ((DynamicEntity)instance).Fields[field.FieldName] = value;
-            }
-            else
-            {
-                field.PropertyInfo.SetValue(instance, value, null);
-            }
-        }
-
-        private object GetInstanceValue(FieldAttribute field, object instance)
-        {
-            object value;
-            if (instance is DynamicEntity)
-            {
-                value = ((DynamicEntity)instance).Fields[field.FieldName];
-            }
-            else
-            {
-                value = field.PropertyInfo.GetValue(instance, null);
-            }
-
-            if (value is TimeSpan)
-            {
-                return ((TimeSpan)value).Ticks;
-            }
-
-            if (value == null) return DBNull.Value;
-
-            return value;
-        }
-
         /// <summary>
         /// Inserts the provided entity instance into the underlying data store.
         /// </summary>

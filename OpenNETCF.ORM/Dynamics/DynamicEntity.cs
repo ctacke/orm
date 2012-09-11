@@ -7,8 +7,13 @@ namespace OpenNETCF.ORM
 {
     public class DynamicEntity
     {
-        public string EntityName { get; private set; }
+        public string EntityName { get; set; }
         public FieldCollection Fields { get; private set; }
+
+        public DynamicEntity()
+            : this(null, null)
+        {
+        }
 
         public DynamicEntity(string entityName)
             : this(entityName, null)

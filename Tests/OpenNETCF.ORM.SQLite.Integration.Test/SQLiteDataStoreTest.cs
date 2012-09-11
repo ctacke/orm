@@ -87,9 +87,12 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             store.AddType<Book>();
             store.CreateStore();
 
+            // insert an author
             var dumas = new Author() { Name = "Alexadre Dumas" };
             store.Insert(dumas);
 
+            // insert a couple books.
+            // note that we're inserting the foreign key value
             store.Insert(
                 new Book()
                 {
@@ -104,7 +107,10 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
                     Title = "The Three Musketeers"
                 });
 
+            // now get the authors back, telling ORM to fill the references
             var authors = store.Select<Author>(true);
+
+            // at this point you will have 1 Author instance, with the Books property hydrated and containing two Book instances
         }
     }
 

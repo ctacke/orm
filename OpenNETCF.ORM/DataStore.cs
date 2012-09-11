@@ -414,6 +414,40 @@ namespace OpenNETCF.ORM
             return ctor;
         }
 
+        protected void SetInstanceValue(FieldAttribute field, object instance, object value)
+        {
+            if (instance is DynamicEntity)
+            {
+                ((DynamicEntity)instance).Fields[field.FieldName] = value;
+            }
+            else
+            {
+                field.PropertyInfo.SetValue(instance, value, null);
+            }
+        }
+
+        protected object GetInstanceValue(FieldAttribute field, object instance)
+        {
+            object value;
+            if (instance is DynamicEntity)
+            {
+                value = ((DynamicEntity)instance).Fields[field.FieldName];
+            }
+            else
+            {
+                value = field.PropertyInfo.GetValue(instance, null);
+            }
+
+            if (value is TimeSpan)
+            {
+                return ((TimeSpan)value).Ticks;
+            }
+
+            if (value == null) return DBNull.Value;
+
+            return value;
+        }
+
         public virtual void BeginTransaction()
         {
             BeginTransaction(IsolationLevel.Unspecified);

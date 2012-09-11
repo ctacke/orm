@@ -109,7 +109,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        private object CreateEntityInstance(string entityName, Type objectType, FieldAttributeCollection fields, SqlCeResultSet results, out bool fieldsSet)
+        protected object CreateEntityInstance(string entityName, Type objectType, FieldAttributeCollection fields, SqlCeResultSet results, out bool fieldsSet)
         {
             MethodInfo proxy;
 
