@@ -49,12 +49,12 @@ namespace OpenNETCF.ORM
             }
         }
 
-        internal void Add(string fieldName)
+        public void Add(string fieldName)
         {
             Add(fieldName, null);
         }
 
-        internal void Add(string fieldName, object value)
+        public void Add(string fieldName, object value)
         {
             lock (m_fields)
             {

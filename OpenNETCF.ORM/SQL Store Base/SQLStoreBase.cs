@@ -1316,5 +1316,6 @@ namespace OpenNETCF.ORM
                 ConnectionBehavior = m_nonTransactionConnectionBehavior;
             }
         }
+
     }
 }
