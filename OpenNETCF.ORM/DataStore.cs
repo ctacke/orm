@@ -418,7 +418,7 @@ namespace OpenNETCF.ORM
         {
             if (instance is DynamicEntity)
             {
-                ((DynamicEntity)instance).Fields[field.FieldName] = value;
+                ((DynamicEntity)instance).Fields[field.FieldName] = value ?? DBNull.Value;
             }
             else
             {
