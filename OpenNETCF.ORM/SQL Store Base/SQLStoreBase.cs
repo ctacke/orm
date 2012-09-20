@@ -1026,6 +1026,7 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 {
                     command.Connection = connection;
+                    command.Transaction = CurrentTransaction;
                     command.CommandText = string.Format("DELETE FROM [{0}] WHERE {1} = ?", entityName, fieldName);
                     var param = CreateParameterObject("@val", matchValue);
                     command.Parameters.Add(param);

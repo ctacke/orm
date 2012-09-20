@@ -143,6 +143,7 @@ namespace OpenNETCF.ORM
             {
                 using (var command = BuildFilterCommand<SqlCeCommand, SqlCeParameter>(entityName, filters, true))
                 {
+                    command.Transaction = CurrentTransaction as SqlCeTransaction;
                     command.Connection = connection as SqlCeConnection;
                     return (int)command.ExecuteScalar();
                 }
@@ -190,6 +191,7 @@ namespace OpenNETCF.ORM
                 using (var command = new SqlCeCommand())
                 {
                     command.Connection = connection as SqlCeConnection;
+                    command.Transaction = CurrentTransaction as SqlCeTransaction;
                     command.CommandText = entityName;
                     command.CommandType = CommandType.TableDirect;
 
@@ -326,6 +328,7 @@ namespace OpenNETCF.ORM
         {
             using (var command = new SqlCeCommand("SELECT @@IDENTITY", connection as SqlCeConnection))
             {
+                command.Transaction = CurrentTransaction as SqlCeTransaction;
                 object id = command.ExecuteScalar();
                 return Convert.ToInt32(id);
             }
@@ -340,6 +343,7 @@ namespace OpenNETCF.ORM
 
                 using (var command = GetNewCommandObject())
                 {
+                    command.Transaction = CurrentTransaction as SqlCeTransaction;
                     command.CommandText = sql;
                     command.Connection = connection;
                     return command.ExecuteScalar() as string;
@@ -361,6 +365,7 @@ namespace OpenNETCF.ORM
             {
                 using (var command = new SqlCeCommand())
                 {
+                    command.Transaction = CurrentTransaction as SqlCeTransaction;
                     command.Connection = connection as SqlCeConnection;
                     command.CommandText = entityName;
                     command.CommandType = CommandType.TableDirect;
@@ -427,6 +432,7 @@ namespace OpenNETCF.ORM
 
             using (SqlCeCommand command = new SqlCeCommand(sql, connection as SqlCeConnection))
             {
+                command.Transaction = CurrentTransaction as SqlCeTransaction;
                 var name = command.ExecuteScalar() as string;
 
                 if (string.Compare(name, indexName, true) == 0)
@@ -455,6 +461,7 @@ namespace OpenNETCF.ORM
             {
                 using (var command = GetNewCommandObject())
                 {
+                    command.Transaction = CurrentTransaction as SqlCeTransaction;
                     command.Connection = connection;
                     var sql = string.Format("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = '{0}'", tableName);
                     command.CommandText = sql;
@@ -483,6 +490,7 @@ namespace OpenNETCF.ORM
 
             using (var command = new SqlCeCommand())
             {
+                command.Transaction = CurrentTransaction as SqlCeTransaction;
                 command.Connection = connection as SqlCeConnection;
 
                 foreach (var field in entity.Fields)
