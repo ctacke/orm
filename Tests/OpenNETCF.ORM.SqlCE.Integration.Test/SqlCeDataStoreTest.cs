@@ -11,6 +11,30 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
         public TestContext TestContext { get; set; }
 
         [TestMethod()]
+        public void SimpleTransactionTest()
+        {
+            var store = new SqlCeDataStore("test_trans.sdf");
+            store.AddType<LateAddItem>();
+
+            if (store.StoreExists)
+            {
+                store.DeleteStore();
+            }
+            store.CreateStore();
+
+            var testEntity = new LateAddItem() { ID = -1 };
+            store.Insert(testEntity);
+
+            var id = testEntity.ID;
+
+            store.BeginTransaction();
+            store.Delete<LateAddItem>(id);
+            // timeout here, at insert
+            store.Insert(new LateAddItem() { ID = -1 });
+            store.Commit();
+        }
+
+        [TestMethod()]
 //        [DeploymentItem("OpenNETCF.ORM.SqlCe.dll")]
         public void SimpleCRUDTest()
         {
