@@ -55,8 +55,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BinaryData.cs" />
+    <Compile Include="DataGenerator.cs" />
     <Compile Include="DataTypeTests.cs" />
     <Compile Include="DynamicEntityTest.cs" />
+    <Compile Include="Entities\Author.cs" />
+    <Compile Include="Entities\Book.cs" />
+    <Compile Include="Entities\CustomObject.cs" />
+    <Compile Include="Entities\TestItem.cs" />
+    <Compile Include="Entities\TestTable.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SqlCeDataStoreTest.cs" />
   </ItemGroup>
@@ -74,6 +80,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <EmbeddedResource Include="dictionary.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
     <Content Include="typetest.sdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
