@@ -2,6 +2,11 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
 using System;
+using OpenNETCF.ORM.Test;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
+using OpenNETCF.ORM.Test.Entities;
 
 namespace OpenNETCF.ORM.SqlCE.Integration.Test
 {
@@ -35,7 +40,6 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
         }
 
         [TestMethod()]
-//        [DeploymentItem("OpenNETCF.ORM.SqlCe.dll")]
         public void SimpleCRUDTest()
         {
             bool beforeInsert = false;
@@ -172,63 +176,291 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             Assert.IsNotNull(expected);
 
         }
-    }
 
-    [Entity(KeyScheme = KeyScheme.Identity)]
-    public class LateAddItem
-    {
-        [Field(IsPrimaryKey = true)]
-        public int ID { get; set; }
-
-        [Field]
-        public string Name { get; set; }
-    }
-
-    [Entity(KeyScheme = KeyScheme.Identity)]
-    public class TestItem : IEquatable<TestItem>
-    {
-        public TestItem()
+        [TestMethod()]
+        public void PerfTest()
         {
+            var store = Initialize();
+//            TestEnumCRUD(store);
+
+//            TestCascadingInsert(store);
+//            TestCascadingUpdates(store);
+
+//            TestGetEntityCount(store, 100);
+            TestGetAllBooks(store, 10);
+
+            var lastID = store.Count<Book>();
+            var searchID = new Random().Next(lastID);
+            TestGetBookById(store, 100, searchID);
         }
 
-        public TestItem(string name)
+        private SqlCeDataStore Initialize()
         {
-            Name = name;
+
+            var store = new SqlCeDataStore("pubs.sdf");
+            if (store.StoreExists)
+            {
+                store.DeleteStore();
+            }
+
+            store.ConnectionBehavior = ConnectionBehavior.Persistent;
+
+            Stopwatch sw = new Stopwatch();
+
+            sw.Start();
+            store.DiscoverTypes(Assembly.GetExecutingAssembly());
+            sw.Stop();
+            Debug.WriteLine(string.Format("SQL CE Store Discover:\t{0}s", sw.Elapsed.TotalSeconds));
+
+            sw.Start();
+            store.CreateStore();
+            sw.Stop();
+            Debug.WriteLine(string.Format("SQL CE Store Create:\t{0}", sw.Elapsed.TotalSeconds));
+
+            CreateTestData(store);
+
+            return store;
         }
 
-        [Field(IsPrimaryKey = true)]
-        public int ID { get; set; }
-
-        [Field]
-        public string Name { get; set; }
-
-        [Field]
-        public Guid? UUID { get; set; }
-
-        [Field]
-        public int ITest { get; set; }
-
-        [Field]
-        public string Address { get; set; }
-
-        [Field]
-        public float FTest { get; set; }
-
-        [Field]
-        public double DBTest { get; set; }
-
-        [Field(Scale=2)]
-        public decimal DETest { get; set; }
-
-        [Field]
-        public TimeSpan TS { get; set; }
-
-        [Field(Length=int.MaxValue)]
-        public string BigString { get; set; }
-
-        public bool Equals(TestItem other)
+        private void CreateTestData(SqlCeDataStore store)
         {
-            return this.ID == other.ID;
+            DataGenerator generator = new DataGenerator();
+
+            var authors = generator.GenerateAuthors(100);
+
+            int authorID = 0;
+            int bookID = 0;
+            List<long> authorEts = new List<long>();
+            List<long> bookEts = new List<long>();
+
+            var r = new Random(Environment.TickCount);
+
+            foreach (var author in authors)
+            {
+                author.AuthorID = authorID++;
+
+                // each author will have 0 to 5 books
+                var books = generator.GenerateBooks(r.Next(5));
+
+                foreach (var book in books)
+                {
+                    book.BookID = bookID++;
+                    book.AuthorID = author.AuthorID;
+
+                    store.Insert(book);
+//                    LastBookID = book.BookID;
+                }
+
+                store.Insert(author);
+//                LastAuthorID = author.AuthorID;
+            }
+        }
+
+        public void TestEnumCRUD(SqlCeDataStore store)
+        {
+            // truncate the table for this test
+            store.Delete<TestTable>();
+
+            var testRow = new TestTable
+            {
+                EnumField = TestEnum.ValueB
+            };
+
+            store.Insert(testRow);
+
+            var existing = store.Select<TestTable>().First();
+
+            Assert.AreEqual(existing.EnumField, testRow.EnumField);
+
+            existing.EnumField = TestEnum.ValueC;
+            store.Update(existing);
+            var secondPull = store.Select<TestTable>().First();
+
+            Assert.AreEqual(existing.EnumField, secondPull.EnumField);
+        }
+
+        private void TestCascadingUpdates(SqlCeDataStore store)
+        {
+            var author = new Author
+            {
+                Name = "Theodore Geisel"
+            };
+
+                store.Insert(author);
+
+                var book = new Book
+                {
+                    BookType = BookType.Fiction,
+                    Title = "Fox in Sox"
+                };
+
+                author.Books = new Book[] { book };
+
+                store.Update(author);
+
+                var existing = store.Select<Author>(author.AuthorID, true);
+                Assert.AreEqual(1, existing.Books.Length);
+                Assert.AreEqual("Fox in Sox", existing.Books[0].Title);
+
+                // replace the book title in the author's collection
+                existing.Books[0].Title = "Green Eggs and Ham";
+
+                // now Update the Author - this should cascade update the book title
+                store.Update(existing);
+
+                existing = store.Select<Author>(author.AuthorID, true);
+                Assert.AreEqual("Green Eggs and Ham", existing.Books[0].Title);
+            
+        }
+
+        private void TestCascadingInsert(SqlCeDataStore store)
+        {
+            var testBooks = new Book[]
+                {
+                    new Book
+                    {
+                      Title = "CSS: The Missing Manual",
+                      BookType = BookType.NonFiction
+                    },
+
+                    new Book
+                    {
+                        Title = "JavaScript: The Missing Manual",
+                        BookType = BookType.NonFiction
+                    },
+
+                    new Book
+                    {
+                        Title = "Dreamweaver: The Missing Manual",
+                        BookType = BookType.NonFiction
+                    },
+                };
+
+            // ensures that the entity *and its references* get inserted
+            Author a = new Author
+            {
+                Name = "David McFarland",
+
+                Books = testBooks
+            };
+
+
+            var initialCount = store.Count<Book>();
+
+            // insert, telling ORM to insert references (cascade)
+            store.Insert(a, true);
+
+            // pull back to verify
+            var author = store.Select<Author>(a.AuthorID, true);
+            var count = store.Count<Book>();
+
+            // we should have inserted 3 new books
+            var diff = count - initialCount;
+            Assert.IsTrue(diff == 3);
+
+
+            // create a new author with the same books - the books should *not* get re-inserted - plus one new book
+            List<Book> newList = new List<Book>(testBooks);
+            newList.Add(
+                new Book
+                {
+                    Title = "My Coauthors Book",
+                    BookType = BookType.NonFiction
+                }
+                    );
+
+            Author a2 = new Author
+            {
+                Name = "Test CoAuthor",
+
+                Books = newList.ToArray()
+            };
+
+            initialCount = store.Count<Book>();
+
+            // insert, telling ORM to insert references (cascade)
+            store.Insert(a2, true);
+
+            author = store.Select<Author>(a.AuthorID, true);
+            count = store.Count<Book>();
+
+            // we should have inserted 1 new book
+            diff = count - initialCount;
+            Assert.IsTrue(diff == 1);
+
+
+
+        }
+
+        private void TestGetEntityCount(SqlCeDataStore store, int iterations)
+        {
+            Stopwatch sw = new Stopwatch();
+
+                sw.Reset();
+
+                for (int i = 0; i < iterations; i++)
+                {
+                    sw.Start();
+
+                    var count = store.Count<Book>();
+                    sw.Stop();
+
+                    if (i == 0)
+                    {
+                        Debug.WriteLine(string.Format("GetBookCount (pass 1):\t{0} s",
+                            sw.Elapsed.TotalSeconds));
+                        sw.Reset();
+                    }
+                }
+                Debug.WriteLine(string.Format("GetBookCount (mean):\t{0} s",
+                    sw.Elapsed.TotalSeconds / (iterations - 1)));
+        }
+
+        private void TestGetAllBooks(SqlCeDataStore store, int iterations)
+        {
+            Stopwatch sw = new Stopwatch();
+
+            sw.Reset();
+
+            for (int i = 0; i < iterations; i++)
+            {
+                sw.Start();
+                var books = store.Select<Book>();
+                sw.Stop();
+
+                if (i == 0)
+                {
+                    Debug.WriteLine(string.Format("GetAllBooks (pass 1):\t{0} s",
+                        sw.Elapsed.TotalSeconds));
+                    sw.Reset();
+                }
+            }
+            Debug.WriteLine(string.Format("GetAllBooks (mean):\t{0} s",
+                sw.Elapsed.TotalSeconds / (iterations - 1)));
+
+        }
+
+        private void TestGetBookById(SqlCeDataStore store, int iterations, int id)
+        {
+            Stopwatch sw = new Stopwatch();
+
+            sw.Reset();
+            for (int i = 0; i < iterations; i++)
+            {
+                sw.Start();
+
+                var books = store.Select<Book>(id);
+                sw.Stop();
+
+                if (i == 0)
+                {
+                    Debug.WriteLine(string.Format("GetBookById (pass 1):\t{0} s",
+                        sw.Elapsed.TotalSeconds));
+                    sw.Reset();
+                }
+            }
+            Debug.WriteLine(string.Format("GetBookById (mean):\t{0} s",
+                sw.Elapsed.TotalSeconds / (iterations - 1)));
         }
     }
 }

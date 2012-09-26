@@ -192,6 +192,7 @@ namespace OpenNETCF.ORM
             try
             {
                 CheckOrdinals(entityName);
+                CheckPrimaryKeyIndex(entityName);
 
                 command = GetSelectCommand<SqlCeCommand, SqlCeParameter>(entityName, filters, out tableDirect);
                 command.Connection = connection as SqlCeConnection;
