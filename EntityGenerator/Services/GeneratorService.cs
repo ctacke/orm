@@ -9,6 +9,7 @@ using System.CodeDom;
 using System.CodeDom.Compiler;
 using System.Reflection;
 using System.IO;
+using System.Data;
 
 namespace EntityGenerator.Services
 {
@@ -91,6 +92,8 @@ namespace EntityGenerator.Services
                     //new CodeAttributeArgument("KeyScheme", new CodePrimitiveExpression(KeyScheme.None))
                     entityClass.CustomAttributes.Add(entityAttributeDeclaration);
 
+                    entityClass.Members.Add(GenerateEntityCreationProxy(entity));
+
                     var fieldList = new List<CodeMemberField>();
                     var propList = new List<CodeMemberProperty>();
 
@@ -141,6 +144,116 @@ namespace EntityGenerator.Services
                 }
 
             }
+        }
+
+        private CodeMemberMethod GenerateEntityCreationProxy(Entities.EntityInfo entity)
+        {
+            var proxy = new CodeMemberMethod();
+            proxy.Name = "ORM_CreateProxy";
+            proxy.Attributes = MemberAttributes.Private | MemberAttributes.Static;
+            proxy.ReturnType = new CodeTypeReference(entity.Entity.NameInStore);
+            var fieldsParameter = new CodeParameterDeclarationExpression(typeof(FieldAttributeCollection), "fields"); 
+            proxy.Parameters.Add(fieldsParameter);
+            var resultsParameter = new CodeParameterDeclarationExpression(typeof(IDataReader), "results");
+            proxy.Parameters.Add(resultsParameter);
+
+            CodeStatement statement = new CodeExpressionStatement(new CodeSnippetExpression(string.Format("var item = new {0}()", entity.Entity.NameInStore)));
+            proxy.Statements.Add(statement);
+
+            statement = new CodeSnippetStatement("foreach(var field in fields){");
+            proxy.Statements.Add(statement);
+
+            statement = new CodeExpressionStatement(new CodeSnippetExpression("var value = results[field.Ordinal]"));
+            proxy.Statements.Add(statement);
+
+            statement = new CodeSnippetStatement("switch(field.FieldName){");
+            proxy.Statements.Add(statement);
+
+            foreach (var field in entity.Fields)
+            {
+                statement = new CodeSnippetStatement(string.Format("case \"{0}\":", field.FieldName));
+                proxy.Statements.Add(statement);
+
+                switch (field.DataType)
+                {
+                    case DbType.Byte:
+                        statement = new CodeExpressionStatement(new CodeSnippetExpression(
+                            string.Format("item.{0} = (value == DBNull.Value) ? 0 : (byte{1})value",
+                            field.FieldName,
+                            field.AllowsNulls ? "?" : string.Empty)));
+                        break;
+                    case DbType.Int16:
+                        statement = new CodeExpressionStatement(new CodeSnippetExpression(
+                            string.Format("item.{0} = (value == DBNull.Value) ? 0 : (short{1})value",
+                            field.FieldName,
+                            field.AllowsNulls ? "?" : string.Empty)));
+                        break;
+                    case DbType.Int32:
+                        statement = new CodeExpressionStatement(new CodeSnippetExpression(
+                            string.Format("item.{0} = (value == DBNull.Value) ? 0 : (int{1})value", 
+                            field.FieldName,
+                            field.AllowsNulls ? "?" : string.Empty)));
+                        break;
+                    case DbType.Int64:
+                        statement = new CodeExpressionStatement(new CodeSnippetExpression(
+                            string.Format("item.{0} = (value == DBNull.Value) ? 0 : (long{1})value",
+                            field.FieldName,
+                            field.AllowsNulls ? "?" : string.Empty)));
+                        proxy.Statements.Add(new CodeCommentStatement("If this is a TimeSpan, use the commented line below"));
+                        proxy.Statements.Add(new CodeCommentStatement(string.Format("item.{0} = (value == DBNull.Value) ? {1} : new TimeSpan((long)value);",
+                            field.FieldName,
+                            field.AllowsNulls ? "null" : "TimeSpan.MinValue;")));
+                        break;
+                    case DbType.Single:
+                        statement = new CodeExpressionStatement(new CodeSnippetExpression(
+                            string.Format("item.{0} = (value == DBNull.Value) ? 0 : (float{1})value",
+                            field.FieldName,
+                            field.AllowsNulls ? "?" : string.Empty)));
+                        break;
+                    case DbType.Double:
+                        statement = new CodeExpressionStatement(new CodeSnippetExpression(
+                            string.Format("item.{0} = (value == DBNull.Value) ? 0 : (double{1})value",
+                            field.FieldName,
+                            field.AllowsNulls ? "?" : string.Empty)));
+                        break;
+                    case DbType.Decimal:
+                        statement = new CodeExpressionStatement(new CodeSnippetExpression(
+                            string.Format("item.{0} = (value == DBNull.Value) ? 0 : (decimal{1})value",
+                            field.FieldName,
+                            field.AllowsNulls ? "?" : string.Empty)));
+                        break;
+                    case DbType.String:
+                        statement = new CodeExpressionStatement(new CodeSnippetExpression(
+                            string.Format("item.{0} = (value == DBNull.Value) ? null : (string)value",
+                            field.FieldName)));
+                        break;
+                    case DbType.Guid:
+                        statement = new CodeExpressionStatement(new CodeSnippetExpression(
+                            string.Format("item.{0} = (value == DBNull.Value) ? null : (Guid{1})value",
+                            field.FieldName,
+                            field.AllowsNulls ? "?" : string.Empty)));
+                        break;
+                    default:
+                        statement = new CodeCommentStatement(string.Format("Field '{0}' not generated: Unsupported type '{1}'", field.FieldName, field.DataType));
+                        break;
+                }
+
+                proxy.Statements.Add(statement);
+
+                statement = new CodeExpressionStatement(new CodeSnippetExpression("break"));
+                proxy.Statements.Add(statement);
+            }
+
+            statement = new CodeSnippetStatement("}"); // end switch
+            proxy.Statements.Add(statement);
+
+            statement = new CodeSnippetStatement("}"); // end foreach
+            proxy.Statements.Add(statement);
+
+            var ret = new CodeExpressionStatement(new CodeSnippetExpression("return item"));
+            proxy.Statements.Add(ret);
+
+            return proxy;
         }
 
         private CodeAttributeArgument[] GenerateFieldArguments(FieldAttribute field)
