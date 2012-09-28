@@ -333,12 +333,6 @@ namespace OpenNETCF.ORM
 
                     if (reference != null)
                     {
-                        //if (!prop.PropertyType.IsArray)
-                        //{
-                        //    throw new InvalidReferenceTypeException(reference.ReferenceEntityType, reference.ReferenceField,
-                        //        "Reference fields must be arrays");
-                        //}
-
                         reference.PropertyInfo = prop;
                         map.References.Add(reference);
                     }
@@ -348,6 +342,13 @@ namespace OpenNETCF.ORM
             if (map.Fields.Count == 0)
             {
                 throw new OpenNETCF.ORM.EntityDefinitionException(map.EntityName, string.Format("Entity '{0}' Contains no Field definitions.", map.EntityName));
+            }
+
+            // store a creator proxy delegate if the entity supports it (*way* faster for Selects)
+            var methodInfo = entityType.GetMethod("ORM_CreateProxy", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance);
+            if (methodInfo != null)
+            {
+                map.CreateProxy = (EntityCreatorDelegate)Delegate.CreateDelegate(typeof(EntityCreatorDelegate), methodInfo);
             }
 
             m_entities.Add(map);
@@ -425,6 +426,35 @@ namespace OpenNETCF.ORM
             var ctor = objectType.GetConstructor(new Type[] { });
             m_ctorCache.Add(objectType, ctor);
             return ctor;
+        }
+
+        protected object CreateEntityInstance(string entityName, Type objectType, FieldAttributeCollection fields, IDataReader results, out bool fieldsSet)
+        {
+            if (objectType.Equals(typeof(DynamicEntity)))
+            {
+                var entity = new DynamicEntity(entityName, fields);
+
+                foreach (var field in entity.Fields)
+                {
+                    // we should probably cache these ordinals
+                    field.Value = results[field.Name];
+                }
+
+                fieldsSet = true;
+                return entity;
+            }
+
+            var info = GetEntityInfo(entityName);
+            if (info.CreateProxy == null)
+            {
+                // no create proxy exists, create the item and let the caller know it needs to fill the fields
+                fieldsSet = false;
+                return Activator.CreateInstance(objectType);
+            }
+
+            var item = info.CreateProxy(fields, results);
+            fieldsSet = true;
+            return item;
         }
 
         protected void SetInstanceValue(FieldAttribute field, object instance, object value)

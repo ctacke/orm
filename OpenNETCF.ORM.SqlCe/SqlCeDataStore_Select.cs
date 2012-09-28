@@ -12,12 +12,9 @@ namespace OpenNETCF.ORM
 {
     partial class SqlCeDataStore
     {
-        delegate object EntityCreatorDelegate(FieldAttributeCollection fields, SqlCeResultSet results);
-
         private string m_lastEntity;
         private FieldAttributeCollection m_fields;
         private ReferenceAttribute[] m_references;
-        private Dictionary<Type, EntityCreatorDelegate> m_createDelegates = new Dictionary<Type, EntityCreatorDelegate>();
 
         protected override TCommand GetSelectCommand<TCommand, TParameter>(string entityName, IEnumerable<FilterCondition> filters, out bool tableDirect)
         {
@@ -109,54 +106,6 @@ namespace OpenNETCF.ORM
             {
                 DoneWithConnection(connection, true);
             }
-        }
-
-        protected object CreateEntityInstance(string entityName, Type objectType, FieldAttributeCollection fields, SqlCeResultSet results, out bool fieldsSet)
-        {
-            MethodInfo proxy;
-            EntityCreatorDelegate createDelegate;
-
-            if (objectType.Equals(typeof(DynamicEntity)))
-            {
-                var entity = new DynamicEntity(entityName, fields);
-
-                foreach (var field in entity.Fields)
-                {
-                    // we should probably cache these ordinals
-                    field.Value = results[field.Name];
-                }
-
-                fieldsSet = true;
-                return entity;
-            }
-
-            if (!m_createDelegates.ContainsKey(objectType))
-            {
-                proxy = objectType.GetMethod("ORM_CreateProxy", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance);
-
-                if (proxy == null)
-                {
-                    // no proxy method, add an item to the cache so we never look again
-                    m_createDelegates.Add(objectType, null);
-                }
-                else
-                {
-                    createDelegate = (EntityCreatorDelegate)Delegate.CreateDelegate(typeof(EntityCreatorDelegate), null, proxy);
-                    m_createDelegates.Add(objectType, createDelegate);
-                }
-            }
-
-            createDelegate = m_createDelegates[objectType];
-            if (createDelegate == null)
-            {
-                // no create proxy exists, create the item and let the caller know it needs to fill the fields
-                fieldsSet = false;
-                return Activator.CreateInstance(objectType);
-            }
-
-            var item = createDelegate(fields, results);
-            fieldsSet = true;
-            return item;
         }
 
         protected override object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
