@@ -5,6 +5,7 @@ using System.Text;
 using OpenNETCF.ORM.Test.Entities;
 using System.IO;
 using System.Reflection;
+using OpenNETCF.ORM.SqlCE.Integration.Test;
 
 namespace OpenNETCF.ORM.Test
 {
@@ -106,6 +107,39 @@ namespace OpenNETCF.ORM.Test
             }
 
             return books;
+        }
+
+        public TestItem[] GenerateTestItems(int count)
+        {
+            TestItem[] items = new TestItem[count];
+
+            var r = new Random(Environment.TickCount);
+
+            for (int i = 0; i < count; i++)
+            {
+                string title = string.Empty;
+
+                for (int w = 0; w < r.Next(m_maxWordsInTitle) + 1; w++)
+                {
+                    title += Dictionary[r.Next(Dictionary.Length - 1)];
+                    title += ' ';
+                }
+
+                items[i] = new TestItem
+                {
+                    Name = title.TrimEnd(),
+                    Address = "Address",
+                    BigString = "we the people...",
+                    DBTest = r.Next(1000) * 12.4,
+                    DETest = r.Next(5000) / r.Next(1, 42),
+                    FTest = r.Next(9865) / r.Next(1, 13),
+                    ITest = r.Next(int.MaxValue),
+                    TS = new TimeSpan(r.Next(int.MaxValue)),
+                    UUID = Guid.NewGuid()
+                };
+            }
+
+            return items;
         }
     }
 }

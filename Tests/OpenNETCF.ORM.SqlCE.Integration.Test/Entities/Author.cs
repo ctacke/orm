@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
+using System.Data.SqlServerCe;
 
 namespace OpenNETCF.ORM.Test.Entities
 {
