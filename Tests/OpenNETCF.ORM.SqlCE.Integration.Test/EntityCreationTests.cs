@@ -1,0 +1,63 @@
+﻿using OpenNETCF.ORM;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Linq;
+using System;
+using OpenNETCF.ORM.Test;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Reflection;
+using OpenNETCF.ORM.Test.Entities;
+
+namespace OpenNETCF.ORM.SqlCE.Integration.Test
+{
+    [TestClass()]
+    public class EntityCreationTests
+    {
+        public TestContext TestContext { get; set; }
+
+        [TestMethod()]
+        public void DelegatePerfTest()
+        {
+            var iterations = 1000;
+            var sw1 = new Stopwatch();
+            var sw2 = new Stopwatch();
+
+            var store = new SqlCeDataStore("test.sdf");
+            store.AddType<TestItem>();
+            store.AddType<TestItemD>();
+            store.CreateStore();
+
+            // populate test data
+            var generator = new DataGenerator();
+            var items = generator.GenerateTestItems(100);
+            foreach (var i in items)
+            {
+                store.Insert(i);
+                store.Insert((TestItemD)i);
+            }
+
+
+            // no delegate
+            sw1.Reset();
+            sw1.Start();
+            for (int i = 0; i < iterations; i++)
+            {
+                var list = store.Select<TestItem>();
+            }
+            sw1.Stop();
+            // with delegate
+            sw2.Reset();
+            sw2.Start();
+            for (int i = 0; i < iterations; i++)
+            {
+                var list = store.Select<TestItemD>();
+            }
+            sw2.Stop();
+
+            var noDelegate = sw1.ElapsedMilliseconds;
+            var withDelegate = sw2.ElapsedMilliseconds;
+
+            Debug.WriteLine(string.Format("Delegate gave a {0}% improvement", ((float)(noDelegate - withDelegate) / withDelegate) * 100f));
+        }
+    }
+}
