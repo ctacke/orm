@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
+using System.Data;
 
 namespace OpenNETCF.ORM
 {
@@ -25,6 +26,7 @@ namespace OpenNETCF.ORM
         public ReferenceAttributeCollection References { get; private set; }
 
         public EntityAttribute EntityAttribute { get; set; }
+        public EntityCreatorDelegate CreateProxy { get; set; }
 
         public string EntityName 
         {

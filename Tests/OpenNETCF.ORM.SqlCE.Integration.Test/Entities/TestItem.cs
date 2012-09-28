@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Data.SqlServerCe;
+using System.Data;
 
 namespace OpenNETCF.ORM.SqlCE.Integration.Test
 {
@@ -67,7 +68,7 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
     [Entity(KeyScheme.Identity)]
     public class TestItemD : IEquatable<TestItemD>
     {
-        private static TestItemD ORM_CreateProxy(FieldAttributeCollection fields, SqlCeResultSet results)
+        private static TestItemD ORM_CreateProxy(FieldAttributeCollection fields, IDataReader results)
         {
             var item = new TestItemD();
 
