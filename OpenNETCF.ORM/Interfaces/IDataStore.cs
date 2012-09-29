@@ -30,8 +30,7 @@ namespace OpenNETCF.ORM
         void EnsureCompatibility();
 
         void Insert(object item);
-        void Insert(IEnumerable<object> items);
-        void Insert(IEnumerable<object> items, bool insertReferences);
+        void Insert(object item, bool insertReferences);
 
         IEntityInfo GetEntityInfo(string entityName);
         IEntityInfo[] GetEntityInfo();

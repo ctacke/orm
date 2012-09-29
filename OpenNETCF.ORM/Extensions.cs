@@ -238,5 +238,30 @@ namespace OpenNETCF.ORM
                 return checkType.Equals(typeof(T));
             }
         }
+
+        public static void BulkInsert(this IDataStore store, IEnumerable<object> items)
+        {
+            store.BulkInsert(items, false);
+        }
+
+        public static void BulkInsert(this IDataStore store, IEnumerable<object> items, bool insertReferences)
+        {
+            foreach (var i in items)
+            {
+                store.Insert(i, insertReferences);
+            }
+        }
+
+        public static void CreateOrUpdateStore(this IDataStore store)
+        {
+            if(store.StoreExists)
+            {
+                store.EnsureCompatibility();
+            }
+            else
+            {
+                store.CreateStore();
+            }
+        }
     }
 }
