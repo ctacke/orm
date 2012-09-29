@@ -30,9 +30,9 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             // populate test data
             var generator = new DataGenerator();
             var items = generator.GenerateTestItems(100);
+            store.BulkInsert(items);
             foreach (var i in items)
             {
-                store.Insert(i);
                 store.Insert((TestItemD)i);
             }
 

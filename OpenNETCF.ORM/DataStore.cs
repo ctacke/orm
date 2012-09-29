@@ -393,19 +393,6 @@ namespace OpenNETCF.ORM
             Insert(item, false);
         }
 
-        public void Insert(IEnumerable<object> items)
-        {
-            Insert(items, false);
-        }
-
-        public void Insert(IEnumerable<object> items, bool insertReferences)
-        {
-            foreach (var i in items)
-            {
-                Insert(i, insertReferences);
-            }
-        }
-
         public T[] Select<T>(Func<T, bool> selector)
             where T : new()
         {
