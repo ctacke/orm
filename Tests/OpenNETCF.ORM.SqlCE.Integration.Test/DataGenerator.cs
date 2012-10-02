@@ -141,5 +141,21 @@ namespace OpenNETCF.ORM.Test
 
             return items;
         }
+
+        public SeekItem[] GenerateSeekItems(int count)
+        {
+            var items = new List<SeekItem>();
+
+            for (int i = 0; i < count; i++)
+            {
+                items.Add(new SeekItem()
+                {
+                     SeekField = i * 10,
+                     Data = "Item " + (i * 10).ToString()
+                });
+            }
+
+            return items.ToArray();
+        }
     }
 }

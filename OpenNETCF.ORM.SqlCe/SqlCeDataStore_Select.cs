@@ -126,6 +126,78 @@ namespace OpenNETCF.ORM
             return e.ConvertAll<DynamicEntity>();// Array.ConvertAll(e, item => (DynamicEntity)item);
         }
 
+        public T Seek<T>(DbSeekOptions option, string seekField, object seekValue)
+            where T: class
+        {
+            var entityName = m_entities.GetNameForType(typeof(T));
+            UpdateIndexCacheForType(entityName);
+
+            var connection = GetConnection(false);
+            var fillReferences = false;
+            SqlCeCommand command = null;
+
+            if (UseCommandCache)
+            {
+                Monitor.Enter(CommandCache);
+            }
+
+            try
+            {
+                ReferenceAttribute[] referenceFields = null;
+                bool tableDirect;
+
+                CheckOrdinals(entityName);
+                CheckPrimaryKeyIndex(entityName);
+
+                command = GetSelectCommand<SqlCeCommand, SqlCeParameter>(entityName, 
+                    new FilterCondition[] { new FilterCondition(seekField, seekValue, FilterCondition.FilterOperator.Equals) }, 
+                    out tableDirect);
+                command.Connection = connection as SqlCeConnection;
+                command.Transaction = CurrentTransaction as SqlCeTransaction;
+
+                using (var results = command.ExecuteReader())
+                {
+                    bool found = results.Seek(option, seekValue);
+
+                    if (!found) return null;
+
+                    results.Read();
+
+                    bool fieldsSet;
+                    object item = CreateEntityInstance(entityName, typeof(T), m_fields, results, out fieldsSet);
+
+                    if (!fieldsSet)
+                    {
+                        // fill in the entity field values
+                        PopulateFields(entityName, Entities[entityName].Fields, results, item, fillReferences);
+                    }
+
+                    // autofill references if desired
+                    if ((fillReferences) && (referenceFields.Length > 0))
+                    {
+                        FillReferences(item, null, referenceFields, false);
+                    }
+
+                    return (T)item;
+                }
+            }
+            finally
+            {
+                if ((!UseCommandCache) && (command != null))
+                {
+                    command.Dispose();
+                }
+
+                if (UseCommandCache)
+                {
+                    Monitor.Exit(CommandCache);
+                }
+
+                FlushReferenceTableCache();
+                DoneWithConnection(connection, false);
+            }
+        }
+
         private object[] Select(string entityName, Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
         {
 
@@ -152,7 +224,6 @@ namespace OpenNETCF.ORM
                 command.Transaction = CurrentTransaction as SqlCeTransaction;
 
                 int searchOrdinal = -1;
-                ResultSetOptions options = ResultSetOptions.Scrollable;
 
                 object matchValue = null;
                 string matchField = null;
@@ -189,7 +260,7 @@ namespace OpenNETCF.ORM
                     }
                 }
 
-                using (var results = command.ExecuteResultSet(options))
+                using (var results = command.ExecuteReader())
                 {
                     if (results.HasRows)
                     {
@@ -305,7 +376,7 @@ namespace OpenNETCF.ORM
             return items.ToArray();
         }
 
-        private void PopulateFields(string entityName, FieldAttributeCollection fields, SqlCeResultSet results, object item, bool fillReferences)
+        private void PopulateFields(string entityName, FieldAttributeCollection fields, IDataReader results, object item, bool fillReferences)
         {
             object rowPK;
 
@@ -348,8 +419,13 @@ namespace OpenNETCF.ORM
                 }
 
                 // Check if it is reference key to set, not primary.
-                var attr = m_references.Where(
+                ReferenceAttribute attr = null;
+
+                if (m_references != null)
+                {
+                    attr = m_references.Where(
                     x => x.ReferenceField == field.FieldName).FirstOrDefault();
+                }
 
                 if ((field.IsPrimaryKey) || (attr != null))
                 {
