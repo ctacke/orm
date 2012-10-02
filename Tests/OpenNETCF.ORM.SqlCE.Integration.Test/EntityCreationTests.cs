@@ -61,14 +61,13 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
         }
 
         [TestMethod()]
-        public void SeekTest()
+        public void SeekTestStatic()
         {
-            var iterations = 1000;
             var sw1 = new Stopwatch();
 
             var store = new SqlCeDataStore("test.sdf");
             store.AddType<SeekItem>();
-            store.CreateStore();
+            store.CreateOrUpdateStore();
 
             // populate test data
             var generator = new DataGenerator();
@@ -84,6 +83,67 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             sw1.Stop();
 
             // item should have a value of 10
+            Assert.AreEqual(10, item.SeekField);
+
+        }
+
+        [TestMethod()]
+        public void SeekTestDynamic()
+        {
+            var sw1 = new Stopwatch();
+
+            var store = new SqlCeDataStore("test.sdf");
+            store.CreateOrUpdateStore();
+
+            // populate test data
+            var fieldList = new List<FieldAttribute>();
+            fieldList.Add(new FieldAttribute()
+            {
+                FieldName = "ID",
+                IsPrimaryKey = true,
+                DataType = System.Data.DbType.Int32
+            });
+
+            fieldList.Add(new FieldAttribute()
+            {
+                FieldName = "SeekField",
+                DataType = System.Data.DbType.Int64,
+                AllowsNulls = false,
+                SearchOrder = FieldSearchOrder.Ascending
+            });
+
+            fieldList.Add(new FieldAttribute()
+            {
+                FieldName = "Data",
+                DataType = System.Data.DbType.String,
+                AllowsNulls = false
+            });
+
+            var definition = new DynamicEntityDefinition("DynamicSeekItem", fieldList, KeyScheme.Identity);
+            store.RegisterDynamicEntity(definition);
+
+
+            for (int i = 0; i < 100; i++)
+            {
+                var de = new DynamicEntity("DynamicSeekItem");
+                de.Fields["SeekField"] = i * 10;
+                de.Fields["Data"] = "Item " +  (i * 10).ToString();
+
+                store.Insert(de);
+            }
+
+
+
+            // no delegate
+            sw1.Reset();
+            sw1.Start();
+
+            var item = store.Seek("DynamicSeekItem", System.Data.SqlServerCe.DbSeekOptions.BeforeEqual, "SeekField", 11);
+            sw1.Stop();
+
+            // item should have a value of 10
+
+
         }
     }
 }

@@ -127,9 +127,20 @@ namespace OpenNETCF.ORM
         }
 
         public T Seek<T>(DbSeekOptions option, string seekField, object seekValue)
-            where T: class
+            where T : class
         {
             var entityName = m_entities.GetNameForType(typeof(T));
+
+            return (T)Seek(entityName, typeof(T), option, seekField, seekValue);
+        }
+
+        public object Seek(string entityName, DbSeekOptions option, string seekField, object seekValue)
+        {
+            return Seek(entityName, typeof(DynamicEntity), option, seekField, seekValue);
+        }
+
+        private object Seek(string entityName, Type objectType, DbSeekOptions option, string seekField, object seekValue)
+        {
             UpdateIndexCacheForType(entityName);
 
             var connection = GetConnection(false);
@@ -164,7 +175,7 @@ namespace OpenNETCF.ORM
                     results.Read();
 
                     bool fieldsSet;
-                    object item = CreateEntityInstance(entityName, typeof(T), m_fields, results, out fieldsSet);
+                    object item = CreateEntityInstance(entityName, objectType, Entities[entityName].Fields, results, out fieldsSet);
 
                     if (!fieldsSet)
                     {
@@ -178,7 +189,7 @@ namespace OpenNETCF.ORM
                         FillReferences(item, null, referenceFields, false);
                     }
 
-                    return (T)item;
+                    return item;
                 }
             }
             finally
