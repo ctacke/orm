@@ -348,7 +348,7 @@ namespace OpenNETCF.ORM
             var methodInfo = entityType.GetMethod("ORM_CreateProxy", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance);
             if (methodInfo != null)
             {
-                map.CreateProxy = (EntityCreatorDelegate)Delegate.CreateDelegate(typeof(EntityCreatorDelegate), methodInfo);
+                map.CreateProxy = (EntityCreatorDelegate)Delegate.CreateDelegate(typeof(EntityCreatorDelegate), null, methodInfo);
             }
 
             m_entities.Add(map);
