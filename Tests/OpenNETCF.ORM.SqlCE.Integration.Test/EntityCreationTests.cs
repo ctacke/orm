@@ -59,5 +59,31 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
 
             Debug.WriteLine(string.Format("Delegate gave a {0}% improvement", ((float)(noDelegate - withDelegate) / withDelegate) * 100f));
         }
+
+        [TestMethod()]
+        public void SeekTest()
+        {
+            var iterations = 1000;
+            var sw1 = new Stopwatch();
+
+            var store = new SqlCeDataStore("test.sdf");
+            store.AddType<SeekItem>();
+            store.CreateStore();
+
+            // populate test data
+            var generator = new DataGenerator();
+            var items = generator.GenerateSeekItems(100);
+            store.BulkInsert(items);
+
+
+            // no delegate
+            sw1.Reset();
+            sw1.Start();
+
+            var item = store.Seek<SeekItem>(System.Data.SqlServerCe.DbSeekOptions.BeforeEqual, "SeekField", 11);
+            sw1.Stop();
+
+            // item should have a value of 10
+        }
     }
 }
