@@ -641,8 +641,15 @@ namespace OpenNETCF.ORM
                                     }
                                     else if ((field.IsPrimaryKey) && (value is Int64))
                                     {
-                                        // SQLite automatically makes auto-increment fields 64-bit, so this works around that behavior
-                                        field.PropertyInfo.SetValue(item, Convert.ToInt32(value), null);
+                                        if (field.PropertyInfo.PropertyType.Equals(typeof(int)))
+                                        {
+                                            // SQLite automatically makes auto-increment fields 64-bit, so this works around that behavior
+                                            field.PropertyInfo.SetValue(item, Convert.ToInt32(value), null);
+                                        }
+                                        else
+                                        {
+                                            field.PropertyInfo.SetValue(item, Convert.ToInt64(value), null);
+                                        }
                                     }
                                     else if ((value is Int64) || (value is double))
                                     {
@@ -947,6 +954,20 @@ namespace OpenNETCF.ORM
         {
             // TODO: just delete this method when implemented, the SqlDataStore base will create the table
             throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
+        }
+
+        protected override string GetFieldDataTypeString(string entityName, FieldAttribute field)
+        {
+            // a SQLite Int64 auto-increment key requires being called "INTEGER", not "BIGINT"
+            if(field.IsPrimaryKey && (field.DataType == DbType.Int64))
+            {
+                if (GetEntityInfo(entityName).EntityAttribute.KeyScheme == KeyScheme.Identity)
+                {
+                    return "INTEGER";
+                }
+            }
+
+            return base.GetFieldDataTypeString(entityName, field);
         }
     }
 }

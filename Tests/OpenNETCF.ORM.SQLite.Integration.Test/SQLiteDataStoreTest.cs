@@ -112,6 +112,37 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
 
             // at this point you will have 1 Author instance, with the Books property hydrated and containing two Book instances
         }
+
+        [TestMethod()]
+        [DeploymentItem("SQLite.Interop.dll")]
+        public void LongIDTest()
+        {
+            var store = new SQLiteDataStore("test2.db");
+            store.AddType<BigID>();
+            store.CreateStore();
+
+            store.Insert(new BigID("Foo"));
+            var bid = store.Select<BigID>();
+        }
+    }
+
+    [Entity(KeyScheme = KeyScheme.Identity)]
+    public class BigID
+    {
+        public BigID()
+        {
+        }
+
+        public BigID(string data)
+        {
+            Data = data;
+        }
+
+        [Field(IsPrimaryKey = true)]
+        public long ID { get; set; }
+
+        [Field]
+        public string Data { get; set; }
     }
 
     [Entity(KeyScheme = KeyScheme.Identity)]
