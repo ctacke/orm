@@ -432,6 +432,8 @@ namespace OpenNETCF.ORM
                     {
                         case DbType.Int32:
                         case DbType.UInt32:
+                        case DbType.Int64:
+                        case DbType.UInt64:
                             sb.Append(AutoIncrementFieldIdentifier + " ");
                             break;
                         case DbType.Guid:

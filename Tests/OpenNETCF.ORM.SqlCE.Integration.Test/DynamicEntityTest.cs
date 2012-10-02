@@ -66,7 +66,7 @@ namespace OpenNETCF.ORM.Integration.Test
             var items = store.Select("People");
             DumpData(items);
 
-            store.Delete("People", 1);
+            store.Delete("People", items.First().Fields["ID"]);
 
             items = store.Select("People");
             DumpData(items);
