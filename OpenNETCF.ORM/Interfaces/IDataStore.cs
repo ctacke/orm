@@ -21,7 +21,11 @@ namespace OpenNETCF.ORM
         void AddType<T>(bool ensureCompatibility);
         void AddType(Type entityType);
         void AddType(Type entityType, bool ensureCompatibility);
+
         void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition);
+        void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition, bool ensureCompatibility);
+        void DiscoverDynamicEntity(string entityName);
+        
         void DiscoverTypes(Assembly containingAssembly);
 
         void CreateStore();
@@ -66,6 +70,7 @@ namespace OpenNETCF.ORM
             where T : new();
 
         int Count<T>();
+        int Count(string entityName);
 
         bool Contains(object item);
 

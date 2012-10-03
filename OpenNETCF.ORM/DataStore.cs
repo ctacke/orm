@@ -46,6 +46,7 @@ namespace OpenNETCF.ORM
         public abstract void OnDelete(object item);
 
         protected abstract void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility);
+        public abstract void DiscoverDynamicEntity(string entityName);
 
         /// <summary>
         /// 
@@ -72,12 +73,25 @@ namespace OpenNETCF.ORM
         public abstract T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField) where T : new();
         public abstract T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences) where T : new();
 
-        public abstract int Count<T>();
+        public abstract int Count(string entityName);
         public abstract int Count<T>(IEnumerable<FilterCondition> filters);
         public abstract bool Contains(object item);
 
         public DataStore()
         {
+        }
+
+        /// <summary>
+        /// Returns the number of instances of the given type in the DataStore
+        /// </summary>
+        /// <typeparam name="T">Entity type to count</typeparam>
+        /// <returns>The number of instances in the store</returns>
+        public int Count<T>()
+        {
+            var t = typeof(T);
+            string entityName = m_entities.GetNameForType(t);
+
+            return Count(entityName);
         }
 
         public virtual string Name
@@ -231,7 +245,13 @@ namespace OpenNETCF.ORM
             AddType(entityType, true, ensureCompatibility);
         }
 
-        //private Dictionary<string, DynamicEntity> m_dynamicDefinitions = new Dictionary<string, DynamicEntity>(StringComparer.InvariantCultureIgnoreCase);
+        protected void RegisterEntityInfo(IEntityInfo info)
+        {
+            lock (m_entities)
+            {
+                m_entities.Add(info);
+            }
+        }
 
         public void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition)
         {

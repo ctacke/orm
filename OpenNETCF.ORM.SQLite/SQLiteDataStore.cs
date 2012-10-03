@@ -382,6 +382,36 @@ namespace OpenNETCF.ORM
             }
         }
 
+        public override string[] GetTableNames()
+        {
+            var names = new List<string>();
+
+            var connection = GetConnection(true);
+            try
+            {
+                using (var command = GetNewCommandObject())
+                {
+                    command.Transaction = CurrentTransaction;
+                    command.Connection = connection;
+                    var sql = "SELECT name FROM sqlite_master WHERE type = 'table'";
+                    command.CommandText = sql;
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            names.Add(reader.GetString(0));
+                        }
+                    }
+
+                    return names.ToArray();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
         public override bool TableExists(string tableName)
         {
             var connection = GetConnection(true);
@@ -953,6 +983,11 @@ namespace OpenNETCF.ORM
         protected override void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility)
         {
             // TODO: just delete this method when implemented, the SqlDataStore base will create the table
+            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
+        }
+
+        public override void DiscoverDynamicEntity(string entityName)
+        {
             throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
         }
 
