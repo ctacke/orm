@@ -454,6 +454,36 @@ namespace OpenNETCF.ORM
             }
         }
 
+        public override string[] GetTableNames()
+        {
+            var names = new List<string>();
+
+            var connection = GetConnection(true);
+            try
+            {
+                using (var command = GetNewCommandObject())
+                {
+                    command.Transaction = CurrentTransaction as SqlCeTransaction;
+                    command.Connection = connection;
+                    var sql = "SELECT table_name FROM information_schema.tables";
+                    command.CommandText = sql;
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            names.Add(reader.GetString(0));
+                        }
+                    }
+
+                    return names.ToArray();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
         public override bool TableExists(string tableName)
         {
             var connection = GetConnection(true);
@@ -474,6 +504,92 @@ namespace OpenNETCF.ORM
             {
                 DoneWithConnection(connection, true);
             }
+        }
+
+        public override void DiscoverDynamicEntity(string entityName)
+        {
+            if (!TableExists(entityName))
+            {
+                throw new EntityNotFoundException(entityName);
+            }
+
+            var connection = GetConnection(true);
+            try
+            {
+                using (var cmd = GetNewCommandObject())
+                {
+                    cmd.Connection = connection;
+                    cmd.Transaction = CurrentTransaction;
+
+                    cmd.CommandText = string.Format("SELECT COLUMN_NAME, ORDINAL_POSITION, IS_NULLABLE, DATA_TYPE, NUMERIC_PRECISION, NUMERIC_SCALE FROM information_schema.columns WHERE TABLE_NAME = '{0}' ORDER BY ORDINAL_POSITION", entityName);
+
+                    var fields = new List<FieldAttribute>();
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while(reader.Read())
+                        {
+                            var name = reader.GetString(0);
+                            var nullable = string.Compare(reader.GetString(2), "YES", true) == 0;
+                            var type = reader.GetString(3).ParseToDbType();
+
+                            var field = new FieldAttribute()
+                            {
+                                DataType = type,
+                                FieldName = name,
+                                AllowsNulls = nullable,
+                            };
+
+                            if (!reader.IsDBNull(4))
+                            {
+                                field.Precision = Convert.ToInt32(reader.GetValue(4));
+                            }
+                            if (!reader.IsDBNull(5))
+                            {
+                                field.Scale = Convert.ToInt32(reader.GetValue(5));
+                            }
+
+                            fields.Add(field);
+                        }
+                    }
+
+                    cmd.CommandText = string.Format("SELECT COLUMN_NAME, PRIMARY_KEY, [UNIQUE], COLLATION FROM information_schema.indexes WHERE TABLE_NAME = '{0}'", entityName);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var column = reader.GetString(0);
+                            var pk = Convert.ToBoolean(reader.GetValue(1));
+                            var unique = Convert.ToBoolean(reader.GetValue(2));
+
+                            var field = fields.FirstOrDefault(f => f.FieldName == column);
+                            if (pk)
+                            {
+                                field.IsPrimaryKey = true;
+                            }
+                            else
+                            {
+                                var collation = Convert.ToInt32(reader.GetValue(3));
+                                field.SearchOrder = collation == 1 ? FieldSearchOrder.Ascending : FieldSearchOrder.Descending; 
+                            }
+                            if (unique)
+                            {
+                                field.RequireUniqueValue = true;
+                            }
+                        }
+                    }
+
+
+                    var entityDefinition = new DynamicEntityDefinition(entityName, fields);
+                    RegisterEntityInfo(entityDefinition);
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+
         }
 
         protected override void ValidateTable(IDbConnection connection, IEntityInfo entity)

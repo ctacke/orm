@@ -47,6 +47,8 @@ namespace OpenNETCF.ORM
 
         public abstract override int Count<T>(IEnumerable<FilterCondition> filters);
 
+        public abstract string[] GetTableNames();
+
         protected abstract IDbCommand GetNewCommandObject();
         protected abstract IDbConnection GetNewConnectionObject();
         protected abstract IDataParameter CreateParameterObject(string parameterName, object parameterValue);
@@ -1098,19 +1100,11 @@ namespace OpenNETCF.ORM
             Delete(entityName, keyFieldName, primaryKey);
         }
 
-        /// <summary>
-        /// Returns the number of instances of the given type in the DataStore
-        /// </summary>
-        /// <typeparam name="T">Entity type to count</typeparam>
-        /// <returns>The number of instances in the store</returns>
-        public override int Count<T>()
+        public override int Count(string entityName)
         {
-            var t = typeof(T);
-            string entityName = m_entities.GetNameForType(t);
-
-            if (entityName == null)
+            if (string.IsNullOrEmpty(entityName))
             {
-                throw new EntityNotFoundException(t);
+                throw new EntityNotFoundException(entityName);
             }
 
             var connection = GetConnection(true);
@@ -1228,6 +1222,7 @@ namespace OpenNETCF.ORM
             }
         }
 
+        public abstract override void DiscoverDynamicEntity(string entityName);
 
         /// <summary>
         /// Ensures that the underlying database tables contain all of the Fields to represent the known entities.

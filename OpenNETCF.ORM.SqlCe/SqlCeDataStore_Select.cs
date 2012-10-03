@@ -134,9 +134,9 @@ namespace OpenNETCF.ORM
             return (T)Seek(entityName, typeof(T), option, seekField, seekValue);
         }
 
-        public object Seek(string entityName, DbSeekOptions option, string seekField, object seekValue)
+        public DynamicEntity Seek(string entityName, DbSeekOptions option, string seekField, object seekValue)
         {
-            return Seek(entityName, typeof(DynamicEntity), option, seekField, seekValue);
+            return (DynamicEntity)Seek(entityName, typeof(DynamicEntity), option, seekField, seekValue);
         }
 
         private object Seek(string entityName, Type objectType, DbSeekOptions option, string seekField, object seekValue)
