@@ -79,7 +79,7 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             sw1.Reset();
             sw1.Start();
 
-            var item = store.Seek<SeekItem>(System.Data.SqlServerCe.DbSeekOptions.BeforeEqual, "SeekField", 11);
+            var item = store.First<SeekItem>(System.Data.SqlServerCe.DbSeekOptions.BeforeEqual, "SeekField", 11);
             sw1.Stop();
 
             // item should have a value of 10
@@ -138,7 +138,7 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             sw1.Reset();
             sw1.Start();
 
-            var item = store.Seek("DynamicSeekItem", System.Data.SqlServerCe.DbSeekOptions.BeforeEqual, "SeekField", 11);
+            var item = store.First("DynamicSeekItem", System.Data.SqlServerCe.DbSeekOptions.BeforeEqual, "SeekField", 11);
             sw1.Stop();
 
             // item should have a value of 10

@@ -169,6 +169,7 @@ namespace OpenNETCF.ORM
                 case "tinyint":
                     return DbType.Byte;
                 case "numeric":
+                case "money":
                     return DbType.Decimal;
                 case "real":
                     return DbType.Single;
@@ -178,6 +179,7 @@ namespace OpenNETCF.ORM
                     return DbType.Guid;
                 case "image":
                 case "binary":
+                case "varbinary":
                     return DbType.Binary;
                 default:
                     throw new NotSupportedException(

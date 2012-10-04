@@ -126,7 +126,7 @@ namespace OpenNETCF.ORM
             return e.ConvertAll<DynamicEntity>();// Array.ConvertAll(e, item => (DynamicEntity)item);
         }
 
-        public T Seek<T>(DbSeekOptions option, string seekField, object seekValue)
+        public T First<T>(DbSeekOptions option, string seekField, object seekValue)
             where T : class
         {
             var entityName = m_entities.GetNameForType(typeof(T));
@@ -134,7 +134,7 @@ namespace OpenNETCF.ORM
             return (T)Seek(entityName, typeof(T), option, seekField, seekValue);
         }
 
-        public DynamicEntity Seek(string entityName, DbSeekOptions option, string seekField, object seekValue)
+        public DynamicEntity First(string entityName, DbSeekOptions option, string seekField, object seekValue)
         {
             return (DynamicEntity)Seek(entityName, typeof(DynamicEntity), option, seekField, seekValue);
         }
@@ -273,97 +273,94 @@ namespace OpenNETCF.ORM
 
                 using (var results = command.ExecuteReader())
                 {
-                    if (results.HasRows)
+                    ReferenceAttribute[] referenceFields = null;
+
+                    int currentOffset = 0;
+
+                    if (matchValue != null)
                     {
-                        ReferenceAttribute[] referenceFields = null;
-
-                        int currentOffset = 0;
-
-                        if (matchValue != null)
+                        // convert enums to an int, else the .Equals later check will fail
+                        // this feels a bit kludgey, but for now it's all I can think of
+                        if (matchValue.GetType().IsEnum)
                         {
-                            // convert enums to an int, else the .Equals later check will fail
-                            // this feels a bit kludgey, but for now it's all I can think of
-                            if (matchValue.GetType().IsEnum)
-                            {
-                                matchValue = (int)matchValue;
-                            }
+                            matchValue = (int)matchValue;
+                        }
 
-                            if (searchOrdinal < 0)
-                            {
-                                searchOrdinal = results.GetOrdinal(matchField);
-                            }
+                        if (searchOrdinal < 0)
+                        {
+                            searchOrdinal = results.GetOrdinal(matchField);
+                        }
 
-                            if (tableDirect)
+                        if (tableDirect)
+                        {
+                            results.Seek(DbSeekOptions.FirstEqual, new object[] { matchValue });
+                        }
+                    }
+
+                    while (results.Read())
+                    {
+                        if (currentOffset < firstRowOffset)
+                        {
+                            currentOffset++;
+                            continue;
+                        }
+
+                        if (tableDirect && (matchValue != null))
+                        {
+                            // if we have a match value, we'll have seeked to the first match above
+                            // then at this point the first non-match means we have no more matches, so
+                            // we can exit out once we hit the first non-match.
+
+                            // For string we want a case-insensitive search, so it's special-cased here
+                            if (matchValue is string)
                             {
-                                results.Seek(DbSeekOptions.FirstEqual, new object[] { matchValue });
+                                if (string.Compare((string)results[searchOrdinal], (string)matchValue, true) != 0)
+                                {
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                if (!results[searchOrdinal].Equals(matchValue))
+                                {
+                                    break;
+                                }
                             }
                         }
-                         
-                        while (results.Read())
+
+                        // autofill references if desired
+                        if (referenceFields == null)
                         {
-                            if (currentOffset < firstRowOffset)
-                            {
-                                currentOffset++;
-                                continue;
-                            }
+                            referenceFields = Entities[entityName].References.ToArray();
+                        }
 
-                            if (tableDirect && (matchValue != null))
-                            {
-                                // if we have a match value, we'll have seeked to the first match above
-                                // then at this point the first non-match means we have no more matches, so
-                                // we can exit out once we hit the first non-match.
+                        // if the entity type changed since the last Select call, re-cache some items (perf improvements)
+                        if (m_lastEntity != entityName)
+                        {
+                            m_fields = Entities[entityName].Fields;
+                            m_references = Entities[entityName].References.ToArray();
+                            m_lastEntity = entityName;
+                        }
 
-                                // For string we want a case-insensitive search, so it's special-cased here
-                                if (matchValue is string)
-                                {
-                                    if (string.Compare((string)results[searchOrdinal], (string)matchValue, true) != 0)
-                                    {
-                                        break;
-                                    }
-                                }
-                                else
-                                {
-                                    if (!results[searchOrdinal].Equals(matchValue))
-                                    {
-                                        break;
-                                    }
-                                }
-                            }
+                        bool fieldsSet;
+                        object item = CreateEntityInstance(entityName, objectType, m_fields, results, out fieldsSet);
 
-                            // autofill references if desired
-                            if (referenceFields == null)
-                            {
-                                referenceFields = Entities[entityName].References.ToArray();
-                            }
+                        if (!fieldsSet)
+                        {
+                            // fill in the entity field values
+                            PopulateFields(entityName, m_fields, results, item, fillReferences);
+                        }
+                        // autofill references if desired
+                        if ((fillReferences) && (referenceFields.Length > 0))
+                        {
+                            FillReferences(item, null, referenceFields, false);
+                        }
 
-                            // if the entity type changed since the last Select call, re-cache some items (perf improvements)
-                            if (m_lastEntity != entityName)
-                            {
-                                m_fields = Entities[entityName].Fields;
-                                m_references = Entities[entityName].References.ToArray();
-                                m_lastEntity = entityName;
-                            }
+                        items.Add(item);
 
-                            bool fieldsSet;
-                            object item = CreateEntityInstance(entityName, objectType, m_fields, results, out fieldsSet);
-
-                            if (!fieldsSet)
-                            {
-                                // fill in the entity field values
-                                PopulateFields(entityName, m_fields, results, item, fillReferences);
-                            }
-                            // autofill references if desired
-                            if ((fillReferences) && (referenceFields.Length > 0))
-                            {
-                                FillReferences(item, null, referenceFields, false);
-                            }
-
-                            items.Add(item);
-
-                            if ((fetchCount > 0) && (items.Count >= fetchCount))
-                            {
-                                break;
-                            }
+                        if ((fetchCount > 0) && (items.Count >= fetchCount))
+                        {
+                            break;
                         }
                     }
                 }

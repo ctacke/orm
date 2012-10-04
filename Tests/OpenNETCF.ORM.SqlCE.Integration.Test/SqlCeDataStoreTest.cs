@@ -160,20 +160,11 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             count = store.Count<TestItem>();
             Assert.AreEqual(2, count);
 
-            // this will *not* create the table
+            // this will create the table in newer versions of ORM
             store.AddType<LateAddItem>();
 
-            Exception expected = null;
-            try
-            {
-                var newitems = store.Select<LateAddItem>(false);
-            }
-            catch (Exception ex)
-            {
-                expected = ex;
-            }
-
-            Assert.IsNotNull(expected);
+            var newitems = store.Select<LateAddItem>(false);
+            Assert.IsNotNull(newitems);
 
         }
 
