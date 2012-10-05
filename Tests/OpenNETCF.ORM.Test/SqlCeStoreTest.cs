@@ -92,12 +92,12 @@ namespace OpenNETCF.ORM.Test
 
         public Book[] GetAllBooks()
         {
-            return Store.Select<Book>();
+            return Store.Select<Book>().ToArray();
         }
 
         public Book[] GetBooksOfType(BookType type)
         {
-            return Store.Select<Book>("BookType", type);
+            return Store.Select<Book>("BookType", type).ToArray();
         }
 
         public Book GetBookById(int bookID)
@@ -129,7 +129,7 @@ namespace OpenNETCF.ORM.Test
 
         public Author[] GetAuthors(int count, int offset)
         {
-            return Store.Fetch<Author>(count, offset, "Name");
+            return Store.Fetch<Author>(count, offset, "Name").ToArray();
         }
 
         public void TruncateBooks()

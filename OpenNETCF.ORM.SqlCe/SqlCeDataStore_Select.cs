@@ -108,7 +108,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        protected override object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
+        protected override IEnumerable<object> Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
         {
             string entityName = m_entities.GetNameForType(objectType);
 
@@ -120,10 +120,9 @@ namespace OpenNETCF.ORM
             return Select(entityName, objectType, filters, fetchCount, firstRowOffset, fillReferences);
         }
 
-        public override DynamicEntity[] Select(string entityName)
+        public override IEnumerable<DynamicEntity> Select(string entityName)
         {
-            var e = Select(entityName, typeof(DynamicEntity), null, -1, -1, false);
-            return e.ConvertAll<DynamicEntity>();// Array.ConvertAll(e, item => (DynamicEntity)item);
+            return Select(entityName, typeof(DynamicEntity), null, -1, -1, false).Cast<DynamicEntity>();
         }
 
         public T First<T>(DbSeekOptions option, string seekField, object seekValue)
@@ -209,7 +208,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        private object[] Select(string entityName, Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
+        private IEnumerable<object> Select(string entityName, Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
         {
 
             UpdateIndexCacheForType(entityName);
@@ -356,7 +355,7 @@ namespace OpenNETCF.ORM
                             FillReferences(item, null, referenceFields, false);
                         }
 
-                        items.Add(item);
+                        yield return item;
 
                         if ((fetchCount > 0) && (items.Count >= fetchCount))
                         {
@@ -380,8 +379,6 @@ namespace OpenNETCF.ORM
                 FlushReferenceTableCache();
                 DoneWithConnection(connection, false);
             }
-
-            return items.ToArray();
         }
 
         private void PopulateFields(string entityName, FieldAttributeCollection fields, IDataReader results, object item, bool fillReferences)

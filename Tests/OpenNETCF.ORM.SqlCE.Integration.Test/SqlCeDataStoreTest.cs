@@ -49,7 +49,7 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             bool beforeDelete = false;
             bool afterDelete = false;
 
-            var store = new SqlCeDataStore("test.sdf");
+            var store = new SqlCeDataStore("simpleCRUDTest.sdf");
             store.AddType<TestItem>();
             store.CreateStore();
 
