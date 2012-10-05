@@ -9,7 +9,7 @@ namespace OpenNETCF.ORM
 {
     partial class SqlCeDataStore
     {
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
             var type = typeof(T);
             string entityName = m_entities.GetNameForType(type);
@@ -89,9 +89,8 @@ namespace OpenNETCF.ORM
 
                                     if (MatchesFilter(checkValue, filter))
                                     {
-                                        // hydrate the object
-                                        var item = HydrateEntity<T>(entityName, results, fillReferences);
-                                        list.Add(item);
+                                        // hydrate and return the object
+                                        yield return HydrateEntity<T>(entityName, results, fillReferences);
 
                                         currentOffset++;
                                         count++;
@@ -99,9 +98,8 @@ namespace OpenNETCF.ORM
                                 }
                                 else
                                 {
-                                    // hydrate the object
-                                    var item = HydrateEntity<T>(entityName, results, fillReferences);
-                                    list.Add(item);
+                                    // hydrate and return the object
+                                    yield return HydrateEntity<T>(entityName, results, fillReferences);
 
                                     currentOffset++;
                                     count++;
@@ -117,8 +115,6 @@ namespace OpenNETCF.ORM
             {
                 DoneWithConnection(connection, false);
             }
-
-            return list.ToArray();
         }
 
         private T HydrateEntity<T>(string entityName, SqlCeResultSet results, bool fillReferences)

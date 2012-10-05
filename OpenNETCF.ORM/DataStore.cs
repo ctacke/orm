@@ -25,17 +25,17 @@ namespace OpenNETCF.ORM
         public event EventHandler<EntityInsertArgs> AfterInsert;
         public abstract void OnInsert(object item, bool insertReferences);
 
-        public abstract T[] Select<T>() where T : new();
-        public abstract T[] Select<T>(bool fillReferences) where T : new();
+        public abstract IEnumerable<T> Select<T>() where T : new();
+        public abstract IEnumerable<T> Select<T>(bool fillReferences) where T : new();
         public abstract T Select<T>(object primaryKey) where T : new();
         public abstract T Select<T>(object primaryKey, bool fillReferences) where T : new();
-        public abstract T[] Select<T>(string searchFieldName, object matchValue) where T : new();
-        public abstract T[] Select<T>(string searchFieldName, object matchValue, bool fillReferences) where T : new();
-        public abstract T[] Select<T>(IEnumerable<FilterCondition> filters) where T : new();
-        public abstract T[] Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences) where T : new();
-        public abstract object[] Select(Type entityType);
-        public abstract object[] Select(Type entityType, bool fillReferences);
-        public abstract DynamicEntity[] Select(string entityName);
+        public abstract IEnumerable<T> Select<T>(string searchFieldName, object matchValue) where T : new();
+        public abstract IEnumerable<T> Select<T>(string searchFieldName, object matchValue, bool fillReferences) where T : new();
+        public abstract IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters) where T : new();
+        public abstract IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences) where T : new();
+        public abstract IEnumerable<object> Select(Type entityType);
+        public abstract IEnumerable<object> Select(Type entityType, bool fillReferences);
+        public abstract IEnumerable<DynamicEntity> Select(string entityName);
 
         public event EventHandler<EntityUpdateArgs> BeforeUpdate;
         public event EventHandler<EntityUpdateArgs> AfterUpdate;
@@ -68,10 +68,10 @@ namespace OpenNETCF.ORM
         public abstract void Delete(string entityName, string fieldName, object matchValue);
 
         public abstract void FillReferences(object instance);
-        public abstract T[] Fetch<T>(int fetchCount) where T : new();
-        public abstract T[] Fetch<T>(int fetchCount, int firstRowOffset) where T : new();
-        public abstract T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField) where T : new();
-        public abstract T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences) where T : new();
+        public abstract IEnumerable<T> Fetch<T>(int fetchCount) where T : new();
+        public abstract IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset) where T : new();
+        public abstract IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField) where T : new();
+        public abstract IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences) where T : new();
 
         public abstract int Count(string entityName);
         public abstract int Count<T>(IEnumerable<FilterCondition> filters);
@@ -413,12 +413,12 @@ namespace OpenNETCF.ORM
             Insert(item, false);
         }
 
-        public T[] Select<T>(Func<T, bool> selector)
+        public IEnumerable<T> Select<T>(Func<T, bool> selector)
             where T : new()
         {
             return (from e in Select<T>(false)
                    where selector(e)
-                   select e).ToArray();
+                   select e);
         }
 
         private Dictionary<Type, ConstructorInfo> m_ctorCache = new Dictionary<Type, ConstructorInfo>();

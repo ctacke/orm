@@ -557,7 +557,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        protected override object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
+        protected override IEnumerable<object> Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
         {
             string entityName = m_entities.GetNameForType(objectType);
 
@@ -740,7 +740,9 @@ namespace OpenNETCF.ORM
                                 FillReferences(item, rowPK, referenceFields, false);
                             }
 
-                            items.Add(item);
+                            // changed from
+                            // items.Add(item);
+                            yield return item;
 
                             if ((fetchCount > 0) && (items.Count >= fetchCount))
                             {
@@ -765,8 +767,6 @@ namespace OpenNETCF.ORM
                 FlushReferenceTableCache();
                 DoneWithConnection(connection, false);
             }
-
-            return items.ToArray();
         }
         
         public override void OnUpdate(object item, bool cascadeUpdates, string fieldName)
@@ -970,12 +970,12 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
             throw new NotSupportedException("Fetch is not currently supported with this Provider.");
         }
 
-        public override DynamicEntity[] Select(string entityName)
+        public override IEnumerable<DynamicEntity> Select(string entityName)
         {
             throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
         }

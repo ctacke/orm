@@ -100,7 +100,7 @@ namespace OpenNETCF.ORM.Integration.Test
 
         }
 
-        void DumpData(DynamicEntity[] items)
+        void DumpData(IEnumerable<DynamicEntity> items)
         {
             var first = true;
 

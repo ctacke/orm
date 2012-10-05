@@ -38,12 +38,12 @@ namespace OpenNETCF.ORM
 
         public abstract override void OnInsert(object item, bool insertReferences);
 
-        protected abstract object[] Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences);
-        public abstract override DynamicEntity[] Select(string entityName);
+        protected abstract IEnumerable<object> Select(Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences);
+        public abstract override IEnumerable<DynamicEntity> Select(string entityName);
 
         public abstract override void OnUpdate(object item, bool cascadeUpdates, string fieldName);
 
-        public abstract override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences);
+        public abstract override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences);
 
         public abstract override int Count<T>(IEnumerable<FilterCondition> filters);
 
@@ -534,11 +534,11 @@ namespace OpenNETCF.ORM
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public override T[] Select<T>()
+        public override IEnumerable<T> Select<T>()
         {
             var type = typeof(T);
             var items = Select(type, null, null, -1, 0);
-            return items.Cast<T>().ToArray();
+            return items.Cast<T>();
         }
 
         /// <summary>
@@ -546,11 +546,11 @@ namespace OpenNETCF.ORM
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public override T[] Select<T>(bool fillReferences)
+        public override IEnumerable<T> Select<T>(bool fillReferences)
         {
             var type = typeof(T);
             var items = Select(type, null, null, -1, 0, fillReferences);
-            return items.Cast<T>().ToArray();
+            return items.Cast<T>();
         }
 
         /// <summary>
@@ -558,46 +558,46 @@ namespace OpenNETCF.ORM
         /// </summary>
         /// <param name="entityType"></param>
         /// <returns></returns>
-        public override object[] Select(Type entityType)
+        public override IEnumerable<object> Select(Type entityType)
         {
             return Select(entityType, true);
         }
 
-        public override object[] Select(Type entityType, bool fillReferences)
+        public override IEnumerable<object> Select(Type entityType, bool fillReferences)
         {
             var items = Select(entityType, null, null, -1, 0, fillReferences);
-            return items.ToArray();
+            return items;
         }
 
-        public override T[] Select<T>(string searchFieldName, object matchValue)
+        public override IEnumerable<T> Select<T>(string searchFieldName, object matchValue)
         {
             return Select<T>(searchFieldName, matchValue, true);
         }
 
-        public override T[] Select<T>(string searchFieldName, object matchValue, bool fillReferences)
+        public override IEnumerable<T> Select<T>(string searchFieldName, object matchValue, bool fillReferences)
         {
             var type = typeof(T);
             var items = Select(type, searchFieldName, matchValue, -1, 0, fillReferences);
-            return items.Cast<T>().ToArray();
+            return items.Cast<T>();
         }
 
-        public override T[] Select<T>(IEnumerable<FilterCondition> filters)
+        public override IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters)
         {
             return Select<T>(filters, true);
         }
 
-        public override T[] Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences)
+        public override IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences)
         {
             var objectType = typeof(T);
-            return Select(objectType, filters, -1, 0, fillReferences).Cast<T>().ToArray();
+            return Select(objectType, filters, -1, 0, fillReferences).Cast<T>();
         }
 
-        private object[] Select(Type objectType, string searchFieldName, object matchValue, int fetchCount, int firstRowOffset)
+        private IEnumerable<object> Select(Type objectType, string searchFieldName, object matchValue, int fetchCount, int firstRowOffset)
         {
             return Select(objectType, searchFieldName, matchValue, fetchCount, firstRowOffset, true);
         }
 
-        protected virtual object[] Select(Type objectType, string searchFieldName, object matchValue, int fetchCount, int firstRowOffset, bool fillReferences)
+        protected virtual IEnumerable<object> Select(Type objectType, string searchFieldName, object matchValue, int fetchCount, int firstRowOffset, bool fillReferences)
         {
             string entityName = m_entities.GetNameForType(objectType);
             FilterCondition filter = null;
@@ -863,7 +863,7 @@ namespace OpenNETCF.ORM
                 // get the lookup values - until we support filtered selects, this may be very expensive memory-wise
                 if (!referenceItems.ContainsKey(reference))
                 {
-                    object[] refData;
+                    IEnumerable<object> refData;
                     if (cacheReferenceTable)
                     {
                         // TODO: ref cache needs to be type->reftype->ref's, not type->refs
@@ -871,7 +871,7 @@ namespace OpenNETCF.ORM
                         if (!m_referenceCache.ContainsKey(reference.ReferenceEntityType))
                         {
                             refData = Select(reference.ReferenceEntityType, null, null, -1, 0);
-                            m_referenceCache.Add(reference.ReferenceEntityType, refData);
+                            m_referenceCache.Add(reference.ReferenceEntityType, refData.ToArray());
                         }
                         else
                         {
@@ -883,7 +883,7 @@ namespace OpenNETCF.ORM
                         refData = Select(reference.ReferenceEntityType, reference.ReferenceField, keyValue, -1, 0);
                     }
 
-                    referenceItems.Add(reference, refData);
+                    referenceItems.Add(reference, refData.ToArray());
                 }
 
                 // get the lookup field
@@ -1128,11 +1128,11 @@ namespace OpenNETCF.ORM
         /// Fetches a sorted list of entities, up to the requested number of entity instances, of the specified type from the DataStore, starting with the specified instance
         /// </summary>
         /// <typeparam name="T"></typeparam>
-        /// <param name="searchFieldName"></param>
         /// <param name="fetchCount"></param>
         /// <param name="firstRowOffset"></param>
+        /// <param name="sortField"></param>
         /// <returns></returns>
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset, string sortField)
+        public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField)
         {
             return Fetch<T>(fetchCount, firstRowOffset, sortField, FieldSearchOrder.Ascending, null, false);
         }
@@ -1143,11 +1143,11 @@ namespace OpenNETCF.ORM
         /// <typeparam name="T"></typeparam>
         /// <param name="fetchCount"></param>
         /// <returns></returns>
-        public override T[] Fetch<T>(int fetchCount)
+        public override IEnumerable<T> Fetch<T>(int fetchCount)
         {
             var type = typeof(T);
             var items = Select(type, null, null, fetchCount, 0, false);
-            return items.Cast<T>().ToArray();
+            return items.Cast<T>();
         }
 
         /// <summary>
@@ -1157,11 +1157,11 @@ namespace OpenNETCF.ORM
         /// <param name="fetchCount"></param>
         /// <param name="firstRowOffset"></param>
         /// <returns></returns>
-        public override T[] Fetch<T>(int fetchCount, int firstRowOffset)
+        public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset)
         {
             var type = typeof(T);
             var items = Select(type, null, null, fetchCount, firstRowOffset, false);
-            return items.Cast<T>().ToArray();
+            return items.Cast<T>();
         }
 
         protected override void AfterAddEntityType(Type entityType, bool ensureCompatibility)

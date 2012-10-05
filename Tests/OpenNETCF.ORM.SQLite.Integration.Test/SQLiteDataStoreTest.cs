@@ -82,7 +82,7 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
         [DeploymentItem("SQLite.Interop.dll")]
         public void SimpleReferenceTest()
         {
-            var store = new SQLiteDataStore("test.db");
+            var store = new SQLiteDataStore("simpleReferenceTest.db");
             store.AddType<Author>();
             store.AddType<Book>();
             store.CreateStore();

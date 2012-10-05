@@ -25,7 +25,7 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             var store = new SqlCeDataStore("test.sdf");
             store.AddType<TestItem>();
             store.AddType<TestItemD>();
-            store.CreateStore();
+            store.CreateOrUpdateStore();
 
             // populate test data
             var generator = new DataGenerator();
