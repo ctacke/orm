@@ -68,6 +68,11 @@ namespace OpenNETCF.ORM
             get { return m_fields[fieldName.ToLower()]; }
         }
 
+        public bool ContainsField(string fieldName)
+        {
+            return m_fields.ContainsKey(fieldName);
+        }
+
         public IEnumerator<FieldAttribute> GetEnumerator()
         {
             return m_fields.Values.GetEnumerator();

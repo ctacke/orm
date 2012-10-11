@@ -980,6 +980,11 @@ namespace OpenNETCF.ORM
             throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
         }
 
+        public override DynamicEntity Select(string entityName, object primaryKey)
+        {
+            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
+        }
+
         protected override void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility)
         {
             // TODO: just delete this method when implemented, the SqlDataStore base will create the table
