@@ -8,7 +8,7 @@ namespace OpenNETCF.ORM
 {
     public class FieldAttributeCollection : IEnumerable<FieldAttribute>
     {
-        private Dictionary<string, FieldAttribute> m_fields = new Dictionary<string, FieldAttribute>();
+        private Dictionary<string, FieldAttribute> m_fields = new Dictionary<string, FieldAttribute>(StringComparer.InvariantCultureIgnoreCase);
 
         public bool OrdinalsAreValid { get; set; }
         public FieldAttribute KeyField { get; private set; }
@@ -54,7 +54,7 @@ namespace OpenNETCF.ORM
                     }
                 }
 
-                m_fields.Add(attribute.FieldName.ToLower(), attribute);
+                m_fields.Add(attribute.FieldName, attribute);
             }
         }
 
