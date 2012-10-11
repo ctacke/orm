@@ -36,6 +36,7 @@ namespace OpenNETCF.ORM
         public abstract IEnumerable<object> Select(Type entityType);
         public abstract IEnumerable<object> Select(Type entityType, bool fillReferences);
         public abstract IEnumerable<DynamicEntity> Select(string entityName);
+        public abstract DynamicEntity Select(string entityName, object primaryKey);
 
         public event EventHandler<EntityUpdateArgs> BeforeUpdate;
         public event EventHandler<EntityUpdateArgs> AfterUpdate;

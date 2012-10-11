@@ -120,6 +120,19 @@ namespace OpenNETCF.ORM
             return Select(entityName, objectType, filters, fetchCount, firstRowOffset, fillReferences);
         }
 
+        public override DynamicEntity Select(string entityName, object primaryKey)
+        {
+            var filter = new SqlFilterCondition
+            {
+                FieldName = (Entities[entityName] as SqlEntityInfo).PrimaryKeyIndexName,
+                Operator = FilterCondition.FilterOperator.Equals,
+                Value = primaryKey,
+                PrimaryKey = true
+            };
+
+            return (DynamicEntity)Select(entityName, typeof(DynamicEntity), new FilterCondition[] { filter }, -1, -1, false).FirstOrDefault();
+        }
+
         public override IEnumerable<DynamicEntity> Select(string entityName)
         {
             return Select(entityName, typeof(DynamicEntity), null, -1, -1, false).Cast<DynamicEntity>();
