@@ -25,7 +25,7 @@ namespace OpenNETCF.ORM
         void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition);
         void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition, bool ensureCompatibility);
         void DiscoverDynamicEntity(string entityName);
-        
+
         void DiscoverTypes(Assembly containingAssembly);
 
         void CreateStore();
@@ -77,9 +77,9 @@ namespace OpenNETCF.ORM
 
         void FillReferences(object instance);
 
-       void BeginTransaction(IsolationLevel isolationLevel);
-       void BeginTransaction();
-       void Commit();
-       void Rollback();
+        void BeginTransaction(IsolationLevel isolationLevel);
+        void BeginTransaction();
+        void Commit();
+        void Rollback();
     }
 }
