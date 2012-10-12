@@ -473,7 +473,43 @@ namespace OpenNETCF.ORM
             }
             else
             {
-                field.PropertyInfo.SetValue(instance, value, null);
+                // use Convert where we can to help ensure conversions (uint->int and the like)
+                if (field.PropertyInfo.PropertyType.Equals(typeof(int)))
+                {
+                    field.PropertyInfo.SetValue(instance, Convert.ToInt32(value), null);
+                }
+                else if (field.PropertyInfo.PropertyType.Equals(typeof(uint)))
+                {
+                    field.PropertyInfo.SetValue(instance, Convert.ToUInt32(value), null);
+                }
+                else if (field.PropertyInfo.PropertyType.Equals(typeof(short)))
+                {
+                    field.PropertyInfo.SetValue(instance, Convert.ToInt16(value), null);
+                }
+                else if (field.PropertyInfo.PropertyType.Equals(typeof(ushort)))
+                {
+                    field.PropertyInfo.SetValue(instance, Convert.ToUInt16(value), null);
+                }
+                else if (field.PropertyInfo.PropertyType.Equals(typeof(long)))
+                {
+                    field.PropertyInfo.SetValue(instance, Convert.ToInt64(value), null);
+                }
+                else if (field.PropertyInfo.PropertyType.Equals(typeof(ulong)))
+                {
+                    field.PropertyInfo.SetValue(instance, Convert.ToUInt64(value), null);
+                }
+                else if (field.PropertyInfo.PropertyType.Equals(typeof(float)))
+                {
+                    field.PropertyInfo.SetValue(instance, Convert.ToSingle(value), null);
+                }
+                else if (field.PropertyInfo.PropertyType.Equals(typeof(double)))
+                {
+                    field.PropertyInfo.SetValue(instance, Convert.ToDouble(value), null);
+                }
+                else
+                {
+                    field.PropertyInfo.SetValue(instance, value, null);
+                }
             }
         }
 
