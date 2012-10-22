@@ -85,7 +85,7 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             var store = new SQLiteDataStore("simpleReferenceTest.db");
             store.AddType<Author>();
             store.AddType<Book>();
-            store.CreateStore();
+            store.CreateOrUpdateStore();
 
             // insert an author
             var dumas = new Author() { Name = "Alexadre Dumas" };
@@ -108,9 +108,31 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
                 });
 
             // now get the authors back, telling ORM to fill the references
-            var authors = store.Select<Author>(true);
+            var authors = store.Select<Author>(true).ToArray();
 
             // at this point you will have 1 Author instance, with the Books property hydrated and containing two Book instances
+        }
+
+        [TestMethod()]
+        [DeploymentItem("SQLite.Interop.dll")]
+        public void SimpleReferenceTest2()
+        {
+            var store = new SQLiteDataStore("simpleReferenceTest.db");
+            store.AddType<Location>();
+            store.AddType<Position>();
+            store.CreateOrUpdateStore();
+
+            var position1 = new Position() { Description = "Position 1" };
+            store.Insert(position1);
+
+            store.Insert(
+                new Location()
+                {
+                    Description = "Description A",
+                    positionId = position1.positionId
+                });
+
+            var positions = store.Select<Position>(true).ToArray();
         }
 
         [TestMethod()]
@@ -123,97 +145,6 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
 
             store.Insert(new BigID("Foo"));
             var bid = store.Select<BigID>();
-        }
-    }
-
-    [Entity(KeyScheme = KeyScheme.Identity)]
-    public class BigID
-    {
-        public BigID()
-        {
-        }
-
-        public BigID(string data)
-        {
-            Data = data;
-        }
-
-        [Field(IsPrimaryKey = true)]
-        public long ID { get; set; }
-
-        [Field]
-        public string Data { get; set; }
-    }
-
-    [Entity(KeyScheme = KeyScheme.Identity)]
-    public class Author
-    {
-        [Field(IsPrimaryKey = true)]
-        public int ID { get; set; }
-
-        [Field]
-        public string Name { get; set; }
-
-        [Reference(typeof(Book), "AuthorID")]
-        Book[] Books { get; set; }
-    }
-
-    [Entity(KeyScheme = KeyScheme.Identity)]
-    public class Book
-    {
-        [Field(IsPrimaryKey = true)]
-        public int ID { get; set; }
-
-        [Field]
-        public int AuthorID { get; set; }
-
-        [Field]
-        public string Title { get; set; }
-    }
-
-
-    [Entity(KeyScheme=KeyScheme.Identity)]
-    public class TestItem : IEquatable<TestItem>
-    {
-        public TestItem()
-        {
-        }
-
-        public TestItem(string name)
-        {
-            Name = name;
-        }
-
-        [Field(IsPrimaryKey = true)]
-        public int ID { get; set; }
-
-        [Field(SearchOrder=FieldSearchOrder.Ascending)]
-        public string Name { get; set; }
-
-        [Field]
-        public Guid? UUID { get; set; }
-
-        [Field]
-        public int ITest { get; set; }
-
-        [Field]
-        public string Address { get; set; }
-
-        [Field]
-        public float FTest { get; set; }
-
-        [Field]
-        public double DBTest { get; set; }
-
-        [Field(Scale = 2)]
-        public decimal DETest { get; set; }
-
-        [Field]
-        public TimeSpan TS { get; set; }
-
-        public bool Equals(TestItem other)
-        {
-            return this.ID == other.ID;
         }
     }
 }

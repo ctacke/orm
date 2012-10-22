@@ -49,4 +49,30 @@ namespace OpenNETCF.ORM
             return this.ID == other.ID;
         }
     }
+
+    [Entity(KeyScheme = KeyScheme.Identity)]
+    public class Author
+    {
+        [Field(IsPrimaryKey = true)]
+        public int ID { get; set; }
+
+        [Field]
+        public string Name { get; set; }
+
+        [Reference(typeof(Book), "AuthorID")]
+        public Book[] Books { get; set; }
+    }
+
+    [Entity(KeyScheme = KeyScheme.Identity)]
+    public class Book
+    {
+        [Field(IsPrimaryKey = true)]
+        public int ID { get; set; }
+
+        [Field]
+        public int AuthorID { get; set; }
+
+        [Field]
+        public string Title { get; set; }
+    }
 }
