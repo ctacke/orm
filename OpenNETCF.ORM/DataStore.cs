@@ -102,9 +102,10 @@ namespace OpenNETCF.ORM
 
         public void Delete(object item)
         {
-            OnBeforeDelete(item);
+            var name = Entities.GetNameForType(item.GetType());
+            OnBeforeDelete(name, item);
             OnDelete(item);
-            OnAfterDelete(item);
+            OnAfterDelete(name, item);
         }
 
         /// <summary>
@@ -125,21 +126,21 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public virtual void OnBeforeDelete(object item)
+        public virtual void OnBeforeDelete(string entityName, object item)
         {
             var handler = BeforeDelete;
             if (handler != null)
             {
-                handler(this, new EntityDeleteArgs(item));
+                handler(this, new EntityDeleteArgs(entityName, item));
             }
         }
 
-        public virtual void OnAfterDelete(object item)
+        public virtual void OnAfterDelete(string entityName, object item)
         {
             var handler = AfterDelete;
             if (handler != null)
             {
-                handler(this, new EntityDeleteArgs(item));
+                handler(this, new EntityDeleteArgs(entityName, item));
             }
         }
 
@@ -163,51 +164,53 @@ namespace OpenNETCF.ORM
 
         public void Update(object item, bool cascadeUpdates, string fieldName)
         {
-            OnBeforeUpdate(item, cascadeUpdates, fieldName);
+            var name = Entities.GetNameForType(item.GetType());
+            OnBeforeUpdate(name, item, cascadeUpdates, fieldName);
             OnUpdate(item, cascadeUpdates, fieldName);
-            OnAfterUpdate(item, cascadeUpdates, fieldName);
+            OnAfterUpdate(name, item, cascadeUpdates, fieldName);
         }
 
-        public virtual void OnBeforeUpdate(object item, bool cascadeUpdates, string fieldName) 
+        public virtual void OnBeforeUpdate(string entityName, object item, bool cascadeUpdates, string fieldName) 
         {
             var handler = BeforeUpdate;
             if (handler != null)
             {
-                handler(this, new EntityUpdateArgs(item, cascadeUpdates, fieldName));
+                handler(this, new EntityUpdateArgs(entityName, item, cascadeUpdates, fieldName));
             }
         }
 
-        public virtual void OnAfterUpdate(object item, bool cascadeUpdates, string fieldName)
+        public virtual void OnAfterUpdate(string entityName, object item, bool cascadeUpdates, string fieldName)
         {
             var handler = AfterUpdate;
             if (handler != null)
             {
-                handler(this, new EntityUpdateArgs(item, cascadeUpdates, fieldName));
+                handler(this, new EntityUpdateArgs(entityName, item, cascadeUpdates, fieldName));
             }
         }
 
         public void Insert(object item, bool insertReferences)
         {
-            OnBeforeInsert(item, insertReferences);
+            var name = Entities.GetNameForType(item.GetType());
+            OnBeforeInsert(name, item, insertReferences);
             OnInsert(item, insertReferences);
-            OnAfterInsert(item, insertReferences);
+            OnAfterInsert(name, item, insertReferences);
         }
 
-        public virtual void OnBeforeInsert(object item, bool insertReferences)
+        public virtual void OnBeforeInsert(string entityName, object item, bool insertReferences)
         {
             var handler = BeforeInsert;
             if (handler != null)
             {
-                handler(this, new EntityInsertArgs(item, insertReferences));
+                handler(this, new EntityInsertArgs(entityName, item, insertReferences));
             }
         }
 
-        public virtual void OnAfterInsert(object item, bool insertReferences)
+        public virtual void OnAfterInsert(string entityName, object item, bool insertReferences)
         {
             var handler = AfterInsert;
             if (handler != null)
             {
-                handler(this, new EntityInsertArgs(item, insertReferences));
+                handler(this, new EntityInsertArgs(entityName, item, insertReferences));
             }
         }
 
