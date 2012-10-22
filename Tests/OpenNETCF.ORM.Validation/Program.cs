@@ -47,7 +47,7 @@ namespace OpenNETCF.ORM.Validation
                     if (Debugger.IsAttached) Debugger.Break();
                     continue;
                 }
-                
+
                 if (!v.DoUpdates())
                 {
                     Debug.WriteLine("  FAILED Update");
@@ -58,6 +58,13 @@ namespace OpenNETCF.ORM.Validation
                 if (!v.DoDeletes())
                 {
                     Debug.WriteLine("  FAILED Delete");
+                    if (Debugger.IsAttached) Debugger.Break();
+                    continue;
+                }
+
+                if (!v.DoReferentialInserts())
+                {
+                    Debug.WriteLine("  FAILED Referential inserts");
                     if (Debugger.IsAttached) Debugger.Break();
                     continue;
                 }

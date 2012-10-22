@@ -80,6 +80,7 @@
     <Compile Include="DataStore.cs" />
     <Compile Include="Entity.cs" />
     <Compile Include="Interfaces\IEntityInfo.cs" />
+    <Compile Include="Interfaces\ITableBasedStore.cs" />
     <Compile Include="SQL Store Base\SqlFilterCondition.cs" />
     <Compile Include="SqlDateTimeDefault.cs" />
     <Compile Include="FilterCondition.cs" />

@@ -172,5 +172,47 @@ namespace OpenNETCF.ORM
 
             return true;
         }
+
+        public bool DoReferentialInserts()
+        {
+            try
+            {
+                Store.AddType<Author>();
+                Store.AddType<Book>();
+                Store.CreateOrUpdateStore();
+
+                // insert an author
+                var dumas = new Author() { Name = "Alexadre Dumas" };
+                Store.Insert(dumas);
+
+                // insert a couple books.
+                // note that we're inserting the foreign key value
+                Store.Insert(
+                    new Book()
+                    {
+                        AuthorID = dumas.ID,
+                        Title = "The Count of Monte Cristo"
+                    });
+
+                Store.Insert(
+                    new Book()
+                    {
+                        AuthorID = dumas.ID,
+                        Title = "The Three Musketeers"
+                    });
+
+                // now get the authors back, telling ORM to fill the references
+                var authors = Store.Select<Author>(true).ToArray();
+
+                if (authors.Length != 1) return false;
+                if (authors[0].Books.Length != 2) return false;
+
+                return true;
+            }
+            catch(Exception ex)
+            {
+                return false;
+            }
+        }
     }
 }
