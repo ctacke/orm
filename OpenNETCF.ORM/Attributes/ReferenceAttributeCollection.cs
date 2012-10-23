@@ -3,20 +3,23 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
+using System.Security.Cryptography;
 
 namespace OpenNETCF.ORM
 {
     public class ReferenceAttributeCollection : IEnumerable<ReferenceAttribute>
     {
-        private Dictionary<int, ReferenceAttribute> m_references = new Dictionary<int, ReferenceAttribute>();
+        private MD5 m_hash;
+        private Dictionary<string, ReferenceAttribute> m_references = new Dictionary<string, ReferenceAttribute>();
 
         internal ReferenceAttributeCollection()
         {
+            m_hash = MD5.Create();
         }
 
         internal void Add(ReferenceAttribute reference)
         {
-            m_references.Add(reference.GetHashCode(), reference);
+            m_references.Add(reference.GenerateHash(), reference);
         }
 
         public int Count
@@ -28,7 +31,7 @@ namespace OpenNETCF.ORM
         {
             get 
             {
-                int hash = referenceName.GetHashCode() | referenceType.Name.GetHashCode() | referenceFieldName.GetHashCode();
+                var hash = string.Format("{0}{1}{2}", referenceName, referenceType.Name, referenceFieldName);
                 return m_references[hash]; 
             }
         }

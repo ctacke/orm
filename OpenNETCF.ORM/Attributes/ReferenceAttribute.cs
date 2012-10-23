@@ -36,10 +36,5 @@ namespace OpenNETCF.ORM
             if (!this.ReferenceEntityType.Equals(other.ReferenceEntityType)) return false;
             return string.Compare(this.ReferenceField, other.ReferenceField, StringComparison.InvariantCultureIgnoreCase) == 0;
         }
-
-        public override int GetHashCode()
-        {
-            return PropertyInfo.Name.GetHashCode() | ReferenceEntityType.Name.GetHashCode() | ReferenceField.GetHashCode();
-        }
     }
 }

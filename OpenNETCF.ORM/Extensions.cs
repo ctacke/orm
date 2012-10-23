@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using System.Data;
+using System.Security.Cryptography;
 
 namespace OpenNETCF.ORM
 {
@@ -264,6 +265,12 @@ namespace OpenNETCF.ORM
             {
                 store.CreateStore();
             }
+        }
+
+        public static string GenerateHash(this ReferenceAttribute r)
+        {
+            var hash = string.Format("{0}{1}{2}", r.PropertyInfo.Name, r.ReferenceEntityType.Name, r.ReferenceField);
+            return hash;
         }
     }
 }
