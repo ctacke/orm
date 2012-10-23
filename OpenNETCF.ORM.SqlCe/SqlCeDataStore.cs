@@ -221,7 +221,8 @@ namespace OpenNETCF.ORM
                                 var valueArray = reference.PropertyInfo.GetValue(item, null);
                                 if (valueArray == null) continue;
 
-                                var fk = Entities[entityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(item, null);
+                                // get the primary key of the parent
+                                var parentKey = Entities[entityName].Fields.First(f => f.IsPrimaryKey).PropertyInfo.GetValue(item, null);
 
                                 string et = null;
 
@@ -234,7 +235,7 @@ namespace OpenNETCF.ORM
                                     }
 
                                     // get the FK value
-                                    var keyValue = Entities[et].Fields.KeyField.PropertyInfo.GetValue(element, null);
+                                    var foreignKeyValue = Entities[et].Fields.KeyField.PropertyInfo.GetValue(element, null);
 
                                     bool isNew = false;
 
@@ -245,17 +246,17 @@ namespace OpenNETCF.ORM
                                     {
                                         case KeyScheme.Identity:
                                             // TODO: see if PK field value == -1
-                                            isNew = keyValue.Equals(-1);
+                                            isNew = foreignKeyValue.Equals(-1);
                                             break;
                                         case KeyScheme.GUID:
                                             // TODO: see if PK field value == null
-                                            isNew = keyValue.Equals(null);
+                                            isNew = foreignKeyValue.Equals(null);
                                             break;
                                     }
 
                                     if (isNew)
                                     {
-                                        Entities[et].Fields[reference.ReferenceField].PropertyInfo.SetValue(element, fk, null);
+                                        Entities[et].Fields[reference.ReferenceField].PropertyInfo.SetValue(element, parentKey, null);
                                         Insert(element);
                                     }
                                 }
