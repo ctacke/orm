@@ -102,7 +102,17 @@ namespace OpenNETCF.ORM
 
         public void Delete(object item)
         {
-            var name = Entities.GetNameForType(item.GetType());
+            string name;
+
+            if (item is DynamicEntity)
+            {
+                name = (item as DynamicEntity).EntityName;
+            }
+            else
+            {
+                name = Entities.GetNameForType(item.GetType());
+            }
+
             OnBeforeDelete(name, item);
             OnDelete(item);
             OnAfterDelete(name, item);
@@ -164,7 +174,17 @@ namespace OpenNETCF.ORM
 
         public void Update(object item, bool cascadeUpdates, string fieldName)
         {
-            var name = Entities.GetNameForType(item.GetType());
+            string name;
+
+            if (item is DynamicEntity)
+            {
+                name = (item as DynamicEntity).EntityName;
+            }
+            else
+            {
+                name = Entities.GetNameForType(item.GetType());
+            }
+
             OnBeforeUpdate(name, item, cascadeUpdates, fieldName);
             OnUpdate(item, cascadeUpdates, fieldName);
             OnAfterUpdate(name, item, cascadeUpdates, fieldName);
@@ -190,7 +210,17 @@ namespace OpenNETCF.ORM
 
         public void Insert(object item, bool insertReferences)
         {
-            var name = Entities.GetNameForType(item.GetType());
+            string name;
+
+            if (item is DynamicEntity)
+            {
+                name = (item as DynamicEntity).EntityName;
+            }
+            else
+            {
+                name = Entities.GetNameForType(item.GetType());
+            }
+
             OnBeforeInsert(name, item, insertReferences);
             OnInsert(item, insertReferences);
             OnAfterInsert(name, item, insertReferences);
