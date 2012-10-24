@@ -16,6 +16,7 @@ namespace OpenNETCF.ORM
         event EventHandler<EntityUpdateArgs> AfterUpdate;
 
         string Name { get; }
+        EntityInfoCollection Entities { get; }
 
         void AddType<T>();
         void AddType<T>(bool ensureCompatibility);
