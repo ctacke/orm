@@ -5,4 +5,4 @@ using System.Reflection;
 
 // see http://landweb.nascom.nasa.gov/browse/calendar.html
 
-[assembly: AssemblyVersion("1.0.12298.0")]
+[assembly: AssemblyVersion("1.0.12306.0")]

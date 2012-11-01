@@ -416,7 +416,7 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
             for (int i = 0; i < iterations; i++)
             {
                 sw.Start();
-                var books = store.Select<Book>();
+                var books = store.Select<Book>().ToArray();
                 sw.Stop();
 
                 if (i == 0)

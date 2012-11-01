@@ -44,6 +44,7 @@ namespace OpenNETCF.ORM
         public abstract override void OnUpdate(object item, bool cascadeUpdates, string fieldName);
 
         public abstract override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences);
+        public abstract override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount);
 
         public abstract override int Count<T>(IEnumerable<FilterCondition> filters);
 
@@ -599,7 +600,13 @@ namespace OpenNETCF.ORM
 
         protected virtual IEnumerable<object> Select(Type objectType, string searchFieldName, object matchValue, int fetchCount, int firstRowOffset, bool fillReferences)
         {
-            string entityName = m_entities.GetNameForType(objectType);
+            var entityName = Entities.GetNameForType(objectType);
+            // if the entity type hasn't already been registered, try to auto-register
+            if (entityName == null)
+            {
+                AddType(objectType);
+            }
+            
             FilterCondition filter = null;
 
             if (searchFieldName == null)
@@ -827,16 +834,104 @@ namespace OpenNETCF.ORM
             m_referenceCache.Clear();
         }
 
+        protected void DoInsertReferences(object item, string entityName, KeyScheme keyScheme)
+        {
+            // cascade insert any References
+            // do this last because we need the PK from above
+            foreach (var reference in Entities[entityName].References)
+            {
+                if (reference.ReferenceType == ReferenceType.ManyToOne) // N:1
+                {
+                    // in an N:1 we need to insert the related item first, so it can get a PK assigned
+                    var referenceEntity = reference.PropertyInfo.GetValue(item, null);
+
+                    // is there anything to insert?
+                    if (referenceEntity == null) continue;
+
+                    var referenceEntityName = Entities.GetNameForType(reference.ReferenceEntityType);
+                    var refPK = Entities[referenceEntityName].Fields.KeyField.PropertyInfo.GetValue(referenceEntity, null);
+
+                    // does the reference entity already exist in the store?
+                    var existing = Select(reference.ReferenceEntityType, null, refPK, -1, -1, true).FirstOrDefault();
+
+                    if (existing == null)
+                    {
+                        Insert(referenceEntity);
+
+                        // we then copy the PK of the reference item into the "local" FK field - need to re-query the key
+                        refPK = Entities[referenceEntityName].Fields.KeyField.PropertyInfo.GetValue(referenceEntity, null);
+
+                        // set the item key
+                        // we already inserted, so we have to do an update
+                        // TODO: in the future, we should move this up and do reference inserts first, then back=propagate references
+                        Entities[entityName].Fields[reference.ReferenceField].PropertyInfo.SetValue(item, refPK, null);
+                    }
+                    else
+                    {
+                        // TODO: should we look for reference entity updates?  That's complex and probably out of scope for the purposes of ORM
+                    }
+                }
+                else // 1:N
+                {
+                    // cascade insert any References
+                    // do this last because we need the PK from above
+                    string et = null;
+
+                    var valueArray = reference.PropertyInfo.GetValue(item, null);
+                    if (valueArray == null) continue;
+
+                    var fk = Entities[entityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(item, null);
+
+                    // we've already enforced this to be an array when creating the store
+                    foreach (var element in valueArray as Array)
+                    {
+                        if (et == null)
+                        {
+                            et = m_entities.GetNameForType(element.GetType());
+                        }
+
+                        // get the FK value
+                        var keyValue = Entities[et].Fields.KeyField.PropertyInfo.GetValue(element, null);
+
+                        bool isNew = false;
+
+
+                        // only do an insert if the value is new (i.e. need to look for existing reference items)
+                        // not certain how this will work right now, so for now we ask the caller to know what they're doing
+                        switch (keyScheme)
+                        {
+                            case KeyScheme.Identity:
+                                // TODO: see if PK field value == -1
+                                isNew = keyValue.Equals(-1);
+                                break;
+                            case KeyScheme.GUID:
+                                // TODO: see if PK field value == null
+                                isNew = keyValue.Equals(null);
+                                break;
+                        }
+
+                        if (isNew)
+                        {
+                            Entities[et].Fields[reference.ReferenceField].PropertyInfo.SetValue(element, fk, null);
+                            Insert(element);
+                        }
+                    }
+                }
+
+            }
+        }
+        
         protected void FillReferences(object instance, object keyValue, ReferenceAttribute[] fieldsToFill, bool cacheReferenceTable)
         {
             if (instance == null) return;
 
             Type type = instance.GetType();
-            string entityName = m_entities.GetNameForType(type);
+            var entityName = m_entities.GetNameForType(type);
 
             if (entityName == null)
             {
-                throw new EntityNotFoundException(type);
+                AddType(type);
+                entityName = m_entities.GetNameForType(type);
             }
 
             if (Entities[entityName].References.Count == 0) return;
@@ -860,6 +955,13 @@ namespace OpenNETCF.ORM
                     }
                 }
 
+                if (reference.ReferenceType == ReferenceType.ManyToOne)
+                {
+                    // In a N:1 relation, the local ('instance' coming in here) key is the FK and the remote it the PK.  
+                    // We need to read the local FK, so we can go to the reference table and pull the one row with that PK value
+                    keyValue = m_entities[entityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(instance, null);
+                }
+
                 // get the lookup values - until we support filtered selects, this may be very expensive memory-wise
                 if (!referenceItems.ContainsKey(reference))
                 {
@@ -880,7 +982,15 @@ namespace OpenNETCF.ORM
                     }
                     else
                     {
-                        refData = Select(reference.ReferenceEntityType, reference.ReferenceField, keyValue, -1, 0);
+                        // FALSE for last parameter to prevent circular reference filling
+                        refData = Select(reference.ReferenceEntityType, reference.ReferenceField, keyValue, -1, 0, false);
+                    }
+
+                    // see if the reference type is known - if not, try to add it automatically
+                    var name = Entities.GetNameForType(reference.ReferenceEntityType);
+                    if (name == null)
+                    {
+                        AddType(reference.ReferenceEntityType);
                     }
 
                     referenceItems.Add(reference, refData.ToArray());
@@ -1072,6 +1182,12 @@ namespace OpenNETCF.ORM
         protected virtual void Delete(Type t, object primaryKey)
         {
             string entityName = m_entities.GetNameForType(t);
+
+            // if the entity type hasn't already been registered, try to auto-register
+            if (entityName == null)
+            {
+                AddType(t);
+            }
 
             Delete(entityName, primaryKey);
         }
