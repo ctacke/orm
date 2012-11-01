@@ -154,7 +154,7 @@ namespace OpenNETCF.ORM
 
             return insertCommand;
         }
-
+        
         /// <summary>
         /// Inserts the provided entity instance into the underlying data store.
         /// </summary>
@@ -166,10 +166,17 @@ namespace OpenNETCF.ORM
         {
             var itemType = item.GetType();
             string entityName = m_entities.GetNameForType(itemType);
+            var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
 
             if (entityName == null)
             {
                 throw new EntityNotFoundException(item.GetType());
+            }
+
+            // ---------- Handle N:1 References -------------
+            if (insertReferences)
+            {
+                DoInsertReferences(item, entityName, keyScheme);
             }
 
             var connection = GetConnection(false);
@@ -179,8 +186,6 @@ namespace OpenNETCF.ORM
                 var command = GetInsertCommand(entityName);
                 command.Connection = connection as SQLiteConnection;
                 command.Transaction = CurrentTransaction as SQLiteTransaction;
-
-                var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
 
                 // TODO: fill the parameters
                 foreach (var field in Entities[entityName].Fields)
@@ -248,52 +253,8 @@ namespace OpenNETCF.ORM
 
                 if (insertReferences)
                 {
-                    // cascade insert any References
-                    // do this last because we need the PK from above
-                    foreach (var reference in Entities[entityName].References)
-                    {
-                        var valueArray = reference.PropertyInfo.GetValue(item, null);
-                        if (valueArray == null) continue;
-
-                        var fk = Entities[entityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(item, null);
-
-                        string et = null;
-
-                        // we've already enforced this to be an array when creating the store
-                        foreach (var element in valueArray as Array)
-                        {
-                            if (et == null)
-                            {
-                                et = m_entities.GetNameForType(element.GetType());
-                            }
-
-                            // get the FK value
-                            var keyValue = Entities[et].Fields.KeyField.PropertyInfo.GetValue(element, null);
-
-                            bool isNew = false;
-
-
-                            // only do an insert if the value is new (i.e. need to look for existing reference items)
-                            // not certain how this will work right now, so for now we ask the caller to know what they're doing
-                            switch (keyScheme)
-                            {
-                                case KeyScheme.Identity:
-                                    // TODO: see if PK field value == -1
-                                    isNew = keyValue.Equals(-1);
-                                    break;
-                                case KeyScheme.GUID:
-                                    // TODO: see if PK field value == null
-                                    isNew = keyValue.Equals(null);
-                                    break;
-                            }
-
-                            if (isNew)
-                            {
-                                Entities[et].Fields[reference.ReferenceField].PropertyInfo.SetValue(element, fk, null);
-                                Insert(element);
-                            }
-                        }
-                    }
+                    // ---------- Handle 1:N References -------------
+                    DoInsertReferences(item, entityName, keyScheme);
                 }
             }
             finally
@@ -442,7 +403,19 @@ namespace OpenNETCF.ORM
                 CreateTable(connection, entity);
                 return;
             }
-            
+
+            using (var command = new SQLiteCommand())
+            {
+                command.Connection = connection as SQLiteConnection;
+                command.CommandText = string.Format("PRAGMA table_info({0})", entity.EntityName);
+                using (var reader = command.ExecuteReader())
+                {
+
+                }
+            }
+
+            return;
+
             throw new NotImplementedException();
 
             // NOTE: THIS IS COPIED FROM THE SQL CE IMPLEMENTAION
@@ -720,14 +693,15 @@ namespace OpenNETCF.ORM
                                         field.PropertyInfo.SetValue(item, value, null);
                                     }
                                 }
-                                //Check if it is reference key to set, not primary.
-                                ReferenceAttribute attr = referenceFields.Where(
-                                    x => x.ReferenceField == field.FieldName).FirstOrDefault();
 
-                                if (attr != null)
-                                {
-                                    rowPK = value;
-                                }
+                                //Check if it is reference key to set, not primary.
+                                //ReferenceAttribute attr = referenceFields.Where(
+                                //    x => x.ReferenceField == field.FieldName).FirstOrDefault();
+
+                                //if (attr != null)
+                                //{
+                                //    rowPK = value;
+                                //}
                                 if (field.IsPrimaryKey)
                                 {
                                     rowPK = value;
@@ -992,6 +966,11 @@ namespace OpenNETCF.ORM
         }
 
         public override void DiscoverDynamicEntity(string entityName)
+        {
+            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
+        }
+
+        public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount)
         {
             throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
         }

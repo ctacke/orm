@@ -1,20 +1,31 @@
-﻿using System;
+﻿#if WINDOWS_PHONE
+using HASH = System.Security.Cryptography.AesManaged;
+#else
+using HASH = System.Security.Cryptography.MD5;
+#endif
+
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using System.Diagnostics;
 using System.Security.Cryptography;
 
+
 namespace OpenNETCF.ORM
 {
     public class ReferenceAttributeCollection : IEnumerable<ReferenceAttribute>
     {
-        private MD5 m_hash;
+        private HASH m_hash;
         private Dictionary<string, ReferenceAttribute> m_references = new Dictionary<string, ReferenceAttribute>();
 
         internal ReferenceAttributeCollection()
         {
-            m_hash = MD5.Create();
+#if WINDOWS_PHONE
+            m_hash = new HASH();
+#else
+            m_hash = HASH.Create();
+#endif
         }
 
         internal void Add(ReferenceAttribute reference)

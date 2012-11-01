@@ -175,9 +175,16 @@ namespace OpenNETCF.ORM
                 entityName = m_entities.GetNameForType(itemType);
             }
 
+            var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
+
             if (entityName == null)
             {
                 throw new EntityNotFoundException(item.GetType());
+            }
+
+            if (insertReferences)
+            {
+                DoInsertReferences(item, entityName, keyScheme);
             }
 
             // we'll use table direct for inserts - no point in getting the query parser involved in this
@@ -212,55 +219,7 @@ namespace OpenNETCF.ORM
 
                         if (insertReferences)
                         {
-                            var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
-
-                            // cascade insert any References
-                            // do this last because we need the PK from above
-                            foreach (var reference in Entities[entityName].References)
-                            {
-                                var valueArray = reference.PropertyInfo.GetValue(item, null);
-                                if (valueArray == null) continue;
-
-                                // get the primary key of the parent
-                                var parentKey = Entities[entityName].Fields.First(f => f.IsPrimaryKey).PropertyInfo.GetValue(item, null);
-
-                                string et = null;
-
-                                // we've already enforced this to be an array when creating the store
-                                foreach (var element in valueArray as Array)
-                                {
-                                    if (et == null)
-                                    {
-                                        et = m_entities.GetNameForType(element.GetType());
-                                    }
-
-                                    // get the FK value
-                                    var foreignKeyValue = Entities[et].Fields.KeyField.PropertyInfo.GetValue(element, null);
-
-                                    bool isNew = false;
-
-
-                                    // only do an insert if the value is new (i.e. need to look for existing reference items)
-                                    // not certain how this will work right now, so for now we ask the caller to know what they're doing
-                                    switch (keyScheme)
-                                    {
-                                        case KeyScheme.Identity:
-                                            // TODO: see if PK field value == -1
-                                            isNew = foreignKeyValue.Equals(-1);
-                                            break;
-                                        case KeyScheme.GUID:
-                                            // TODO: see if PK field value == null
-                                            isNew = foreignKeyValue.Equals(null);
-                                            break;
-                                    }
-
-                                    if (isNew)
-                                    {
-                                        Entities[et].Fields[reference.ReferenceField].PropertyInfo.SetValue(element, parentKey, null);
-                                        Insert(element);
-                                    }
-                                }
-                            }
+                            DoInsertReferences(item, entityName, keyScheme);
                         }
                     }
 

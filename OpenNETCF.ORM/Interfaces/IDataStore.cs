@@ -71,6 +71,8 @@ namespace OpenNETCF.ORM
         IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
             where T : new();
 
+        IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount);
+
         int Count<T>();
         int Count(string entityName);
 

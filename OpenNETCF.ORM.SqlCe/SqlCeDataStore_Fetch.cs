@@ -9,6 +9,11 @@ namespace OpenNETCF.ORM
 {
     partial class SqlCeDataStore
     {
+        public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount)
+        {
+            throw new NotSupportedException("Fetching dynamic entities is not supported by this provider");
+        }
+
         public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
             var type = typeof(T);
