@@ -55,6 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BinaryData.cs" />
+    <Compile Include="ExtensionTests.cs" />
     <Compile Include="Entities\SeekItem.cs" />
     <Compile Include="EntityCreationTests.cs" />
     <Compile Include="DataGenerator.cs" />

@@ -17,11 +17,12 @@ namespace EntityGenerator.Entities
         CSharp
     }
 
-    internal class BuildOptions
+    public class BuildOptions
     {
         private static string ElementName = "BuildOptions";
         private static string LanguageAttribute = "language";
         private static string OutputFolderAttribute = "outputFolder";
+        private static string SourceFolderAttribute = "sourceFolder";
         private static string NamespaceAttribute = "namespace";
         private static string EntityModifierAttribute = "entityModifier";
 
@@ -30,6 +31,7 @@ namespace EntityGenerator.Entities
             // set defaults
             Language = OutputLanguage.CSharp;
             OutputFolder = "C:\\ORM";
+            SourceFolder = Application.StartupPath;
             EntityNamespace = "OpenNETCF.ORM";
             EntityModifier = System.Reflection.TypeAttributes.Public;
         }
@@ -38,6 +40,7 @@ namespace EntityGenerator.Entities
         public string OutputFolder { get; set; }
         public string EntityNamespace { get; set; }
         public TypeAttributes EntityModifier { get; set; }
+        public string SourceFolder { get; set; }
 
         public static BuildOptions Load(string path)
         {
@@ -66,6 +69,12 @@ namespace EntityGenerator.Entities
                     options.OutputFolder = (string)atttrib;
                 }
 
+                atttrib = element.Attribute(SourceFolderAttribute);
+                if (atttrib != null)
+                {
+                    options.SourceFolder = (string)atttrib;
+                }
+
                 atttrib = element.Attribute(NamespaceAttribute);
                 if (atttrib != null)
                 {
@@ -89,6 +98,7 @@ namespace EntityGenerator.Entities
                 new XElement(ElementName,
                     new XAttribute(LanguageAttribute, this.Language.ToString()),
                     new XAttribute(OutputFolderAttribute, this.OutputFolder),
+                    new XAttribute(SourceFolderAttribute, this.SourceFolder),
                     new XAttribute(NamespaceAttribute, this.EntityNamespace),
                     new XAttribute(EntityModifierAttribute, this.EntityModifier.ToString())
                     ));

@@ -64,6 +64,14 @@ namespace EntityGenerator.Views
                         fieldNode.Checked = true;
                     }
 
+                    foreach (var reference in entity.References)
+                    {
+                        var refNode = new TreeNode(string.Format("[Reference from {0} to {1}.{2}]", reference.LocalFieldName, reference.ReferenceTable, reference.RemoteFieldName));
+                        refNode.Tag = reference;
+                        entityNode.Nodes.Add(refNode);
+                        refNode.Checked = true;
+                    }
+
                     entityTree.Nodes.Add(entityNode);
                 }
             }
