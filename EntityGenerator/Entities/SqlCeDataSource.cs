@@ -27,7 +27,7 @@ namespace EntityGenerator.Entities
             get { return "SQL Server Compact"; }
         }
 
-        public object BrowseForSource()
+        public object BrowseForSource(BuildOptions options)
         {
             // TODO: load last browse folder
             var ofd = new OpenFileDialog();

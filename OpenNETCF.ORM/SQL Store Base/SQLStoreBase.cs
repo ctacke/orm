@@ -584,7 +584,7 @@ namespace OpenNETCF.ORM
 
         public override IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters)
         {
-            return Select<T>(filters, true);
+            return Select<T>(filters, false);
         }
 
         public override IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences)

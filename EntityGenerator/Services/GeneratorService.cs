@@ -10,6 +10,7 @@ using System.CodeDom.Compiler;
 using System.Reflection;
 using System.IO;
 using System.Data;
+using System.Reflection.Emit;
 
 namespace EntityGenerator.Services
 {
@@ -27,6 +28,7 @@ namespace EntityGenerator.Services
                 m_sources = new IDataSource[]
                 {
                     new SqlCeDataSource(),
+                    new SQLiteDataSource()
                 };
             }
             return m_sources;
@@ -53,11 +55,11 @@ namespace EntityGenerator.Services
             return null;
         }
 
-        public object BrowseForSource()
+        public object BrowseForSource(BuildOptions options)
         {
             if (CurrentSourceType == null) return null;
 
-            return CurrentSourceType.BrowseForSource();
+            return CurrentSourceType.BrowseForSource(options);
         }
 
         public void SetSelectedStructure(IEnumerable<EntityGenerator.Entities.EntityInfo> structure)
@@ -104,7 +106,7 @@ namespace EntityGenerator.Services
                     {
                         // TODO: optionally make it bindable with RaisePropertyChanged
                         var type = new CodeTypeReference(field.DataType.ToManagedType(field.AllowsNulls));
-                        var backingFieldName = "m_" + field.FieldName.ToLower(); // TODO: let the use specify format
+                        var backingFieldName = "m_" + field.FieldName.ToLower(); // TODO: let the user specify format
                         var backingField = new CodeMemberField(type, backingFieldName);
                         backingField.Attributes = MemberAttributes.Private;
                         fieldList.Add(backingField);
@@ -127,17 +129,49 @@ namespace EntityGenerator.Services
                         propList.Add(prop);
                     }
                     
-                    // this is outside the loop above to give some semblance of structure to the code
+                    foreach (var reference in entity.References)
+                    {
+                        var refType = new CodeTypeReference(reference.ReferenceTable);
+
+
+                        var backingFieldName = "m_ref" + reference.ReferenceTable; // TODO: let the use specify format
+                        var backingField = new CodeMemberField(refType, backingFieldName);
+                        backingField.Attributes = MemberAttributes.Private;
+                        fieldList.Add(backingField); 
+                        
+                        var prop = new CodeMemberProperty();                       
+                        prop.Name = reference.ReferenceTable;
+                        // crop any "s" suffix for the name
+                        if (prop.Name.EndsWith("s")) prop.Name = prop.Name.Substring(0, prop.Name.Length - 1);
+                        prop.Attributes = MemberAttributes.Public | MemberAttributes.Final;  // TODO: get from UI
+                        prop.CustomAttributes.Add(new CodeAttributeDeclaration("Reference", GenerateReferenceArguments(reference)));
+                        prop.Type = refType;
+                        prop.GetStatements.Add(
+                            new CodeMethodReturnStatement(
+                                new CodeFieldReferenceExpression(
+                                    new CodeThisReferenceExpression(), backingFieldName)));
+                        prop.SetStatements.Add(
+                            new CodeAssignStatement(
+                                new CodeFieldReferenceExpression(
+                                    new CodeThisReferenceExpression(), backingFieldName),
+                                    new CodePropertySetValueReferenceExpression()));
+
+                        propList.Add(prop);
+                    }
+
+                    // this is outside the loops above to give some semblance of structure to the code
                     foreach (var backingField in fieldList)
                     {
                         entityClass.Members.Add(backingField);
                     }
+
                     foreach (var prop in propList)
                     {
                         entityClass.Members.Add(prop);
                     }
 
                     root.Types.Add(entityClass);
+                    
 
                     // Generate the C# source code for this class
                     GenerateClassFile(options, csProvider, ccu, entity.Entity.NameInStore);
@@ -178,13 +212,13 @@ namespace EntityGenerator.Services
                 {
                     case DbType.Byte:
                         statement = new CodeExpressionStatement(new CodeSnippetExpression(
-                            string.Format("item.{0} = (value == DBNull.Value) ? 0 : (byte{1})value",
+                            string.Format("item.{0} = (value == DBNull.Value) ? (byte{1})0 : (byte{1})value",
                             field.FieldName,
                             field.AllowsNulls ? "?" : string.Empty)));
                         break;
                     case DbType.Int16:
                         statement = new CodeExpressionStatement(new CodeSnippetExpression(
-                            string.Format("item.{0} = (value == DBNull.Value) ? 0 : (short{1})value",
+                            string.Format("item.{0} = (value == DBNull.Value) ? (short{1})0 : (short{1})value",
                             field.FieldName,
                             field.AllowsNulls ? "?" : string.Empty)));
                         break;
@@ -223,6 +257,7 @@ namespace EntityGenerator.Services
                             field.AllowsNulls ? "?" : string.Empty)));
                         break;
                     case DbType.String:
+                    case DbType.StringFixedLength:
                         statement = new CodeExpressionStatement(new CodeSnippetExpression(
                             string.Format("item.{0} = (value == DBNull.Value) ? null : (string)value",
                             field.FieldName)));
@@ -230,6 +265,17 @@ namespace EntityGenerator.Services
                     case DbType.Guid:
                         statement = new CodeExpressionStatement(new CodeSnippetExpression(
                             string.Format("item.{0} = (value == DBNull.Value) ? null : (Guid{1})value",
+                            field.FieldName,
+                            field.AllowsNulls ? "?" : string.Empty)));
+                        break;
+                    case DbType.Binary:
+                        statement = new CodeExpressionStatement(new CodeSnippetExpression(
+                            string.Format("item.{0} = (value == DBNull.Value) ? null : (byte[])value",
+                            field.FieldName)));
+                        break;
+                    case DbType.DateTime:
+                        statement = new CodeExpressionStatement(new CodeSnippetExpression(
+                            string.Format("item.{0} = (value == DBNull.Value) ? null : (DateTime{1})value",
                             field.FieldName,
                             field.AllowsNulls ? "?" : string.Empty)));
                         break;
@@ -254,6 +300,17 @@ namespace EntityGenerator.Services
             proxy.Statements.Add(ret);
 
             return proxy;
+        }
+
+        private CodeAttributeArgument[] GenerateReferenceArguments(ReferenceInfo reference)
+        {
+            var attrList = new List<CodeAttributeArgument>();
+
+            attrList.Add(new CodeAttributeArgument(new CodeSnippetExpression(string.Format("typeof({0})", reference.ReferenceTable))));
+            attrList.Add(new CodeAttributeArgument(new CodeSnippetExpression(string.Format("\"{0}\"", reference.LocalFieldName))));
+            attrList.Add(new CodeAttributeArgument(new CodeSnippetExpression("ReferenceType=ReferenceType.ManyToOne")));
+            
+            return attrList.ToArray();
         }
 
         private CodeAttributeArgument[] GenerateFieldArguments(FieldAttribute field)

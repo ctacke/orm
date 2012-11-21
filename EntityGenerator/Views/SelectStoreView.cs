@@ -15,7 +15,8 @@ namespace EntityGenerator.Views
 {
     public partial class SelectStoreView : WizardViewBase
     {
-        WizardPresenter Presenter { get; set; }
+        private BuildOptions BuildOptions { get; set; }
+        private WizardPresenter Presenter { get; set; }
 
         public SelectStoreView()
         {
@@ -29,6 +30,8 @@ namespace EntityGenerator.Views
             Presenter = presenter;
 
             this.Caption = "Select Data Store";
+
+            BuildOptions = presenter.GetBuildOptions();
 
             sourceType.SelectedIndexChanged += new EventHandler(sourceType_SelectedIndexChanged);
             LoadSourceTypes();

@@ -594,92 +594,98 @@ namespace OpenNETCF.ORM
                                 continue;
                             }
 
-                            // create the actual object instance
-                            // this is faster than Activator.CreateInstance starting at call #2 for the type
-                            var ctor = GetConstructorForType(objectType);
-                            object item = ctor.Invoke(null);
-                            object rowPK = null;
-
                             // autofill references if desired
                             if (referenceFields == null)
                             {
                                 referenceFields = Entities[entityName].References.ToArray();
                             }
 
+                            bool fieldsSet;
+                            object item = CreateEntityInstance(entityName, objectType, Entities[entityName].Fields, results, out fieldsSet);
 
-                            foreach (var field in Entities[entityName].Fields)
+                            object rowPK = null;
+
+                            if(!fieldsSet)
                             {
-                                var value = results[field.Ordinal];
-                                if (value != DBNull.Value)
+                                foreach (var field in Entities[entityName].Fields)
                                 {
-                                    if (field.DataType == DbType.Object)
+                                    var value = results[field.Ordinal];
+                                    if (value != DBNull.Value)
                                     {
-                                        if (fillReferences)
+                                        if (field.DataType == DbType.Object)
                                         {
-                                            // get serializer
-                                            var itemType = item.GetType();
-                                            var deserializer = GetDeserializer(itemType);
-
-                                            if (deserializer == null)
+                                            if (fillReferences)
                                             {
-                                                throw new MissingMethodException(
-                                                    string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
-                                                    field.FieldName, entityName));
-                                            }
+                                                // get serializer
+                                                var itemType = item.GetType();
+                                                var deserializer = GetDeserializer(itemType);
 
-                                            var @object = deserializer.Invoke(item, new object[] { field.FieldName, value });
-                                            field.PropertyInfo.SetValue(item, @object, null);
+                                                if (deserializer == null)
+                                                {
+                                                    throw new MissingMethodException(
+                                                        string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
+                                                        field.FieldName, entityName));
+                                                }
+
+                                                var @object = deserializer.Invoke(item, new object[] { field.FieldName, value });
+                                                field.PropertyInfo.SetValue(item, @object, null);
+                                            }
                                         }
-                                    }
-                                    else if (field.IsRowVersion)
-                                    {
-                                        // sql stores this an 8-byte array
-                                        field.PropertyInfo.SetValue(item, BitConverter.ToInt64((byte[])value, 0), null);
-                                    }
-                                    else if (field.IsTimespan)
-                                    {
-                                        // SQL Compact doesn't support Time, so we're convert to ticks in both directions
-                                        var valueAsTimeSpan = new TimeSpan((long)value);
-                                        field.PropertyInfo.SetValue(item, valueAsTimeSpan, null);
-                                    }
-                                    else if ((field.IsPrimaryKey) && (value is Int64))
-                                    {
-                                        if (field.PropertyInfo.PropertyType.Equals(typeof(int)))
+                                        else if (field.IsRowVersion)
                                         {
-                                            // SQLite automatically makes auto-increment fields 64-bit, so this works around that behavior
-                                            field.PropertyInfo.SetValue(item, Convert.ToInt32(value), null);
+                                            // sql stores this an 8-byte array
+                                            field.PropertyInfo.SetValue(item, BitConverter.ToInt64((byte[])value, 0), null);
                                         }
-                                        else
+                                        else if (field.IsTimespan)
                                         {
-                                            field.PropertyInfo.SetValue(item, Convert.ToInt64(value), null);
+                                            // SQL Compact doesn't support Time, so we're convert to ticks in both directions
+                                            var valueAsTimeSpan = new TimeSpan((long)value);
+                                            field.PropertyInfo.SetValue(item, valueAsTimeSpan, null);
                                         }
-                                    }
-                                    else if ((value is Int64) || (value is double))
-                                    {
-                                        // SQLite is "interesting" in that its 'integer' has a strong affinity toward 64-bit, so int and uint properties
-                                        // end up as 64-bit fields.  Decimals have a strong affinity toward 'double', so float properties
-                                        // end up as 'double'. Even more fun is that a decimal value '0' will come back as an int64
-                                        
-                                        // When we query those back, we must convert to put them into the property or we crash hard
-                                        if(field.PropertyInfo.PropertyType.Equals(typeof(UInt32)))
+                                        else if ((field.IsPrimaryKey) && (value is Int64))
                                         {
-                                            var t = value.GetType();
-                                            field.PropertyInfo.SetValue(item, Convert.ToUInt32(value), null);
+                                            if (field.PropertyInfo.PropertyType.Equals(typeof(int)))
+                                            {
+                                                // SQLite automatically makes auto-increment fields 64-bit, so this works around that behavior
+                                                field.PropertyInfo.SetValue(item, Convert.ToInt32(value), null);
+                                            }
+                                            else
+                                            {
+                                                field.PropertyInfo.SetValue(item, Convert.ToInt64(value), null);
+                                            }
                                         }
-                                        else if (field.PropertyInfo.PropertyType.Equals(typeof(Int32)))
+                                        else if ((value is Int64) || (value is double))
                                         {
-                                            var t = value.GetType();
-                                            field.PropertyInfo.SetValue(item, Convert.ToInt32(value), null);
-                                        }
-                                        else if (field.PropertyInfo.PropertyType.Equals(typeof(decimal)))
-                                        {
-                                            var t = value.GetType();
-                                            field.PropertyInfo.SetValue(item, Convert.ToDecimal(value), null);
-                                        }
-                                        else if (field.PropertyInfo.PropertyType.Equals(typeof(float)))
-                                        {
-                                            var t = value.GetType();
-                                            field.PropertyInfo.SetValue(item, Convert.ToSingle(value), null);
+                                            // SQLite is "interesting" in that its 'integer' has a strong affinity toward 64-bit, so int and uint properties
+                                            // end up as 64-bit fields.  Decimals have a strong affinity toward 'double', so float properties
+                                            // end up as 'double'. Even more fun is that a decimal value '0' will come back as an int64
+
+                                            // When we query those back, we must convert to put them into the property or we crash hard
+                                            if (field.PropertyInfo.PropertyType.Equals(typeof(UInt32)))
+                                            {
+                                                var t = value.GetType();
+                                                field.PropertyInfo.SetValue(item, Convert.ToUInt32(value), null);
+                                            }
+                                            else if ((field.PropertyInfo.PropertyType.Equals(typeof(Int32))) || (field.PropertyInfo.PropertyType.Equals(typeof(Int32?))))
+                                            {
+                                                var t = value.GetType();
+                                                field.PropertyInfo.SetValue(item, Convert.ToInt32(value), null);
+                                            }
+                                            else if (field.PropertyInfo.PropertyType.Equals(typeof(decimal)))
+                                            {
+                                                var t = value.GetType();
+                                                field.PropertyInfo.SetValue(item, Convert.ToDecimal(value), null);
+                                            }
+                                            else if (field.PropertyInfo.PropertyType.Equals(typeof(float)))
+                                            {
+                                                var t = value.GetType();
+                                                field.PropertyInfo.SetValue(item, Convert.ToSingle(value), null);
+                                            }
+                                            else
+                                            {
+                                                var t = value.GetType();
+                                                field.PropertyInfo.SetValue(item, value, null);
+                                            }
                                         }
                                         else
                                         {
@@ -687,24 +693,11 @@ namespace OpenNETCF.ORM
                                             field.PropertyInfo.SetValue(item, value, null);
                                         }
                                     }
-                                    else
+
+                                    if (field.IsPrimaryKey)
                                     {
-                                        var t = value.GetType();
-                                        field.PropertyInfo.SetValue(item, value, null);
+                                        rowPK = value;
                                     }
-                                }
-
-                                //Check if it is reference key to set, not primary.
-                                //ReferenceAttribute attr = referenceFields.Where(
-                                //    x => x.ReferenceField == field.FieldName).FirstOrDefault();
-
-                                //if (attr != null)
-                                //{
-                                //    rowPK = value;
-                                //}
-                                if (field.IsPrimaryKey)
-                                {
-                                    rowPK = value;
                                 }
                             }
 

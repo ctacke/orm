@@ -12,7 +12,7 @@ namespace EntityGenerator.Entities
     public interface IDataSource
     {
         string SourceName { get; }
-        object BrowseForSource();
+        object BrowseForSource(BuildOptions options);
         object[] GetPreviousSources(IDataSource sourceType);
         void ClearPreviousSources();
         EntityInfo[] GetEntityDefinitions();

@@ -93,7 +93,7 @@ namespace EntityGenerator.Presenters
 
         public object BrowseForSource()
         {
-            return GeneratorService.BrowseForSource();
+            return GeneratorService.BrowseForSource(this.GetBuildOptions());
         }
 
         public IDataSource GetCurrentDataSource()
