@@ -255,6 +255,7 @@ namespace OpenNETCF.ORM
                 case "ntext":
                 case "nvarchar":
                 case "varchar":
+                case "text":
                     return DbType.String;
                 case "nchar":
                     return DbType.StringFixedLength;
