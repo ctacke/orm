@@ -19,14 +19,18 @@ namespace OpenNETCF.ORM
             string key = map.EntityName.ToLower();
 
             // check for dupes
-            if (m_entities.ContainsKey(key)) return;
+            if (!m_entities.ContainsKey(key))
+            {
+                m_entities.Add(key, map);
+            }
 
-            m_entities.Add(key, map);
-            
             // dynamic entities have no underlying EntityType
             if (map.EntityType != typeof(DynamicEntityDefinition))
             {
-                m_typeToNameMap.Add(map.EntityType, map.EntityName);
+                if (!m_typeToNameMap.ContainsKey(map.EntityType))
+                {
+                    m_typeToNameMap.Add(map.EntityType, map.EntityName);
+                }
             }
         }
 
@@ -51,6 +55,11 @@ namespace OpenNETCF.ORM
         {
             get { return m_entities[entityName]; }
             internal set { m_entities[entityName] = value; }
+        }
+
+        public bool Contains(string entityName)
+        {
+            return m_entities.ContainsKey(entityName);
         }
     }
 }
