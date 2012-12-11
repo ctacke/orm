@@ -355,6 +355,11 @@ namespace OpenNETCF.ORM
 
             map.Initialize(attr, entityType);
 
+            if (m_entities.Contains(map.EntityName))
+            {
+                throw new EntityAlreadyExistsException(map.EntityName);
+            }
+
             // see if we have any entity 
             // get all field definitions
             foreach (var prop in entityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
