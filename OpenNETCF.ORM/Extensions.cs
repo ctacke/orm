@@ -275,6 +275,7 @@ namespace OpenNETCF.ORM
                 case "image":
                 case "binary":
                 case "varbinary":
+                case "blob":
                     return DbType.Binary;
                 default:
                     // if case it has a length suffix
