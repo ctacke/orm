@@ -241,6 +241,7 @@ namespace OpenNETCF.ORM
                 case "datetime":
                     return DbType.DateTime;
                 case "bigint":
+                case "rowversion":
                     return DbType.Int64;
                 case "int":
                 case "integer":

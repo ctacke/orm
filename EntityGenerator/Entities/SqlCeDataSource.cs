@@ -93,12 +93,12 @@ namespace EntityGenerator.Entities
                         info.Entity = new EntityAttribute();
                         info.Entity.NameInStore = reader.GetString(0);
 
-                        using(var indexCommand = new SqlCeCommand(
+                        using (var indexCommand = new SqlCeCommand(
                             string.Format("SELECT INDEX_NAME, PRIMARY_KEY, COLUMN_NAME, COLLATION FROM INFORMATION_SCHEMA.INDEXES WHERE TABLE_NAME = '{0}'", info.Entity.NameInStore),
                             connection))
                         using (var indexReader = indexCommand.ExecuteReader())
                         {
-                            while(indexReader.Read())
+                            while (indexReader.Read())
                             {
                                 var indexName = indexReader.GetString(0);
                                 var primaryKey = indexReader.GetBoolean(1);
@@ -136,7 +136,7 @@ namespace EntityGenerator.Entities
                                     field.AllowsNulls = string.Compare(fieldReader.GetString(2), "YES", true) == 0;
                                     field.DataType = fieldReader.GetString(3).ParseToDbType();
                                     object val = fieldReader[4];
-                                    if(!val.Equals(DBNull.Value))
+                                    if (!val.Equals(DBNull.Value))
                                     {
                                         field.Length = Convert.ToInt32(val);
                                     }
@@ -179,12 +179,72 @@ namespace EntityGenerator.Entities
                                 }
                             }
                         }
+
+                        // check for references
+                        using (var referenceSourceCommand = new SqlCeCommand(
+                             string.Format(
+                             "SELECT a.Constraint_name, a.TABLE_NAME, b.COLUMN_NAME " +
+                             "FROM information_schema.table_constraints AS a " +
+                             "INNER JOIN information_schema.KEY_COLUMN_USAGE AS b ON a.CONSTRAINT_NAME = b.CONSTRAINT_NAME " +
+                             "WHERE (a.TABLE_NAME = '{0}') AND (a.CONSTRAINT_TYPE = 'FOREIGN KEY')",
+                             info.Entity.NameInStore),
+                             connection))
+                        {
+                            string constraintName = null;
+                            string localField = null;
+                            string remoteTable = null;
+                            string remoteFieldName = null;
+                            bool referenceExists = false;
+
+                            using (var srcReader = referenceSourceCommand.ExecuteReader())
+                            {
+                                while (srcReader.Read())
+                                {
+                                    constraintName = (string)srcReader[0];
+                                    localField = (string)srcReader[2];
+
+                                    using (var referenceTargetCommand = new SqlCeCommand(
+                                         string.Format(
+                                         "SELECT a.UNIQUE_CONSTRAINT_TABLE_NAME, b.COLUMN_NAME " +
+                                         "FROM information_schema.REFERENTIAL_CONSTRAINTS AS a INNER JOIN " +
+                                         "information_schema.KEY_COLUMN_USAGE AS b ON a.Constraint_name = b.CONSTRAINT_NAME " +
+                                         "WHERE a.CONSTRAINT_NAME = '{0}'",
+                                         constraintName),
+                                         connection))
+                                    {
+                                        using (var targetReader = referenceTargetCommand.ExecuteReader())
+                                        {
+                                            while (targetReader.Read())
+                                            {
+                                                remoteTable = (string)targetReader[0];
+                                                remoteFieldName = (string)targetReader[1];
+                                                referenceExists = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (referenceExists)
+                            {
+                                var reference = new ReferenceInfo()
+                                {
+                                    ReferenceTable = remoteTable,
+                                    LocalFieldName = localField,
+                                    RemoteFieldName = remoteFieldName
+                                };
+                                info.References.Add(reference);
+
+                            }
+                        }
                         entities.Add(info);
                     }
                 }
             }
 
             return entities.ToArray();
+
         }
 
         private void ValidateConnection()
