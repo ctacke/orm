@@ -210,6 +210,13 @@ namespace EntityGenerator.Services
 
                 switch (field.DataType)
                 {
+                    case DbType.Boolean:
+                        statement = new CodeExpressionStatement(new CodeSnippetExpression(
+                            string.Format("item.{0} = (value == DBNull.Value) ? {2} : (bool{1})value",
+                            field.FieldName,
+                            field.AllowsNulls ? "?" : string.Empty, 
+                            field.AllowsNulls ? "null" : "false"))); // Handle default value when field is not nullable
+                        break;
                     case DbType.Byte:
                         statement = new CodeExpressionStatement(new CodeSnippetExpression(
                             string.Format("item.{0} = (value == DBNull.Value) ? (byte{1})0 : (byte{1})value",
