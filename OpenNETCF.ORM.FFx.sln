@@ -39,9 +39,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SQLite.Androi
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SQLiteNorthwind", "Samples\SQLiteNorthwind\SQLiteNorthwind.csproj", "{F2D73EF5-F9AC-4926-8847-40393D641AF0}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Samples", "Samples", "{6B3362FF-2776-4A9D-B585-327BA2C74BC6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ReferenceSample.FFx", "Samples\ReferenceSample\ReferenceSample.FFx.csproj", "{50DC5975-6698-4069-ABC1-88C9F8DB68D7}"
+EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 13
+		SccNumberOfProjects = 14
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs01
 		SccLocalPath0 = .
@@ -91,6 +95,10 @@ Global
 		SccProjectTopLevelParentUniqueName12 = OpenNETCF.ORM.FFx.sln
 		SccProjectName12 = Samples/SQLiteNorthwind
 		SccLocalPath12 = Samples\\SQLiteNorthwind
+		SccProjectUniqueName13 = Samples\\ReferenceSample\\ReferenceSample.FFx.csproj
+		SccProjectTopLevelParentUniqueName13 = OpenNETCF.ORM.FFx.sln
+		SccProjectName13 = Samples/ReferenceSample
+		SccLocalPath13 = Samples\\ReferenceSample
 	EndGlobalSection
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = OpenNETCF.ORM.FFx.vsmdi
@@ -224,6 +232,16 @@ Global
 		{F2D73EF5-F9AC-4926-8847-40393D641AF0}.Release|Mixed Platforms.Build.0 = Release|x86
 		{F2D73EF5-F9AC-4926-8847-40393D641AF0}.Release|x86.ActiveCfg = Release|x86
 		{F2D73EF5-F9AC-4926-8847-40393D641AF0}.Release|x86.Build.0 = Release|x86
+		{50DC5975-6698-4069-ABC1-88C9F8DB68D7}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{50DC5975-6698-4069-ABC1-88C9F8DB68D7}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{50DC5975-6698-4069-ABC1-88C9F8DB68D7}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{50DC5975-6698-4069-ABC1-88C9F8DB68D7}.Debug|x86.ActiveCfg = Debug|x86
+		{50DC5975-6698-4069-ABC1-88C9F8DB68D7}.Debug|x86.Build.0 = Debug|x86
+		{50DC5975-6698-4069-ABC1-88C9F8DB68D7}.Release|Any CPU.ActiveCfg = Release|x86
+		{50DC5975-6698-4069-ABC1-88C9F8DB68D7}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{50DC5975-6698-4069-ABC1-88C9F8DB68D7}.Release|Mixed Platforms.Build.0 = Release|x86
+		{50DC5975-6698-4069-ABC1-88C9F8DB68D7}.Release|x86.ActiveCfg = Release|x86
+		{50DC5975-6698-4069-ABC1-88C9F8DB68D7}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -239,5 +257,6 @@ Global
 		{C6814B71-2825-491A-9066-A989BC3ABFF6} = {46B57893-C73E-4F80-B05C-387AB94F65F4}
 		{8225AFAF-2FED-40C8-A602-0432AB17E2E1} = {46B57893-C73E-4F80-B05C-387AB94F65F4}
 		{F2D73EF5-F9AC-4926-8847-40393D641AF0} = {46B57893-C73E-4F80-B05C-387AB94F65F4}
+		{50DC5975-6698-4069-ABC1-88C9F8DB68D7} = {6B3362FF-2776-4A9D-B585-327BA2C74BC6}
 	EndGlobalSection
 EndGlobal

@@ -18,5 +18,10 @@ namespace OpenNETCF.ORM
         {
             return "GETDATE()";
         }
+
+        public static SqlDateTimeDefault Value
+        {
+            get { return new SqlDateTimeDefault(); }
+        }
     }
 }

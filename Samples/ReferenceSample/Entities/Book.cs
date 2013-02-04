@@ -11,12 +11,17 @@ namespace ReferenceSample.Entities
     {
         [Field(IsPrimaryKey=true)]
         public int BookID { get; set; }
-        [Field]
+
+        [Field(DefaultValue="[untitled]")]
         public string Title { get; set; }
 
         [Reference(typeof(Person), "PersonID")]
         public Person[] Authors { get; set; }
+
         [Reference(typeof(Person), "PersonID")]
         public Person[] Illustrators { get; set; }
+
+        [Field(DefaultType = DefaultType.CurrentDateTime)]
+        public DateTime CreateDate { get; set; }
     }
 }
