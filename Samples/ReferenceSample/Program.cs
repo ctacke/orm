@@ -13,6 +13,8 @@ namespace ReferenceSample
         {
             var store = new DataService();
 
+            store.AddBook(null, null, null);
+
             var authors = new List<Person>();
             var illustrators = new List<Person>();
 
@@ -24,13 +26,15 @@ namespace ReferenceSample
         }
     }
 
-    public class DataService : SqlCeDataStore
+    public class DataService
     {
         private SqlCeDataStore m_store;
 
         public DataService()
         {
             m_store = new SqlCeDataStore("MyData.sdf");
+
+            m_store.DeleteStore();
 
             if (!m_store.StoreExists)
             {
@@ -68,6 +72,11 @@ namespace ReferenceSample
             m_store.Insert(book);
 
             return book;
+        }
+
+        public Book[] GetAllBooks()
+        {
+            return m_store.Select<Book>().ToArray();
         }
     }
 }

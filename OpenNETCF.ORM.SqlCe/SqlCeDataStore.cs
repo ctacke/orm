@@ -268,13 +268,30 @@ namespace OpenNETCF.ORM
                         setter(field.Ordinal, value);
                     }
                 }
+                else if (field.DataType == DbType.DateTime)
+                {
+                    var dtValue = GetInstanceValue(field, item);
+
+                    if (!field.AllowsNulls)
+                    {
+                        dtValue = SqlDateTime.MinValue;
+                        setter(field.Ordinal, dtValue);
+                    }
+                }
                 else if (field.IsRowVersion)
                 {
                     // read-only, so do nothing
                 }
                 else
                 {
-                    setter(field.Ordinal, GetInstanceValue(field, item));
+                    var iv = GetInstanceValue(field, item);
+                    
+                    if((iv == DBNull.Value) && (field.DefaultValue != null))
+                    {
+                        iv = field.DefaultValue;
+                    }
+
+                    setter(field.Ordinal, iv);
                 }
             }
         }

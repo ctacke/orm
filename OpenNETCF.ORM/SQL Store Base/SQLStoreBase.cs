@@ -420,9 +420,31 @@ namespace OpenNETCF.ORM
                     break;
             }
 
-            if (field.Default != null)
+            if ((field.DefaultType != DefaultType.None) || (field.DefaultValue != null))
             {
-                sb.AppendFormat("DEFAULT {0} ", field.Default.GetDefaultValue());
+                if (field.DefaultType == DefaultType.CurrentDateTime)
+                {
+                    // allow an override of the actual default value - if none is provided, use the default SqlDateTimeDefault
+                    if ((field.DefaultValue != null) && (field.DefaultValue is IDefaultValue))
+                    {
+                        sb.AppendFormat("DEFAULT {0} ", (field.DefaultValue as IDefaultValue).GetDefaultValue());
+                    }
+                    else
+                    {
+                        sb.AppendFormat("DEFAULT {0} ", SqlDateTimeDefault.Value.GetDefaultValue());                    
+                    }
+                }
+                else
+                {
+                    if (field.DefaultValue is string)
+                    {
+                        sb.AppendFormat("DEFAULT '{0}' ", field.DefaultValue);
+                    }
+                    else
+                    {
+                        sb.AppendFormat("DEFAULT {0} ", field.DefaultValue);
+                    }
+                }
             }
 
             if (field.IsPrimaryKey)

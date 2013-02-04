@@ -9,8 +9,8 @@ namespace OpenNETCF.ORM
 {
     public enum DefaultType
     {
-        String,
-        Number,
+        None,
+        Constant,
         CurrentDateTime
     }
 }

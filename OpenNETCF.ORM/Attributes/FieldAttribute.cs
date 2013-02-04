@@ -32,7 +32,9 @@ namespace OpenNETCF.ORM
         public bool RequireUniqueValue { get; set; }
         public int Ordinal { get; set; }
         public FieldSearchOrder SearchOrder { get; set; }
-        public IDefaultValue Default { get; set; }
+
+        public DefaultType DefaultType { get; set; }
+        public object DefaultValue { get; set; }
         
         private bool? m_isTimeSpan;
 
