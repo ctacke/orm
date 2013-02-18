@@ -371,7 +371,7 @@ namespace OpenNETCF.ORM
 
         public static string GenerateHash(this ReferenceAttribute r)
         {
-            var hash = string.Format("{0}{1}{2}", r.PropertyInfo.Name, r.ReferenceEntityType.Name, r.ReferenceField);
+            var hash = string.Format("{0}{1}{2}", r.PropertyInfo.Name, r.ReferenceEntityType.Name, r.ForeignReferenceField);
             return hash;
         }
     }

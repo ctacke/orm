@@ -28,7 +28,7 @@ namespace OpenNETCF.ORM
             {
                 if (!reference.CascadeDelete) continue;
 
-                Delete(reference.ReferenceEntityType, reference.ReferenceField, primaryKey);
+                Delete(reference.ReferenceEntityType, reference.ForeignReferenceField, primaryKey);
             }
 
             var connection = GetConnection(false);
