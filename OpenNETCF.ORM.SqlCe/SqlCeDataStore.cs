@@ -184,7 +184,7 @@ namespace OpenNETCF.ORM
 
             if (insertReferences)
             {
-                DoInsertReferences(item, entityName, keyScheme);
+                DoInsertReferences(item, entityName, keyScheme, true);
             }
 
             // we'll use table direct for inserts - no point in getting the query parser involved in this
@@ -219,7 +219,7 @@ namespace OpenNETCF.ORM
 
                         if (insertReferences)
                         {
-                            DoInsertReferences(item, entityName, keyScheme);
+                            DoInsertReferences(item, entityName, keyScheme, false);
                         }
                     }
 

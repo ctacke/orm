@@ -176,7 +176,7 @@ namespace OpenNETCF.ORM
             // ---------- Handle N:1 References -------------
             if (insertReferences)
             {
-                DoInsertReferences(item, entityName, keyScheme);
+                DoInsertReferences(item, entityName, keyScheme, true);
             }
 
             var connection = GetConnection(false);
@@ -254,7 +254,7 @@ namespace OpenNETCF.ORM
                 if (insertReferences)
                 {
                     // ---------- Handle 1:N References -------------
-                    DoInsertReferences(item, entityName, keyScheme);
+                    DoInsertReferences(item, entityName, keyScheme, false);
                 }
             }
             finally

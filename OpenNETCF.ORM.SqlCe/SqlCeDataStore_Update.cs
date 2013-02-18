@@ -98,10 +98,11 @@ namespace OpenNETCF.ORM
                     {
                         foreach (var refItem in itemList)
                         {
+                            var foreignKey = refItem.GetType().GetProperty(reference.ReferenceField, BindingFlags.Instance | BindingFlags.Public);
+                            foreignKey.SetValue(refItem, keyValue, null);
+
                             if (!this.Contains(refItem))
                             {
-                                var foreignKey = refItem.GetType().GetProperty(reference.ReferenceField, BindingFlags.Instance | BindingFlags.Public);
-                                foreignKey.SetValue(refItem, keyValue, null);
                                 Insert(refItem, false);
                             }
                             else

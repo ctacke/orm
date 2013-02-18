@@ -856,13 +856,13 @@ namespace OpenNETCF.ORM
             m_referenceCache.Clear();
         }
 
-        protected void DoInsertReferences(object item, string entityName, KeyScheme keyScheme)
+        protected void DoInsertReferences(object item, string entityName, KeyScheme keyScheme, bool beforeParentInsert)
         {
             // cascade insert any References
             // do this last because we need the PK from above
             foreach (var reference in Entities[entityName].References)
             {
-                if (reference.ReferenceType == ReferenceType.ManyToOne) // N:1
+                if (beforeParentInsert && (reference.ReferenceType == ReferenceType.ManyToOne)) // N:1
                 {
                     // in an N:1 we need to insert the related item first, so it can get a PK assigned
                     var referenceEntity = reference.PropertyInfo.GetValue(item, null);
@@ -893,7 +893,7 @@ namespace OpenNETCF.ORM
                         // TODO: should we look for reference entity updates?  That's complex and probably out of scope for the purposes of ORM
                     }
                 }
-                else // 1:N
+                else if(!beforeParentInsert && (reference.ReferenceType == ReferenceType.OneToMany)) // 1:N
                 {
                     // cascade insert any References
                     // do this last because we need the PK from above
@@ -902,6 +902,7 @@ namespace OpenNETCF.ORM
                     var valueArray = reference.PropertyInfo.GetValue(item, null);
                     if (valueArray == null) continue;
 
+                    //entityName = m_entities.GetNameForType(reference.ReferenceEntityType);
                     var fk = Entities[entityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(item, null);
 
                     // we've already enforced this to be an array when creating the store
