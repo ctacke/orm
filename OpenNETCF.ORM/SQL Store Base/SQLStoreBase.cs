@@ -886,7 +886,7 @@ namespace OpenNETCF.ORM
                         // set the item key
                         // we already inserted, so we have to do an update
                         // TODO: in the future, we should move this up and do reference inserts first, then back=propagate references
-                        Entities[entityName].Fields[reference.ReferenceField].PropertyInfo.SetValue(item, refPK, null);
+                        Entities[entityName].Fields[reference.ForeignReferenceField].PropertyInfo.SetValue(item, refPK, null);
                     }
                     else
                     {
@@ -903,7 +903,7 @@ namespace OpenNETCF.ORM
                     if (valueArray == null) continue;
 
                     //entityName = m_entities.GetNameForType(reference.ReferenceEntityType);
-                    var fk = Entities[entityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(item, null);
+                    var fk = Entities[entityName].Fields[reference.ForeignReferenceField].PropertyInfo.GetValue(item, null);
 
                     // we've already enforced this to be an array when creating the store
                     foreach (var element in valueArray as Array)
@@ -924,8 +924,8 @@ namespace OpenNETCF.ORM
                         switch (keyScheme)
                         {
                             case KeyScheme.Identity:
-                                // TODO: see if PK field value == -1
-                                isNew = keyValue.Equals(-1);
+                                // SQLCE and SQLite start with an ID == 1, so 0 mean "not in DB"
+                                isNew = keyValue.Equals(0) || keyValue.Equals(-1);
                                 break;
                             case KeyScheme.GUID:
                                 // TODO: see if PK field value == null
@@ -935,7 +935,7 @@ namespace OpenNETCF.ORM
 
                         if (isNew)
                         {
-                            Entities[et].Fields[reference.ReferenceField].PropertyInfo.SetValue(element, fk, null);
+                            Entities[et].Fields[reference.ForeignReferenceField].PropertyInfo.SetValue(element, fk, null);
                             Insert(element);
                         }
                     }
@@ -982,7 +982,7 @@ namespace OpenNETCF.ORM
                 {
                     // In a N:1 relation, the local ('instance' coming in here) key is the FK and the remote it the PK.  
                     // We need to read the local FK, so we can go to the reference table and pull the one row with that PK value
-                    keyValue = m_entities[entityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(instance, null);
+                    keyValue = m_entities[entityName].Fields[reference.ForeignReferenceField].PropertyInfo.GetValue(instance, null);
                 }
 
                 // get the lookup values - until we support filtered selects, this may be very expensive memory-wise
@@ -1006,7 +1006,7 @@ namespace OpenNETCF.ORM
                     else
                     {
                         // FALSE for last parameter to prevent circular reference filling
-                        refData = Select(reference.ReferenceEntityType, reference.ReferenceField, keyValue, -1, 0, false);
+                        refData = Select(reference.ReferenceEntityType, reference.ForeignReferenceField, keyValue, -1, 0, false);
                     }
 
                     // see if the reference type is known - if not, try to add it automatically
@@ -1027,7 +1027,7 @@ namespace OpenNETCF.ORM
                 // now look for those that match our pk
                 foreach (var child in referenceItems[reference])
                 {
-                    var childKey = m_entities[childEntityName].Fields[reference.ReferenceField].PropertyInfo.GetValue(child, null);
+                    var childKey = m_entities[childEntityName].Fields[reference.ForeignReferenceField].PropertyInfo.GetValue(child, null);
 
                     // this seems "backward" because childKey may turn out null, 
                     // so doing it backwards (keyValue.Equals instead of childKey.Equals) prevents a null referenceexception
@@ -1232,7 +1232,7 @@ namespace OpenNETCF.ORM
             {
                 if (!reference.CascadeDelete) continue;
 
-                Delete(reference.ReferenceEntityType, reference.ReferenceField, primaryKey);
+                Delete(reference.ReferenceEntityType, reference.ForeignReferenceField, primaryKey);
             }
 
             var keyFieldName = Entities[entityName].Fields.KeyField.FieldName;

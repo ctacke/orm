@@ -442,7 +442,7 @@ namespace OpenNETCF.ORM
                 if (m_references != null)
                 {
                     attr = m_references.Where(
-                    x => x.ReferenceField == field.FieldName).FirstOrDefault();
+                    x => x.ForeignReferenceField == field.FieldName).FirstOrDefault();
                 }
 
                 if ((field.IsPrimaryKey) || (attr != null))

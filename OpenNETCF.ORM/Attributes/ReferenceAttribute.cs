@@ -23,7 +23,8 @@ namespace OpenNETCF.ORM
         /// <summary>
         /// The name of the key Field in the referenced Entity (typically the Primary Key)
         /// </summary>
-        public string ReferenceField { get; set; }
+        public string ForeignReferenceField { get; set; }
+        public string LocalReferenceField { get; set; }
         public bool Autofill { get; set; }
         public PropertyInfo PropertyInfo { get; internal set; }
         public bool CascadeDelete { get; set; }
@@ -53,11 +54,20 @@ namespace OpenNETCF.ORM
         /// 
         /// </summary>
         /// <param name="referenceEntityType">The type of the referenced Entity (the other Entity, not this one)</param>
-        /// <param name="referenceField">The name of the key Field in the referenced Entity (typically the Primary Key)</param>
-        public ReferenceAttribute(Type referenceEntityType, string referenceField)
+        /// <param name="foreignReferenceField">The name of the key Field in the referenced Entity (typically the Primary Key)</param>
+        public ReferenceAttribute(Type referenceEntityType, string foreignReferenceField)
         {
             ReferenceEntityType = referenceEntityType;
-            ReferenceField = referenceField;
+            LocalReferenceField = ForeignReferenceField = foreignReferenceField;
+            Autofill = false;
+            ReferenceType = ReferenceType.OneToMany;
+        }
+
+        public ReferenceAttribute(Type referenceEntityType, string foreignReferenceField, string localReferenceField)
+        {
+            ReferenceEntityType = referenceEntityType;
+            LocalReferenceField = localReferenceField;
+            ForeignReferenceField = foreignReferenceField;
             Autofill = false;
             ReferenceType = ReferenceType.OneToMany;
         }
@@ -65,7 +75,7 @@ namespace OpenNETCF.ORM
         public bool Equals(ReferenceAttribute other)
         {
             if (!this.ReferenceEntityType.Equals(other.ReferenceEntityType)) return false;
-            return string.Compare(this.ReferenceField, other.ReferenceField, StringComparison.InvariantCultureIgnoreCase) == 0;
+            return string.Compare(this.ForeignReferenceField, other.ForeignReferenceField, StringComparison.InvariantCultureIgnoreCase) == 0;
         }
     }
 }

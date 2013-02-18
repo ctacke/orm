@@ -898,7 +898,7 @@ namespace OpenNETCF.ORM
                         {
                             if (!this.Contains(refItem))
                             {
-                                var foreignKey = refItem.GetType().GetProperty(reference.ReferenceField, BindingFlags.Instance | BindingFlags.Public);
+                                var foreignKey = refItem.GetType().GetProperty(reference.ForeignReferenceField, BindingFlags.Instance | BindingFlags.Public);
                                 foreignKey.SetValue(refItem, keyValue, null);
                                 Insert(refItem, false);
                             }
