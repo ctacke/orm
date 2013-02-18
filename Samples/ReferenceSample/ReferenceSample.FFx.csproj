@@ -49,6 +49,7 @@
   <ItemGroup>
     <Compile Include="DataStore.cs" />
     <Compile Include="Entities\Book.cs" />
+    <Compile Include="Entities\Customer.cs" />
     <Compile Include="Entities\Person.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
