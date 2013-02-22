@@ -44,6 +44,12 @@ namespace OpenNETCF.ORM
         [Field]
         public TimeSpan TS { get; set; }
 
+        [Field(DefaultValue = "Default")]
+        public string DefString { get; set; }
+
+        [Field(DefaultType = DefaultType.CurrentDateTime)]
+        public DateTime CreateDate { get; set; }
+
         public bool Equals(TestItem other)
         {
             return this.ID == other.ID;

@@ -82,6 +82,11 @@ namespace OpenNETCF.ORM
             GC.SuppressFinalize(this);
         }
 
+        protected virtual string DefaultDateGenerator
+        {
+            get { return "GETDATE()"; }
+        }
+
         protected virtual IDbConnection GetConnection(bool maintenance)
         {
             switch (ConnectionBehavior)
@@ -431,7 +436,7 @@ namespace OpenNETCF.ORM
                     }
                     else
                     {
-                        sb.AppendFormat("DEFAULT {0} ", SqlDateTimeDefault.Value.GetDefaultValue());                    
+                        sb.AppendFormat("DEFAULT {0} ", DefaultDateGenerator);                    
                     }
                 }
                 else

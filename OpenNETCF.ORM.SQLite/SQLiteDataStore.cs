@@ -52,6 +52,11 @@ namespace OpenNETCF.ORM
             FileName = fileName;
         }
 
+        protected override string DefaultDateGenerator
+        {
+            get { return "CURRENT_TIMESTAMP"; }
+        }
+
         private string ConnectionString
         {
             get
@@ -216,6 +221,19 @@ namespace OpenNETCF.ORM
                             command.Parameters[field.FieldName].Value = value;
                         }
                     }
+                    else if (field.DataType == DbType.DateTime)
+                    {
+                        var dtValue = GetInstanceValue(field, item);
+
+                        if (dtValue.Equals(DateTime.MinValue) &&
+                            ((field.AllowsNulls) || (field.DefaultType == DefaultType.CurrentDateTime)))
+                        {
+                            // testing of just letting the null fall through is setting the field to null, not using the default
+                            // so we'll set it manually
+                            dtValue = DateTime.Now;
+                        }
+                        command.Parameters[field.FieldName].Value = dtValue;
+                    }
                     else if (field.IsRowVersion)
                     {
                         // read-only, so do nothing
@@ -238,7 +256,14 @@ namespace OpenNETCF.ORM
                     else
                     {
                         var value = field.PropertyInfo.GetValue(item, null);
-                        command.Parameters[field.FieldName].Value = value;
+                        if ((value == null) && (field.DefaultValue != null))
+                        {
+                            command.Parameters[field.FieldName].Value = field.DefaultValue;
+                        }
+                        else
+                        {
+                            command.Parameters[field.FieldName].Value = value;
+                        }
                     }
                 }
 

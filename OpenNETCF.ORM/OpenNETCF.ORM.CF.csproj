@@ -82,7 +82,7 @@
     <Compile Include="Interfaces\IEntityInfo.cs" />
     <Compile Include="Interfaces\ITableBasedStore.cs" />
     <Compile Include="SQL Store Base\SqlFilterCondition.cs" />
-    <Compile Include="SqlDateTimeDefault.cs" />
+    <None Include="SqlDateTimeDefault.cs" />
     <Compile Include="FilterCondition.cs" />
     <Compile Include="Interfaces\IDefaultValue.cs" />
     <Compile Include="Interfaces\IDataStore.cs" />

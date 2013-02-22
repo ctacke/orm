@@ -272,11 +272,23 @@ namespace OpenNETCF.ORM
                 {
                     var dtValue = GetInstanceValue(field, item);
 
-                    if (!field.AllowsNulls)
+                    if (dtValue.Equals(DateTime.MinValue))
                     {
-                        dtValue = SqlDateTime.MinValue;
+                        if ((!field.AllowsNulls) && (field.DefaultType != DefaultType.CurrentDateTime))
+                        {
+                            dtValue = SqlDateTime.MinValue;
+                            setter(field.Ordinal, dtValue);
+                        }
+                        else
+                        {
+                            // let the null pass through
+                        }
+                    }
+                    else
+                    {
                         setter(field.Ordinal, dtValue);
                     }
+
                 }
                 else if (field.IsRowVersion)
                 {

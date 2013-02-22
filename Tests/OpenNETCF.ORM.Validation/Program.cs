@@ -40,7 +40,7 @@ namespace OpenNETCF.ORM.Validation
                     if (Debugger.IsAttached) Debugger.Break();
                     continue;
                 }
-
+                
                 if (!v.DoSelects())
                 {
                     Debug.WriteLine("  FAILED Select");
@@ -65,6 +65,13 @@ namespace OpenNETCF.ORM.Validation
                 if (!v.DoReferentialInserts())
                 {
                     Debug.WriteLine("  FAILED Referential inserts");
+                    if (Debugger.IsAttached) Debugger.Break();
+                    continue;
+                }
+
+                if (!v.CheckDefaults())
+                {
+                    Debug.WriteLine("  FAILED Default Values");
                     if (Debugger.IsAttached) Debugger.Break();
                     continue;
                 }
