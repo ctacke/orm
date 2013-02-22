@@ -51,6 +51,38 @@ namespace OpenNETCF.ORM
             return true;
         }
 
+        public bool CheckDefaults()
+        {
+            // don't use defaults
+            var date = new DateTime(1989, 5, 1);
+            var d = new TestItem("ItemD")
+            {
+                DefString = "not default",
+                CreateDate = date
+            };
+
+            // insert
+            Store.Insert(d);
+
+            // pull and check
+            var check = Store.Select<TestItem>(i => i.Name == d.Name).FirstOrDefault();
+            if (check.DefString != "not default") return false;
+            if (!check.CreateDate.Equals(date)) return false;
+
+            // use defaults
+            var e = new TestItem("ItemE");
+
+            // insert
+            Store.Insert(e);
+
+            // pull and check
+            check = Store.Select<TestItem>(i => i.Name == e.Name).FirstOrDefault();
+            if (check.DefString != "Default") return false;
+            if ((DateTime.Now - check.CreateDate).TotalMinutes > 1) return false;
+
+            return true;
+        }
+
         public bool DoCreateStore()
         {
             try
