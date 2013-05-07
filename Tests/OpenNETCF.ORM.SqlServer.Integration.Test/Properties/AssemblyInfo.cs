@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("OpenNETCF.ORM.SqlCe")]
+[assembly: AssemblyTitle("OpenNETCF.ORM.SqlServer.Integration.Test")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("OpenNETCF Consulting, LLC")]
-[assembly: AssemblyProduct("OpenNETCF.ORM")]
-[assembly: AssemblyCopyright("Copyright © OpenNETCF 2010-2013")]
+[assembly: AssemblyCompany("Microsoft")]
+[assembly: AssemblyProduct("OpenNETCF.ORM.SqlServer.Integration.Test")]
+[assembly: AssemblyCopyright("Copyright © Microsoft 2013")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,4 +20,17 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("52b9b42b-5cf8-4b22-8388-a5af5b96478c")]
+[assembly: Guid("86464792-7a13-4d35-aa05-015e68071ee1")]
+
+// Version information for an assembly consists of the following four values:
+//
+//      Major Version
+//      Minor Version 
+//      Build Number
+//      Revision
+//
+// You can specify all the values or you can default the Build and Revision Numbers 
+// by using the '*' as shown below:
+// [assembly: AssemblyVersion("1.0.*")]
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.0.0")]

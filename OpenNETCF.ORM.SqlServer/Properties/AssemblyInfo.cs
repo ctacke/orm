@@ -5,12 +5,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("OpenNETCF.ORM.SqlCe")]
+[assembly: AssemblyTitle("OpenNETCF.ORM.SqlServer")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("OpenNETCF Consulting, LLC")]
-[assembly: AssemblyProduct("OpenNETCF.ORM")]
-[assembly: AssemblyCopyright("Copyright © OpenNETCF 2010-2013")]
+[assembly: AssemblyCompany("Tacke Consulting, LLC")]
+[assembly: AssemblyProduct("OpenNETCF.ORM.SqlServer")]
+[assembly: AssemblyCopyright("Copyright © Tacke Consulting, LLC 2013")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
@@ -20,4 +20,5 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("52b9b42b-5cf8-4b22-8388-a5af5b96478c")]
+[assembly: Guid("d39c0f35-5eaa-4264-b05a-3101f762c00c")]
+
