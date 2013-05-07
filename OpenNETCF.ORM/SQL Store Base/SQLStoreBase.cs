@@ -74,9 +74,22 @@ namespace OpenNETCF.ORM
 
         public virtual void Dispose()
         {
-            if (m_connection != null)
+            try
             {
-                m_connection.Dispose();
+                if (m_connection != null)
+                {
+                    if (m_connection.State == ConnectionState.Open)
+                    {
+                        m_connection.Close();
+                    }
+
+                    m_connection.Dispose();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                if (Debugger.IsAttached) Debugger.Break();
             }
 
             GC.SuppressFinalize(this);
@@ -1169,7 +1182,7 @@ namespace OpenNETCF.ORM
                 {
                     command.Connection = connection;
                     command.Transaction = CurrentTransaction;
-                    command.CommandText = string.Format("DELETE FROM [{0}] WHERE {1} = ?", entityName, fieldName);
+                    command.CommandText = string.Format("DELETE FROM [{0}] WHERE {1} = @val", entityName, fieldName);
                     var param = CreateParameterObject("@val", matchValue);
                     command.Parameters.Add(param);
                     command.ExecuteNonQuery();
