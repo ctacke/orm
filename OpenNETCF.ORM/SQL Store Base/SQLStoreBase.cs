@@ -1472,5 +1472,9 @@ namespace OpenNETCF.ORM
             }
         }
 
+        protected void UpdateEntityPropertyInfo(string entityName, string fieldName, PropertyInfo pi)
+        {
+            this.Entities[entityName].Fields[fieldName].PropertyInfo = pi;
+        }
     }
 }
