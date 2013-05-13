@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace OpenNETCF.ORM.SqlServer
 {
-    public class SqlServerDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
+    public partial class SqlServerDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
     {
         private string m_lastEntity;
         private string m_connectionString;
@@ -169,6 +169,25 @@ namespace OpenNETCF.ORM.SqlServer
             return insertCommand;
         }
 
+        private void ValidateEntityPropertyInfo(string entityName, object instance)
+        {
+            Type entityType = null;
+
+            foreach (var field in Entities[entityName].Fields)
+            {
+                if (field.PropertyInfo == null)
+                {
+                    if (entityType == null)
+                    {
+                        entityType = instance.GetType();
+                    }
+
+                    var pi = entityType.GetProperty(field.FieldName, BindingFlags.Public | BindingFlags.Instance);
+                    UpdateEntityPropertyInfo(entityName, field.FieldName, pi);
+                }
+            }
+        }
+
         /// <summary>
         /// Inserts the provided entity instance into the underlying data store.
         /// </summary>
@@ -178,15 +197,22 @@ namespace OpenNETCF.ORM.SqlServer
         /// </remarks>
         public override void OnInsert(object item, bool insertReferences)
         {
+            if (item is DynamicEntity)
+            {
+                OnInsertDynamicEntity(item as DynamicEntity, insertReferences);
+                return;
+            }
+
+            string entityName;
             var itemType = item.GetType();
-            string entityName = m_entities.GetNameForType(itemType);
-            var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
+            entityName = m_entities.GetNameForType(itemType);
 
             if (entityName == null)
             {
                 throw new EntityNotFoundException(item.GetType());
             }
 
+            var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
             // ---------- Handle N:1 References -------------
             if (insertReferences)
             {
@@ -197,6 +223,7 @@ namespace OpenNETCF.ORM.SqlServer
             try
             {
                 FieldAttribute identity = null;
+                keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
                 var command = GetInsertCommand(entityName);
                 command.Connection = connection as SqlConnection;
                 command.Transaction = CurrentTransaction as SqlTransaction;
@@ -588,6 +615,16 @@ namespace OpenNETCF.ORM.SqlServer
                 throw new EntityNotFoundException(objectType);
             }
 
+            return Select(entityName, objectType, filters, fetchCount, firstRowOffset, fillReferences);
+        }
+
+        private IEnumerable<object> Select(string entityName, Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
+        {
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(objectType);
+            }
+
             UpdateIndexCacheForType(entityName);
 
             var items = new List<object>();
@@ -787,10 +824,16 @@ namespace OpenNETCF.ORM.SqlServer
 
         public override void OnUpdate(object item, bool cascadeUpdates, string fieldName)
         {
+            if (item is DynamicEntity)
+            {
+                OnUpdateDynamicEntity(item as DynamicEntity);
+                return;
+            }
+
             object keyValue;
             var changeDetected = false;
             var itemType = item.GetType();
-            string entityName = m_entities.GetNameForType(itemType);
+            var entityName = m_entities.GetNameForType(itemType);
 
             if (entityName == null)
             {
@@ -989,32 +1032,6 @@ namespace OpenNETCF.ORM.SqlServer
         public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
             throw new NotSupportedException("Fetch is not currently supported with this Provider.");
-        }
-
-        public override IEnumerable<DynamicEntity> Select(string entityName)
-        {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
-        }
-
-        public override DynamicEntity Select(string entityName, object primaryKey)
-        {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
-        }
-
-        protected override void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility)
-        {
-            // TODO: just delete this method when implemented, the SqlDataStore base will create the table
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
-        }
-
-        public override void DiscoverDynamicEntity(string entityName)
-        {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
-        }
-
-        public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount)
-        {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
         }
 
         protected override string GetFieldDataTypeString(string entityName, FieldAttribute field)
