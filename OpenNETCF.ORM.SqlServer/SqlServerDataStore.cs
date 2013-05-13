@@ -273,6 +273,11 @@ namespace OpenNETCF.ORM.SqlServer
                             }
                             else
                             {
+                                if (field.DataType == DbType.Binary)
+                                {
+                                    command.Parameters["@" + field.FieldName].SqlDbType = SqlDbType.VarBinary;
+                                    command.Parameters["@" + field.FieldName].Size = -1;
+                                }
                                 command.Parameters["@" + field.FieldName].Value = DBNull.Value;
                             }
                         }

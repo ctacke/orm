@@ -7,6 +7,16 @@ using System.Data;
 namespace OpenNETCF.ORM.Tests
 {
     [Entity(KeyScheme = KeyScheme.Identity)]
+    public class BinaryItem
+    {
+        [Field(IsPrimaryKey = true)]
+        public int ID { get; set; }
+
+        [Field]
+        public byte[] Data { get; set; }
+    }
+
+    [Entity(KeyScheme = KeyScheme.Identity)]
     public class LateAddItem
     {
         [Field(IsPrimaryKey = true)]
