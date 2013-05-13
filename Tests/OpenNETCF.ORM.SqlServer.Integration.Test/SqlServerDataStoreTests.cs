@@ -17,6 +17,22 @@ namespace OpenNETCF.ORM.SqlServer.Integration.Test
             };
         }
 
+        private SqlServerDataStore GetTestStore()
+        {
+            var store = new SqlServerDataStore(GetInfo());
+
+            if (!store.StoreExists)
+            {
+                store.CreateStore();
+            }
+            else
+            {
+                store.EnsureCompatibility();
+            }
+
+            return store;
+        }
+
         [TestMethod]
         public void TestCreateStore()
         {
@@ -35,17 +51,8 @@ namespace OpenNETCF.ORM.SqlServer.Integration.Test
             bool beforeDelete = false;
             bool afterDelete = false;
 
-            var store = new SqlServerDataStore(GetInfo());
+            var store = GetTestStore();
             store.AddType<TestItem>();
-
-            if (!store.StoreExists)
-            {
-                store.CreateStore();
-            }
-            else
-            {
-                store.EnsureCompatibility();
-            }
 
             store.BeforeInsert += delegate
             {
@@ -162,5 +169,17 @@ namespace OpenNETCF.ORM.SqlServer.Integration.Test
 
         }
 
+        [TestMethod()]
+        public void VarBinaryNullTest()
+        {
+            var store = GetTestStore();
+            store.AddType<BinaryItem>();
+
+            var item = new BinaryItem();
+
+            store.Insert(item);
+
+            var test = store.Select<BinaryItem>(item.ID);
+        }
     }
 }
