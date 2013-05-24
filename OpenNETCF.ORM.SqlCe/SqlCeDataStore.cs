@@ -323,8 +323,11 @@ namespace OpenNETCF.ORM
             }
         }
 
-        protected override string GetPrimaryKeyIndexName(string entityName)
+        protected override void GetPrimaryKeyInfo(string entityName, out string indexName, out string columnName)
         {
+            indexName = string.Empty;
+            columnName = string.Empty;
+
             var connection = GetConnection(true);
             try
             {
@@ -335,7 +338,7 @@ namespace OpenNETCF.ORM
                     command.Transaction = CurrentTransaction as SqlCeTransaction;
                     command.CommandText = sql;
                     command.Connection = connection;
-                    return command.ExecuteScalar() as string;
+                    indexName = command.ExecuteScalar() as string;
                 }
             }
             finally

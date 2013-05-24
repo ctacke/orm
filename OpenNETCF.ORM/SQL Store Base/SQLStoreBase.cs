@@ -23,9 +23,6 @@ namespace OpenNETCF.ORM
         public int DefaultVarBinaryLength { get; set; }
         protected abstract string AutoIncrementFieldIdentifier { get; }
 
-        private const int MaxSizedStringLength = 4000;
-        private const int MaxSizedBinaryLength = 8000;
-
         public ConnectionBehavior ConnectionBehavior { get; set; }
 
         public abstract override void CreateStore();
@@ -34,7 +31,7 @@ namespace OpenNETCF.ORM
 
         public abstract override bool StoreExists { get; }
 
-        protected abstract string GetPrimaryKeyIndexName(string entityName);
+        protected abstract void GetPrimaryKeyInfo(string entityName, out string indexName, out string columnName);
 
         public abstract override void OnInsert(object item, bool insertReferences);
 
@@ -70,6 +67,21 @@ namespace OpenNETCF.ORM
         ~SQLStoreBase()
         {
             Dispose();
+        }
+
+        protected virtual int MaxSizedStringLength
+        {
+            get { return 4000; }
+        }
+
+        protected virtual int MaxSizedBinaryLength
+        {
+            get { return 8000; }
+        }
+
+        protected virtual string ParameterPrefix
+        {
+            get { return "@"; }
         }
 
         public virtual void Dispose()
@@ -228,7 +240,7 @@ namespace OpenNETCF.ORM
                 throw new ReservedWordException(entity.EntityName);
             }
 
-            sql.AppendFormat("CREATE TABLE [{0}] (", entity.EntityName);
+            sql.AppendFormat("CREATE TABLE {0} (", entity.EntityName);
 
             int count = entity.Fields.Count;
 
@@ -245,7 +257,7 @@ namespace OpenNETCF.ORM
                     throw new ReservedWordException(field.FieldName);
                 }
 
-                sql.AppendFormat("[{0}] {1} {2}",
+                sql.AppendFormat("{0} {1} {2}",
                     field.FieldName,
                     GetFieldDataTypeString(entity.EntityName, field),
                     GetFieldCreationAttributes(entity.EntityAttribute, field));
@@ -420,11 +432,16 @@ namespace OpenNETCF.ORM
             switch (field.DataType)
             {
                 case DbType.String:
+                case DbType.StringFixedLength:
                     if (field.Length > 0)
                     {
                         if (field.Length <= MaxSizedStringLength)
                         {
                             sb.AppendFormat("({0}) ", field.Length);
+                        }
+                        else
+                        {
+                            sb.AppendFormat("({0}) ", MaxSizedStringLength);
                         }
                     }
                     else
@@ -658,7 +675,7 @@ namespace OpenNETCF.ORM
                     // searching on primary key
                     filter = new SqlFilterCondition
                     {
-                        FieldName = (Entities[entityName] as SqlEntityInfo).PrimaryKeyIndexName,
+                        FieldName = (Entities[entityName] as SqlEntityInfo).PrimaryKeyColumnName,
                         Operator = FilterCondition.FilterOperator.Equals,
                         Value = matchValue,
                         PrimaryKey = true
@@ -735,11 +752,11 @@ namespace OpenNETCF.ORM
 
             if (isCount)
             {
-                sb = new StringBuilder(string.Format("SELECT COUNT(*) FROM [{0}]", entityName));
+                sb = new StringBuilder(string.Format("SELECT COUNT(*) FROM {0}", entityName));
             }
             else
             {
-                sb = new StringBuilder(string.Format("SELECT * FROM [{0}]", entityName));
+                sb = new StringBuilder(string.Format("SELECT * FROM {0}", entityName));
             }
 
             if (filters != null)
@@ -749,7 +766,7 @@ namespace OpenNETCF.ORM
                     sb.Append(i == 0 ? " WHERE " : " AND ");
 
                     var filter = filters.ElementAt(i);
-                    sb.Append("[" + filter.FieldName + "]");
+                    sb.Append(filter.FieldName);
 
                     switch (filters.ElementAt(i).Operator)
                     {
@@ -774,7 +791,7 @@ namespace OpenNETCF.ORM
                             throw new NotSupportedException();
                     }
 
-                    string paramName = string.Format("@p{0}", i);
+                    string paramName = string.Format(ParameterPrefix + "{0}", i);
                     sb.Append(paramName);
 
                     var param = new TParameter()
@@ -824,9 +841,16 @@ namespace OpenNETCF.ORM
 
         protected void CheckPrimaryKeyIndex(string entityName)
         {
-            if ((Entities[entityName] as SqlEntityInfo).PrimaryKeyIndexName != null) return;
-            var name = GetPrimaryKeyIndexName(entityName);
-            (Entities[entityName] as SqlEntityInfo).PrimaryKeyIndexName = name;
+            var info = Entities[entityName] as SqlEntityInfo;
+
+            string column, index;
+
+            if (info.PrimaryKeyIndexName == null)
+            {
+                GetPrimaryKeyInfo(entityName, out index, out column);
+                info.PrimaryKeyIndexName = index;
+                info.PrimaryKeyColumnName = column;
+            }
         }
 
         protected virtual void CheckOrdinals(string entityName)
@@ -839,7 +863,7 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 {
                     command.Connection = connection;
-                    command.CommandText = string.Format("SELECT * FROM [{0}]", entityName);
+                    command.CommandText = string.Format("SELECT * FROM {0}", entityName);
 
                     using (var reader = command.ExecuteReader())
                     {
@@ -1086,7 +1110,7 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 {
                     command.Connection = connection;
-                    command.CommandText = string.Format("DELETE FROM [{0}]", tableName);
+                    command.CommandText = string.Format("DELETE FROM {0}", tableName);
                     command.ExecuteNonQuery();
                 }
             }
@@ -1108,7 +1132,7 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 {
                     command.Connection = connection;
-                    command.CommandText = string.Format("DROP TABLE [{0}]", tableName);
+                    command.CommandText = string.Format("DROP TABLE {0}", tableName);
                     command.ExecuteNonQuery();
                 }
             }
@@ -1182,8 +1206,8 @@ namespace OpenNETCF.ORM
                 {
                     command.Connection = connection;
                     command.Transaction = CurrentTransaction;
-                    command.CommandText = string.Format("DELETE FROM [{0}] WHERE {1} = @val", entityName, fieldName);
-                    var param = CreateParameterObject("@val", matchValue);
+                    command.CommandText = string.Format("DELETE FROM {0} WHERE {1} = {2}val", entityName, fieldName, ParameterPrefix);
+                    var param = CreateParameterObject(ParameterPrefix + "val", matchValue);
                     command.Parameters.Add(param);
                     command.ExecuteNonQuery();
                 }
@@ -1270,7 +1294,7 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 {
                     command.Connection = connection;
-                    command.CommandText = string.Format("SELECT COUNT(*) FROM [{0}]", entityName);
+                    command.CommandText = string.Format("SELECT COUNT(*) FROM {0}", entityName);
                     var count = command.ExecuteScalar();
                     return Convert.ToInt32(count);
                 }

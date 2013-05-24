@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 
-namespace OpenNETCF.ORM.SqlServer
+namespace OpenNETCF.ORM
 {
     partial class SqlServerDataStore
     {
@@ -245,6 +245,54 @@ namespace OpenNETCF.ORM.SqlServer
             finally
             {
                 DoneWithConnection(connection, true);
+            }
+        }
+
+        public IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        {
+            // yes, this is very limited in scope capability, but it's purpose-built for a specific use-case (and better than no functionality at all)
+
+            if (firstRowOffset > 0) throw new NotSupportedException("non-zero rowOffset not currently supported with this version of Fetch");
+            if (fillReferences) throw new NotSupportedException("References not currently supported with this version of Fetch.");
+            if (filter != null) throw new NotSupportedException("Filters not currently supported with this version of Fetch.  Try post-filtering with LINQ");
+
+            var sql = string.Format("SELECT TOP {0} * FROM {1} ", fetchCount, entityName);
+
+            if (!string.IsNullOrEmpty(sortField))
+            {
+                sql += string.Format("ORDER BY {0} {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+            }
+
+            var connection = GetConnection(false);
+            try
+            {
+                var entities = new List<DynamicEntity>();
+
+                using (var command = GetNewCommandObject())
+                {
+                    command.CommandType = CommandType.Text;
+                    command.Connection = connection;
+                    command.CommandText = sql;
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var e = new DynamicEntity(entityName);
+                            for (int i = 0; i < reader.FieldCount; i++)
+                            {
+                                e.Fields.Add(reader.GetName(i), reader.GetValue(i));
+                            }
+                            entities.Add(e);
+                        }
+                    }
+                }
+
+                return entities;
+            }
+            finally
+            {
+                DoneWithConnection(connection, false);
             }
         }
 

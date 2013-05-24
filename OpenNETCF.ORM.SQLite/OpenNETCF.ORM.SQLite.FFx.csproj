@@ -8,8 +8,8 @@
     <ProjectGuid>{750ED0AF-FE89-4EFC-BF7A-C29CBDD8AA7F}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>OpenNETCF.ORM.SQLite.FFx</RootNamespace>
-    <AssemblyName>OpenNETCF.ORM.SQLite.FFx</AssemblyName>
+    <RootNamespace>OpenNETCF.ORM.SQLite</RootNamespace>
+    <AssemblyName>OpenNETCF.ORM.SQLite</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>

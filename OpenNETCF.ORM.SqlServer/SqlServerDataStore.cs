@@ -8,7 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 
-namespace OpenNETCF.ORM.SqlServer
+namespace OpenNETCF.ORM
 {
     public partial class SqlServerDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
     {
@@ -193,7 +193,7 @@ namespace OpenNETCF.ORM.SqlServer
         /// </summary>
         /// <param name="item"></param>
         /// <remarks>
-        /// If the entity has an identity field, calling Insert will populate that field with the identity vale vefore returning
+        /// If the entity has an identity field, calling Insert will populate that field with the identity value before returning
         /// </remarks>
         public override void OnInsert(object item, bool insertReferences)
         {
@@ -300,6 +300,7 @@ namespace OpenNETCF.ORM.SqlServer
                             }
                             else
                             {
+                                // this is specific to SQL Server
                                 if (field.DataType == DbType.Binary)
                                 {
                                     command.Parameters["@" + field.FieldName].SqlDbType = SqlDbType.VarBinary;
@@ -352,18 +353,21 @@ namespace OpenNETCF.ORM.SqlServer
             }
         }
 
-        protected override string GetPrimaryKeyIndexName(string entityName)
+        protected override void GetPrimaryKeyInfo(string entityName, out string indexName, out string columnName)
         {
             var connection = GetConnection(true);
             try
             {
-                string name = null;
                 string sql = string.Format(
                     "SELECT column_name " +
                     "FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
                     "WHERE OBJECTPROPERTY(OBJECT_ID(constraint_name), 'IsPrimaryKey') = 1 " +
                     "AND table_name = '{0}'",
                     entityName);
+
+                // TODO: get index name
+                indexName = string.Empty;
+                columnName = string.Empty;
 
                 using (var command = GetNewCommandObject())
                 {
@@ -376,12 +380,11 @@ namespace OpenNETCF.ORM.SqlServer
                         {
                             while (reader.Read())
                             {
-                                return reader.GetString(0);
+                                columnName = reader.GetString(0);
                             }
                         }
                     }
                 }
-                return name;
             }
             finally
             {
@@ -408,17 +411,21 @@ namespace OpenNETCF.ORM.SqlServer
                     "ORDER BY T.[name], I.[index_id], IC.[key_ordinal]"
                     , entityName);
 
-                using (var command = new SqlCommand(sql, connection as SqlConnection))
-                using (var reader = command.ExecuteReader())
+                using (var command = GetNewCommandObject())
                 {
-                    List<string> nameList = new List<string>();
-
-                    while (reader.Read())
+                    command.CommandText = sql;
+                    command.Connection = connection;
+                    using (var reader = command.ExecuteReader())
                     {
-                        nameList.Add(reader.GetString(1));
-                    }
+                        List<string> nameList = new List<string>();
 
-                    ((SqlEntityInfo)Entities[entityName]).IndexNames = nameList;
+                        while (reader.Read())
+                        {
+                            nameList.Add(reader.GetString(1));
+                        }
+
+                        ((SqlEntityInfo)Entities[entityName]).IndexNames = nameList;
+                    }
                 }
             }
             catch (Exception ex)
@@ -497,10 +504,10 @@ namespace OpenNETCF.ORM.SqlServer
                 return;
             }
 
-            using (var command = new SqlCommand())
+            using (var command = GetNewCommandObject())
             {
-                command.Transaction = CurrentTransaction as SqlTransaction;
-                command.Connection = connection as SqlConnection;
+                command.Transaction = CurrentTransaction;
+                command.Connection = connection;
 
                 foreach (var field in entity.Fields)
                 {
@@ -533,8 +540,10 @@ namespace OpenNETCF.ORM.SqlServer
                                 GetFieldDataTypeString(entity.EntityName, field),
                                 GetFieldCreationAttributes(entity.EntityAttribute, field)));
 
-                            using (var altercmd = new SqlCommand(alter.ToString(), connection as SqlConnection))
+                            using (var altercmd = GetNewCommandObject())
                             {
+                                altercmd.CommandText = alter.ToString();
+                                altercmd.Connection = connection;
                                 altercmd.ExecuteNonQuery();
                             }
                         }
