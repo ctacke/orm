@@ -1,60 +1,40 @@
 ﻿using System;
-using System.Net;
-using System.IO;
-using System.Diagnostics;
-using System.Text;
-using System.Linq;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Collections.Generic;
-using System.Threading;
+using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
-
-#if ANDROID
-// note the case difference between the System.Data.SQLite and Mono's implementation
-using SQLiteCommand = Mono.Data.Sqlite.SqliteCommand;
-using SQLiteConnection = Mono.Data.Sqlite.SqliteConnection;
-using SQLiteParameter = Mono.Data.Sqlite.SqliteParameter;
-using SQLiteDataReader = Mono.Data.Sqlite.SqliteDataReader;
-using SQLiteTransaction = Mono.Data.Sqlite.SqliteTransaction;
-#elif WINDOWS_PHONE
-// ah the joys of an open-source project changing cases on us
-using SQLiteConnection = Community.CsharpSqlite.SQLiteClient.SqliteConnection;
-using SQLiteCommand = Community.CsharpSqlite.SQLiteClient.SqliteCommand;
-using SQLiteParameter = Community.CsharpSqlite.SQLiteClient.SqliteParameter;
-using SQLiteDataReader = Community.CsharpSqlite.SQLiteClient.SqliteDataReader;
-using SQLiteTransaction = Community.CsharpSqlite.SQLiteClient.SqliteTransaction;
-#else
-using System.Data.SQLite;
-#endif
+using System.Text;
+using System.Threading;
+using Oracle.DataAccess.Client;
 
 namespace OpenNETCF.ORM
 {
-    public class SQLiteDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
+    public class OracleDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
     {
-        private string m_connectionString;
+        private string m_connectionString; 
+        private OracleConnectionInfo m_info;
 
-        public string FileName { get; protected set; }
-        
-        protected SQLiteDataStore()
-            : base()
+        public OracleDataStore(OracleConnectionInfo info)
         {
+            m_info = info;
         }
 
-        public SQLiteDataStore(string fileName)
-            : this()
+        private string BuildConnectionString(OracleConnectionInfo info)
         {
-            if (string.IsNullOrEmpty(fileName))
-            {
-                throw new ArgumentException();
-            }
+            var cs = string.Format(
+                "Data Source=(DESCRIPTION=" +
+                "(ADDRESS=(PROTOCOL=TCP)(HOST={0})(PORT={1}))" +
+                "(CONNECT_DATA=(SERVICE_NAME={2})));" +
+                "User Id={3};Password={4};",
+                     info.ServerAddress,
+                     info.ServerPort,
+                     info.ServiceName,
+                     info.UserName,
+                     info.Password);
 
-            FileName = fileName;
-        }
-
-        protected override string DefaultDateGenerator
-        {
-            get { return "CURRENT_TIMESTAMP"; }
+            return cs;
         }
 
         private string ConnectionString
@@ -63,49 +43,99 @@ namespace OpenNETCF.ORM
             {
                 if (m_connectionString == null)
                 {
-                    m_connectionString = string.Format("Data Source={0}", FileName);
+                    m_connectionString = BuildConnectionString(m_info);
 
                 }
                 return m_connectionString;
             }
         }
 
+        protected override int MaxSizedStringLength
+        {
+            // NOTE: this is a character count, and it depends on the encoding of the DB.  We'll assume UTF16 for safety
+            get { return 2000; }
+        }
+
+        protected override string ParameterPrefix
+        {
+            get { return ":"; }
+        }
+
         protected override IDbCommand GetNewCommandObject()
         {
-            return new SQLiteCommand();
+            return new OracleCommand();
         }
 
         protected override IDbConnection GetNewConnectionObject()
         {
-            return new SQLiteConnection(ConnectionString);
+            return new OracleConnection(ConnectionString);
         }
 
         protected override IDataParameter CreateParameterObject(string parameterName, object parameterValue)
         {
-            return new SQLiteParameter(parameterName, parameterValue);
+            return new OracleParameter(parameterName, parameterValue);
         }
 
+        // oracle does not support a direct auto-incrementing identifier 
+        // (search for SEQUENCE for a workaround - maybe implement this in a future ORM build)
+        //create table FOO (
+        //    x number primary key
+        //);
+        //create sequence  FOO_seq;
+
+        //create or replace trigger FOO_trg
+        //before insert on FOO
+        //for each row
+        //begin
+        //  select FOO_seq.nextval into :new.x from dual;
+        //end;
         protected override string AutoIncrementFieldIdentifier
         {
-            get { return "AUTOINCREMENT"; }
+            get 
+            { 
+                return string.Empty; 
+            }
         }
 
         public override void CreateStore()
         {
-            if (StoreExists)
-            {
-                throw new StoreAlreadyExistsException();
-            }
+            // NOP
+        }
 
-#if(!WINDOWS_PHONE)
-            SQLiteConnection.CreateFile(FileName);
-#endif
+        public override void DeleteStore()
+        {
+            throw new NotSupportedException();
+        }
+
+        public override bool StoreExists
+        {
+            // Oracle has a single "store" which is the service instance, unlike say SQL Server which may have multiple Databases in an instance
+            get { return true; }
+        }
+
+        public override string[] GetTableNames()
+        {
+            var names = new List<string>();
+
             var connection = GetConnection(true);
             try
             {
-                foreach (var entity in this.Entities)
+                using (var command = GetNewCommandObject())
                 {
-                    CreateTable(connection, entity);
+                    command.Transaction = CurrentTransaction;
+                    command.Connection = connection;
+                    // this gets all tables the current user has access to (not necessarily all tables in the store)
+                    var sql = "SELECT table_name FROM all_tables";
+                    command.CommandText = sql;
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            names.Add(reader.GetString(0));
+                        }
+                    }
+
+                    return names.ToArray();
                 }
             }
             finally
@@ -114,70 +144,230 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public override void DeleteStore()
+        public override bool TableExists(string tableName)
         {
-            if (StoreExists)
+            var connection = GetConnection(true);
+            try
             {
-                File.Delete(FileName);
+                using (var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+                    // Oracle is case-sensitive.  Joy!
+                    var sql = string.Format("SELECT COUNT(*) FROM all_tables WHERE UPPER(table_name) = UPPER('{0}')", tableName);
+                    command.CommandText = sql;
+                    command.Transaction = CurrentTransaction;
+                    var count = Convert.ToInt32(command.ExecuteScalar());
+
+                    return (count > 0);
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
             }
         }
 
-        public override bool StoreExists
+        protected override string GetFieldDataTypeString(string entityName, FieldAttribute field)
         {
-            get { return File.Exists(FileName); }
+            switch (field.DataType)
+            {
+                case DbType.String:
+                    return "NVARCHAR2";
+                case DbType.StringFixedLength:
+                    return "CHAR";
+                case DbType.Int64:
+                case DbType.UInt64:
+                case DbType.Int32:
+                case DbType.UInt32:
+                case DbType.Int16:
+                case DbType.UInt16:
+                case DbType.Decimal:
+                    return "NUMBER";
+                case DbType.Single:
+                    return "BINARY_FLOAT";
+                case DbType.Double:
+                    return "BINARY_DOUBLE";
+                case DbType.DateTime:
+                    return "DATE";
+                case DbType.Binary:
+                    return "BLOB";
+                case DbType.Guid:
+                    return "RAW";
+                default:
+                    throw new NotSupportedException(
+                        string.Format("Unable to determine convert DbType '{0}' to string", field.DataType.ToString()));
+            }
         }
 
-        private SQLiteCommand GetInsertCommand(string entityName)
+        protected override string GetFieldCreationAttributes(EntityAttribute attribute, FieldAttribute field)
+        {
+            switch (field.DataType)
+            {
+                case DbType.Guid:
+                    return "(16)"; // guids are "RAW(16)"
+                default:
+                    return base.GetFieldCreationAttributes(attribute, field);
+            }
+        }
+
+        protected override void ValidateTable(IDbConnection connection, IEntityInfo entity)
+        {
+            // first make sure the table exists
+            if (!TableExists(entity.EntityAttribute.NameInStore))
+            {
+                CreateTable(connection, entity);
+                return;
+            }
+
+            using (var command = GetNewCommandObject())
+            {
+                command.Transaction = CurrentTransaction;
+                command.Connection = connection;
+
+                foreach (var field in entity.Fields)
+                {
+                    if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
+                    {
+                        throw new ReservedWordException(field.FieldName);
+                    }
+
+                    // yes, I realize hard-coded ordinals are not a good practice, but the SQL isn't changing, it's method specific
+                    var sql = string.Format(
+                        "SELECT COLUMN_NAME, "
+                        + "DATA_TYPE, "
+                        + "DATA_LENGTH, "
+                        + "DATA_PRECISION, "
+                        + "DATA_SCALE, "
+                        + "NULLABLE "
+                        + "FROM all_tab_cols "
+                        + "WHERE (UPPER(table_name) = UPPER('{0}') AND UPPER(column_name) = UPPER('{1}'))",
+                          entity.EntityAttribute.NameInStore, field.FieldName);
+
+                    command.CommandText = sql;
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (!reader.Read())
+                        {
+                            // field doesn't exist - we must create it
+                            var alter = new StringBuilder(string.Format("ALTER TABLE {0} ", entity.EntityAttribute.NameInStore));
+                            alter.Append(string.Format("ADD {0} {1} {2}",
+                                field.FieldName,
+                                GetFieldDataTypeString(entity.EntityName, field),
+                                GetFieldCreationAttributes(entity.EntityAttribute, field)));
+
+                            using (var altercmd = GetNewCommandObject()) 
+                            {
+                                altercmd.CommandText = alter.ToString();
+                                altercmd.Connection = connection;
+                                altercmd.ExecuteNonQuery();
+                            }
+                        }
+                        else
+                        {
+                            // TODO: verify field length, etc.
+                        }
+                    }
+                }
+            }
+        }
+
+        private OracleCommand GetInsertCommand(string entityName)
         {
             // TODO: support command caching to improve bulk insert speeds
             //       simply use a dictionary keyed by entityname
             var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
-            var insertCommand = new SQLiteCommand();
-            
+            var insertCommand = GetNewCommandObject() as OracleCommand;
+
             var sbFields = new StringBuilder(string.Format("INSERT INTO {0} (", entityName));
-            var sbParams = new StringBuilder( " VALUES (");
+            var sbParams = new StringBuilder(" VALUES (");
+
+            FieldAttribute identity = null;
 
             foreach (var field in Entities[entityName].Fields)
             {
                 // skip auto-increments
                 if ((field.IsPrimaryKey) && (keyScheme == KeyScheme.Identity))
                 {
+                    identity = field;
                     continue;
                 }
-                sbFields.Append("[" + field.FieldName + "],");
-                sbParams.Append("?,");
+                sbFields.Append(field.FieldName + ",");
+                sbParams.Append(":" + field.FieldName + ",");
 
-                // TODO; verify that the 2-parameter method work on non-Phone implementations
-                insertCommand.Parameters.Add(new SQLiteParameter(field.FieldName, field.DataType));
+                var parameter = new OracleParameter(field.FieldName, TranslateDbTypeToOracleDbType(field.DataType));
+                insertCommand.Parameters.Add(parameter);
             }
 
             // replace trailing commas
             sbFields[sbFields.Length - 1] = ')';
             sbParams[sbParams.Length - 1] = ')';
 
-            insertCommand.CommandText = sbFields.ToString() + sbParams.ToString();
+            var sql = sbFields.ToString() + sbParams.ToString();
+
+            if (identity != null)
+            {
+                sql += string.Format(" RETURNING {0} INTO :LASTID", identity.FieldName);
+            }
+
+            insertCommand.CommandText = sql;
 
             return insertCommand;
         }
-        
-        /// <summary>
-        /// Inserts the provided entity instance into the underlying data store.
-        /// </summary>
-        /// <param name="item"></param>
-        /// <remarks>
-        /// If the entity has an identity field, calling Insert will populate that field with the identity vale vefore returning
-        /// </remarks>
+
+        private OracleDbType TranslateDbTypeToOracleDbType(DbType type)
+        {
+            switch (type)
+            {
+                case DbType.String:
+                    return OracleDbType.NVarchar2;
+                case DbType.StringFixedLength:
+                    return OracleDbType.Char;
+                case DbType.Int64:
+                case DbType.UInt64:
+                    return OracleDbType.Int64;
+                case DbType.Int32:
+                case DbType.UInt32:
+                    return OracleDbType.Int32;
+                case DbType.Int16:
+                case DbType.UInt16:
+                    return OracleDbType.Int16;
+                case DbType.Decimal:
+                    return OracleDbType.Decimal;
+                case DbType.Single:
+                    return OracleDbType.BinaryFloat;
+                case DbType.Double:
+                    return OracleDbType.BinaryDouble;
+                case DbType.DateTime:
+                    return OracleDbType.Date;
+                case DbType.Binary:
+                    return OracleDbType.Blob;
+                case DbType.Guid:
+                    return OracleDbType.Raw;
+                default:
+                    throw new NotSupportedException(string.Format("Cannot translate DbType '{0}' to OracleDbType", type.ToString()));
+            }
+        }
+
         public override void OnInsert(object item, bool insertReferences)
         {
+            if (item is DynamicEntity)
+            {
+                throw new NotSupportedException("Dynamic entities not supported by this Provider");
+                //OnInsertDynamicEntity(item as DynamicEntity, insertReferences);
+                //return;
+            }
+
+            string entityName;
             var itemType = item.GetType();
-            string entityName = m_entities.GetNameForType(itemType);
-            var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
+            entityName = m_entities.GetNameForType(itemType);
 
             if (entityName == null)
             {
                 throw new EntityNotFoundException(item.GetType());
             }
 
+            var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
             // ---------- Handle N:1 References -------------
             if (insertReferences)
             {
@@ -188,9 +378,10 @@ namespace OpenNETCF.ORM
             try
             {
                 FieldAttribute identity = null;
+                keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
                 var command = GetInsertCommand(entityName);
-                command.Connection = connection as SQLiteConnection;
-                command.Transaction = CurrentTransaction as SQLiteTransaction;
+                command.Connection = connection  as OracleConnection;
+                command.Transaction = CurrentTransaction as OracleTransaction;
 
                 // TODO: fill the parameters
                 foreach (var field in Entities[entityName].Fields)
@@ -234,9 +425,18 @@ namespace OpenNETCF.ORM
                         }
                         command.Parameters[field.FieldName].Value = dtValue;
                     }
-                    else if (field.IsRowVersion)
+                    else if (field.DataType == DbType.Guid)
                     {
                         // read-only, so do nothing
+                        var guid = field.PropertyInfo.GetValue(item, null);
+                        if (guid == null)
+                        {
+                            command.Parameters[field.FieldName].Value = DBNull.Value;
+                        }
+                        else
+                        {
+                            command.Parameters[field.FieldName].Value = ((Guid)guid).ToByteArray();
+                        }
                     }
                     else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
                     {
@@ -256,9 +456,16 @@ namespace OpenNETCF.ORM
                     else
                     {
                         var value = field.PropertyInfo.GetValue(item, null);
-                        if ((value == null) && (field.DefaultValue != null))
+                        if (value == null)
                         {
-                            command.Parameters[field.FieldName].Value = field.DefaultValue;
+                            if (field.DefaultValue != null)
+                            {
+                                command.Parameters[field.FieldName].Value = field.DefaultValue;
+                            }
+                            else
+                            {
+                                command.Parameters[field.FieldName].Value = DBNull.Value;
+                            }
                         }
                         else
                         {
@@ -267,13 +474,20 @@ namespace OpenNETCF.ORM
                     }
                 }
 
-                command.ExecuteNonQuery();
-
                 // did we have an identity field?  If so, we need to update that value in the item
-                if (identity != null)
+                if (identity == null)
                 {
-                    var id = GetIdentity(connection);
-                    identity.PropertyInfo.SetValue(item, id, null);
+                    command.ExecuteNonQuery();
+                }
+                else
+                {
+                    var idParameter =  new OracleParameter(":LASTID", OracleDbType.Int32);
+                    idParameter.Direction = ParameterDirection.Output;
+                    command.Parameters.Add(idParameter);
+
+                    command.ExecuteNonQuery();
+
+                    identity.PropertyInfo.SetValue(item, idParameter.Value, null);
                 }
 
                 if (insertReferences)
@@ -282,277 +496,15 @@ namespace OpenNETCF.ORM
                     DoInsertReferences(item, entityName, keyScheme, false);
                 }
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                if (Debugger.IsAttached) Debugger.Break();
+                throw;
+            }
             finally
             {
                 DoneWithConnection(connection, false);
-            }
-        }
-
-        private int GetIdentity(IDbConnection connection)
-        {
-            using (var command = new SQLiteCommand("SELECT last_insert_rowid()", connection as SQLiteConnection))
-            {
-                object id = command.ExecuteScalar();
-                return Convert.ToInt32(id);
-            }
-        }
-
-        protected override void GetPrimaryKeyInfo(string entityName, out string indexName, out string columnName)
-        {
-            var connection = GetConnection(true);
-            try
-            {
-                indexName = string.Empty;
-                columnName = string.Empty;
-
-                string sql = string.Format("PRAGMA table_info({0})", entityName);
-
-                using (var command = GetNewCommandObject())
-                {
-                    command.CommandText = sql;
-                    command.Connection = connection;
-                    command.Transaction = CurrentTransaction;
-                    using (var reader = command.ExecuteReader() as SQLiteDataReader)
-                    {
-                        if (reader.HasRows)
-                        {
-                            while (reader.Read())
-                            {
-                                // pk column is #5
-                                if (Convert.ToInt32(reader[5]) != 0)
-                                {
-                                    columnName = reader[1] as string;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, true);
-            }
-        }
-
-        private void UpdateIndexCacheForType(string entityName)
-        {
-            // have we already cached this?
-            if (((SqlEntityInfo)Entities[entityName]).IndexNames != null) return;
-
-            // get all iindex names for the type
-            var connection = GetConnection(true);
-            try
-            {
-                string sql = string.Format("SELECT name FROM sqlite_master WHERE (tbl_name = '{0}')", entityName);
-
-                using (var command = GetNewCommandObject())
-                {
-                    command.Connection = connection;
-                    command.CommandText = sql;
-                    command.Transaction = CurrentTransaction;
-                    using (var reader = command.ExecuteReader())
-                    {
-                        List<string> nameList = new List<string>();
-
-                        while (reader.Read())
-                        {
-                            nameList.Add(reader.GetString(0));
-                        }
-
-                        ((SqlEntityInfo)Entities[entityName]).IndexNames = nameList;
-                    }
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, true);
-            }
-        }
-
-        public override string[] GetTableNames()
-        {
-            var names = new List<string>();
-
-            var connection = GetConnection(true);
-            try
-            {
-                using (var command = GetNewCommandObject())
-                {
-                    command.Transaction = CurrentTransaction;
-                    command.Connection = connection;
-                    var sql = "SELECT name FROM sqlite_master WHERE type = 'table'";
-                    command.CommandText = sql;
-                    using (var reader = command.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            names.Add(reader.GetString(0));
-                        }
-                    }
-
-                    return names.ToArray();
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, true);
-            }
-        }
-
-        public override bool TableExists(string tableName)
-        {
-            var connection = GetConnection(true);
-            try
-            {
-                using (var command = GetNewCommandObject())
-                {
-                    command.Connection = connection;
-                    var sql = string.Format("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = '{0}'", tableName);
-                    command.CommandText = sql;
-                    command.Transaction = CurrentTransaction;
-                    var count = Convert.ToInt32(command.ExecuteScalar());
-
-                    return (count > 0);
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, true);
-            }
-        }
-
-        protected override void ValidateTable(IDbConnection connection, IEntityInfo entity)
-        {
-            // first make sure the table exists
-            if (!TableExists(entity.EntityAttribute.NameInStore))
-            {
-                CreateTable(connection, entity);
-                return;
-            }
-
-            using (var command = new SQLiteCommand())
-            {
-                command.Connection = connection as SQLiteConnection;
-                command.CommandText = string.Format("PRAGMA table_info({0})", entity.EntityName);
-                using (var reader = command.ExecuteReader())
-                {
-
-                }
-            }
-
-            return;
-
-            throw new NotImplementedException();
-
-            // NOTE: THIS IS COPIED FROM THE SQL CE IMPLEMENTAION
-            // THE SQL IS NOT RIGHT AND NEEDS FIXING, WHICH IS WHY IT'S COMMENTED OUT
-
-
-            //using (var command = new SQLiteCommand())
-            //{
-            //    command.Connection = connection as SQLiteConnection;
-
-            //    foreach (var field in entity.Fields)
-            //    {
-            //        if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
-            //        {
-            //            throw new ReservedWordException(field.FieldName);
-            //        }
-
-            //        // yes, I realize hard-coded ordinals are not a good practice, but the SQL isn't changing, it's method specific
-            //        var sql = string.Format("SELECT column_name, "  // 0
-            //              + "data_type, "                       // 1
-            //              + "character_maximum_length, "        // 2
-            //              + "numeric_precision, "               // 3
-            //              + "numeric_scale, "                   // 4
-            //              + "is_nullable "
-            //              + "FROM information_schema.columns "
-            //              + "WHERE (table_name = '{0}' AND column_name = '{1}')",
-            //              entity.EntityAttribute.NameInStore, field.FieldName);
-
-            //        command.CommandText = sql;
-
-            //        using (var reader = command.ExecuteReader())
-            //        {
-            //            if (!reader.Read())
-            //            {
-            //                // field doesn't exist - we must create it
-            //                var alter = new StringBuilder(string.Format("ALTER TABLE {0} ", entity.EntityAttribute.NameInStore));
-            //                alter.Append(string.Format("ADD [{0}] {1} {2}",
-            //                    field.FieldName,
-            //                    GetFieldDataTypeString(entity.EntityName, field),
-            //                    GetFieldCreationAttributes(entity.EntityAttribute, field)));
-
-            //                using (var altercmd = new SQLiteCommand(alter.ToString(), connection as SQLiteConnection))
-            //                {
-            //                    altercmd.ExecuteNonQuery();
-            //                }
-            //            }
-            //            else
-            //            {
-            //                // TODO: verify field length, etc.
-            //            }
-            //        }
-            //    }
-            //}
-        }
-
-        protected override string VerifyIndex(string entityName, string fieldName, FieldSearchOrder searchOrder, IDbConnection connection)
-        {
-            bool localConnection = false;
-            if (connection == null)
-            {
-                localConnection = true;
-                connection = GetConnection(true);
-            }
-            try
-            {
-                var indexName = string.Format("ORM_IDX_{0}_{1}_{2}", entityName, fieldName,
-                    searchOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
-
-                if (m_indexNameCache.FirstOrDefault(ii => ii.Name == indexName) != null) return indexName;
-
-                using (var command = GetNewCommandObject())
-                {
-                    command.Connection = connection;
-
-                    var sql = string.Format("SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = '{0}'", indexName);
-                    command.CommandText = sql;
-
-                    var i = (long)command.ExecuteScalar();
-
-                    if (i == 0)
-                    {
-                        sql = string.Format("CREATE INDEX {0} ON {1}({2} {3})",
-                            indexName,
-                            entityName,
-                            fieldName,
-                            searchOrder == FieldSearchOrder.Descending ? "DESC" : string.Empty);
-
-                        Debug.WriteLine(sql);
-
-                        command.CommandText = sql;
-                        command.Transaction = CurrentTransaction;
-                        command.ExecuteNonQuery();
-                    }
-
-                    var indexinfo = new IndexInfo
-                    {
-                        Name = indexName,
-                        MaxCharLength = -1
-                    };
-
-                    m_indexNameCache.Add(indexinfo);
-                }
-
-                return indexName;
-            }
-            finally
-            {
-                if (localConnection)
-                {
-                    DoneWithConnection(connection, true);
-                }
             }
         }
 
@@ -565,29 +517,82 @@ namespace OpenNETCF.ORM
                 throw new EntityNotFoundException(objectType);
             }
 
+            return Select(entityName, objectType, filters, fetchCount, firstRowOffset, fillReferences);
+        }
+
+        private void UpdateIndexCacheForType(string entityName)
+        {
+            // have we already cached this?
+            if (((SqlEntityInfo)Entities[entityName]).IndexNames != null) return;
+
+            // get all index names for the type
+            var connection = GetConnection(true);
+            try
+            {
+                string sql = string.Format(
+                    "SELECT table_name, index_name, column_name FROM all_ind_columns " +
+                    "WHERE UPPER(table_name) = UPPER('{0}')"
+                , entityName);
+
+                using (var command = GetNewCommandObject())
+                {
+                    command.CommandText = sql;
+                    command.Connection = connection;
+                    using (var reader = command.ExecuteReader())
+                    {
+                        List<string> nameList = new List<string>();
+
+                        while (reader.Read())
+                        {
+                            nameList.Add(reader.GetString(1));
+                        }
+
+                        ((SqlEntityInfo)Entities[entityName]).IndexNames = nameList;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.Message);
+                if (Debugger.IsAttached) Debugger.Break();
+                throw;
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
+        private IEnumerable<object> Select(string entityName, Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
+        {
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(objectType);
+            }
+
             UpdateIndexCacheForType(entityName);
 
             var items = new List<object>();
 
             var connection = GetConnection(false);
-            SQLiteCommand command = null;
+            OracleCommand command = null;
 
             try
             {
                 CheckOrdinals(entityName);
                 bool tableDirect;
-                command = GetSelectCommand<SQLiteCommand, SQLiteParameter>(entityName, filters, out tableDirect);
-                command.Connection = connection as SQLiteConnection;
-                command.Transaction = CurrentTransaction as SQLiteTransaction;
+                command = GetSelectCommand<OracleCommand, OracleParameter>(entityName, filters, out tableDirect);
+                command.Connection = connection as OracleConnection;
+                command.Transaction = CurrentTransaction as OracleTransaction;
 
                 int searchOrdinal = -1;
-            //    ResultSetOptions options = ResultSetOptions.Scrollable;
+                //    ResultSetOptions options = ResultSetOptions.Scrollable;
 
                 object matchValue = null;
                 string matchField = null;
 
-            // TODO: we need to ensure that the search value does not exceed the length of the indexed
-            // field, else we'll get an exception on the Seek call below (see the SQL CE implementation)
+                // TODO: we need to ensure that the search value does not exceed the length of the indexed
+                // field, else we'll get an exception on the Seek call below (see the SQL CE implementation)
 
                 using (var results = command.ExecuteReader(CommandBehavior.SingleResult))
                 {
@@ -631,7 +636,7 @@ namespace OpenNETCF.ORM
 
                             object rowPK = null;
 
-                            if(!fieldsSet)
+                            if (!fieldsSet)
                             {
                                 foreach (var field in Entities[entityName].Fields)
                                 {
@@ -657,15 +662,15 @@ namespace OpenNETCF.ORM
                                                 field.PropertyInfo.SetValue(item, @object, null);
                                             }
                                         }
-                                        else if (field.IsRowVersion)
+                                        else if (field.DataType == DbType.Guid)
                                         {
                                             // sql stores this an 8-byte array
-                                            field.PropertyInfo.SetValue(item, BitConverter.ToInt64((byte[])value, 0), null);
+                                            field.PropertyInfo.SetValue(item, new Guid((byte[])value), null);
                                         }
                                         else if (field.IsTimespan)
                                         {
                                             // SQL Compact doesn't support Time, so we're convert to ticks in both directions
-                                            var valueAsTimeSpan = new TimeSpan((long)value);
+                                            var valueAsTimeSpan = new TimeSpan(Convert.ToInt64(value));
                                             field.PropertyInfo.SetValue(item, valueAsTimeSpan, null);
                                         }
                                         else if ((field.IsPrimaryKey) && (value is Int64))
@@ -680,11 +685,9 @@ namespace OpenNETCF.ORM
                                                 field.PropertyInfo.SetValue(item, Convert.ToInt64(value), null);
                                             }
                                         }
-                                        else if ((value is Int64) || (value is double))
+                                        else if (value is decimal)
                                         {
-                                            // SQLite is "interesting" in that its 'integer' has a strong affinity toward 64-bit, so int and uint properties
-                                            // end up as 64-bit fields.  Decimals have a strong affinity toward 'double', so float properties
-                                            // end up as 'double'. Even more fun is that a decimal value '0' will come back as an int64
+                                            // Oracle numeric fields appear to come back as "decimal"
 
                                             // When we query those back, we must convert to put them into the property or we crash hard
                                             if (field.PropertyInfo.PropertyType.Equals(typeof(UInt32)))
@@ -761,13 +764,57 @@ namespace OpenNETCF.ORM
                 DoneWithConnection(connection, false);
             }
         }
-        
+
+        protected override void GetPrimaryKeyInfo(string entityName, out string indexName, out string columnName)
+        {
+            var connection = GetConnection(true);
+            try
+            {
+                string sql = string.Format(
+                    "SELECT cons.constraint_name, cols.column_name " +
+                    "FROM all_constraints cons, all_cons_columns cols " +
+                    "WHERE UPPER(cols.table_name) = UPPER('{0}') " +
+                    "AND cons.constraint_type = 'P' " +
+                    "AND cons.constraint_name = cols.constraint_name",
+                    entityName);
+
+                indexName = string.Empty;
+                columnName = string.Empty;
+
+                using (var command = GetNewCommandObject())
+                {
+                    command.CommandText = sql;
+                    command.Connection = connection;
+                    command.Transaction = CurrentTransaction;
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            indexName = reader.GetString(0);
+                            columnName = reader.GetString(1);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
         public override void OnUpdate(object item, bool cascadeUpdates, string fieldName)
         {
+            if (item is DynamicEntity)
+            {
+                throw new NotSupportedException();
+//                OnUpdateDynamicEntity(item as DynamicEntity);
+//                return;
+            }
+
             object keyValue;
             var changeDetected = false;
             var itemType = item.GetType();
-            string entityName = m_entities.GetNameForType(itemType);
+            var entityName = m_entities.GetNameForType(itemType);
 
             if (entityName == null)
             {
@@ -791,17 +838,18 @@ namespace OpenNETCF.ORM
 
                     command.Connection = connection;
 
-                    command.CommandText = string.Format("SELECT * FROM {0} WHERE [{1}] = @keyparam",
+                    command.CommandText = string.Format("SELECT * FROM {0} WHERE {1} = {2}keyparam",
                         entityName,
-                        Entities[entityName].Fields.KeyField.FieldName);
+                        Entities[entityName].Fields.KeyField.FieldName,
+                        ParameterPrefix);
 
                     command.CommandType = CommandType.Text;
-                    command.Parameters.Add(new SQLiteParameter("@keyparam", keyValue));
+                    command.Parameters.Add(new OracleParameter(ParameterPrefix + "keyparam", keyValue));
                     command.Transaction = CurrentTransaction;
 
                     var updateSQL = new StringBuilder(string.Format("UPDATE {0} SET ", entityName));
 
-                    using (var reader = command.ExecuteReader() as SQLiteDataReader)
+                    using (var reader = command.ExecuteReader() as OracleDataReader)
                     {
 
                         if (!reader.HasRows)
@@ -850,8 +898,8 @@ namespace OpenNETCF.ORM
                                     }
                                     else
                                     {
-                                        updateSQL.AppendFormat("{0}=@{0}, ", field.FieldName);
-                                        insertCommand.Parameters.Add(new SQLiteParameter("@" + field.FieldName, value));
+                                        updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
+                                        insertCommand.Parameters.Add(new OracleParameter(ParameterPrefix + field.FieldName, value));
                                     }
                                 }
                                 else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
@@ -866,8 +914,8 @@ namespace OpenNETCF.ORM
                                     else
                                     {
                                         var ticks = ((TimeSpan)value).Ticks;
-                                        updateSQL.AppendFormat("{0}=@{0}, ", field.FieldName);
-                                        insertCommand.Parameters.Add(new SQLiteParameter("@" + field.FieldName, ticks));
+                                        updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
+                                        insertCommand.Parameters.Add(new OracleParameter(ParameterPrefix + field.FieldName, ticks));
                                     }
                                 }
                                 else
@@ -884,8 +932,8 @@ namespace OpenNETCF.ORM
                                         }
                                         else
                                         {
-                                            updateSQL.AppendFormat("{0}=@{0}, ", field.FieldName);
-                                            insertCommand.Parameters.Add(new SQLiteParameter("@" + field.FieldName, value));
+                                            updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
+                                            insertCommand.Parameters.Add(new OracleParameter(ParameterPrefix + field.FieldName, value));
                                         }
                                     }
                                 }
@@ -896,8 +944,8 @@ namespace OpenNETCF.ORM
                             {
                                 // remove the trailing comma and append the filter
                                 updateSQL.Length -= 2;
-                                updateSQL.AppendFormat(" WHERE {0} = @keyparam", Entities[entityName].Fields.KeyField.FieldName);
-                                insertCommand.Parameters.Add(new SQLiteParameter("@keyparam", keyValue));
+                                updateSQL.AppendFormat(" WHERE {0} = {1}keyparam", Entities[entityName].Fields.KeyField.FieldName, ParameterPrefix);
+                                insertCommand.Parameters.Add(new OracleParameter(ParameterPrefix + "keyparam", keyValue));
                                 insertCommand.CommandText = updateSQL.ToString();
                                 insertCommand.Connection = connection;
                                 insertCommand.Transaction = CurrentTransaction;
@@ -938,74 +986,34 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public override int Count<T>(IEnumerable<FilterCondition> filters)
+        public override IEnumerable<DynamicEntity> Select(string entityName)
         {
-            var t = typeof(T);
-            string entityName = m_entities.GetNameForType(t);
-
-            if (entityName == null)
-            {
-                throw new EntityNotFoundException(t);
-            }
-
-            var connection = GetConnection(true);
-            try
-            {
-                using (var command = BuildFilterCommand<SQLiteCommand, SQLiteParameter>(entityName, filters, true))
-                {
-                    command.Connection = connection as SQLiteConnection;
-                    return (int)command.ExecuteScalar();
-                }
-            }
-            finally
-            {
-                DoneWithConnection(connection, true);
-            }
+            throw new NotImplementedException();
         }
 
         public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
-            throw new NotSupportedException("Fetch is not currently supported with this Provider.");
-        }
-
-        public override IEnumerable<DynamicEntity> Select(string entityName)
-        {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
-        }
-
-        public override DynamicEntity Select(string entityName, object primaryKey)
-        {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
-        }
-
-        protected override void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility)
-        {
-            // TODO: just delete this method when implemented, the SqlDataStore base will create the table
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
-        }
-
-        public override void DiscoverDynamicEntity(string entityName)
-        {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
+            throw new NotImplementedException();
         }
 
         public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount)
         {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
+            throw new NotImplementedException();
         }
 
-        protected override string GetFieldDataTypeString(string entityName, FieldAttribute field)
+        public override int Count<T>(IEnumerable<FilterCondition> filters)
         {
-            // a SQLite Int64 auto-increment key requires being called "INTEGER", not "BIGINT"
-            if(field.IsPrimaryKey && (field.DataType == DbType.Int64))
-            {
-                if (GetEntityInfo(entityName).EntityAttribute.KeyScheme == KeyScheme.Identity)
-                {
-                    return "INTEGER";
-                }
-            }
+            throw new NotImplementedException();
+        }
 
-            return base.GetFieldDataTypeString(entityName, field);
+        public override void DiscoverDynamicEntity(string entityName)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override DynamicEntity Select(string entityName, object primaryKey)
+        {
+            throw new NotImplementedException();
         }
     }
 }

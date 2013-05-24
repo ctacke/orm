@@ -15,6 +15,7 @@ namespace OpenNETCF.ORM
         }
 
         public string PrimaryKeyIndexName { get; set; }
+        public string PrimaryKeyColumnName { get; set; }
         public List<string> IndexNames { get; set; }
 
         public int PrimaryKeyOrdinal
