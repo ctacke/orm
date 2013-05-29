@@ -439,10 +439,11 @@ namespace OpenNETCF.ORM
                         {
                             sb.AppendFormat("({0}) ", field.Length);
                         }
-                        else
-                        {
-                            sb.AppendFormat("({0}) ", MaxSizedStringLength);
-                        }
+                        // SQLCE uses ntext, which cannot have a size
+                        //else
+                        //{
+                        //    sb.AppendFormat("({0}) ", MaxSizedStringLength);
+                        //}
                     }
                     else
                     {
@@ -1499,6 +1500,43 @@ namespace OpenNETCF.ORM
         protected void UpdateEntityPropertyInfo(string entityName, string fieldName, PropertyInfo pi)
         {
             this.Entities[entityName].Fields[fieldName].PropertyInfo = pi;
+        }
+
+        public IDataReader ExecuteReader(string sql)
+        {
+            return ExecuteReader(sql, false);
+        }
+
+        public virtual IDataReader ExecuteReader(string sql, bool throwExceptions)
+        {
+            if (ConnectionBehavior != ORM.ConnectionBehavior.Persistent)
+            {
+                throw new Exception("ConnectionBehavior must be Persistent to use ExecuteReader");
+            }
+
+            var connection = GetConnection(false);
+            try
+            {
+                using (var command = GetNewCommandObject())
+                {
+                    command.CommandText = sql;
+                    command.Connection = connection;
+                    command.Transaction = CurrentTransaction;
+                    var reader = command.ExecuteReader(CommandBehavior.SingleResult);
+                    return reader;
+                }
+            }
+            catch (Exception ex)
+            {
+                if (throwExceptions) throw;
+
+                Debug.WriteLine("SQLStoreBase::ExecuteReader threw: " + ex.Message);
+                return null;
+            }
+            finally
+            {
+                DoneWithConnection(connection, false);
+            }
         }
     }
 }
