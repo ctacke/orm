@@ -15,6 +15,61 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
     {
         public TestContext TestContext { get; set; }
 
+        private SqlCeDataStore m_store;
+
+        [TestInitialize]
+        public void BuildCleanDB()
+        {
+            m_store = new SqlCeDataStore("testDB.sdf");
+
+            if (m_store.StoreExists)
+            {
+                m_store.DeleteStore();
+            }
+            m_store.CreateStore();
+
+            m_store.AddType<TestItem>();
+
+        }
+
+        [TestMethod()]
+        public void SimpleReaderTest()
+        {
+            m_store.ConnectionBehavior = ConnectionBehavior.Persistent;
+
+            var itemA = new TestItem("ItemA");
+            itemA.UUID = Guid.NewGuid();
+            itemA.ITest = 5;
+            itemA.FTest = 3.14F;
+            itemA.DBTest = 1.4D;
+            itemA.DETest = 2.678M;
+            m_store.Insert(itemA);
+
+            var sql = string.Format("SELECT  COLUMN_NAME, ORDINAL_POSITION, IS_NULLABLE, DATA_TYPE FROM information_schema.columns WHERE TABLE_NAME = '{0}'", "TestItem");
+
+            using (var reader = m_store.ExecuteReader(sql))
+            {
+                for (int i = 0; i < reader.FieldCount; i++)
+                {
+                    Debug.Write(reader.GetName(i) + "  |  ");
+                }
+
+                object[] values = new object[reader.FieldCount];
+
+                while (reader.Read())
+                {
+                    Debug.Write("\r\n");
+
+                    reader.GetValues(values);
+
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        Debug.Write(values[i].ToString() + "  |  ");
+                    }
+                }
+            }
+        }
+
         [TestMethod()]
         public void SimpleTransactionTest()
         {
