@@ -33,6 +33,26 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
         }
 
         [TestMethod()]
+        public void DateTimeTest()
+        {
+            m_store.TruncateTable("TestItem");
+
+            var itemA = new TestItem("ItemA");
+            m_store.Insert(itemA);
+
+            var checkItem = m_store.Select<TestItem>().FirstOrDefault();
+            Assert.AreEqual(itemA.TestDate, checkItem.TestDate);
+
+            var now = DateTime.Now;
+
+            itemA.TestDate = now;
+
+            m_store.Update(itemA);
+            checkItem = m_store.Select<TestItem>().FirstOrDefault();
+            Assert.AreEqual(itemA.TestDate.Second, checkItem.TestDate.Second);
+        }
+
+        [TestMethod()]
         public void SimpleReaderTest()
         {
             m_store.ConnectionBehavior = ConnectionBehavior.Persistent;

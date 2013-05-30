@@ -11,7 +11,7 @@ using Oracle.DataAccess.Client;
 
 namespace OpenNETCF.ORM
 {
-    public class OracleDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
+    public partial class OracleDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
     {
         private string m_connectionString; 
         private OracleConnectionInfo m_info;
@@ -986,32 +986,12 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public override IEnumerable<DynamicEntity> Select(string entityName)
-        {
-            throw new NotImplementedException();
-        }
-
         public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
             throw new NotImplementedException();
         }
 
-        public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount)
-        {
-            throw new NotImplementedException();
-        }
-
         public override int Count<T>(IEnumerable<FilterCondition> filters)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void DiscoverDynamicEntity(string entityName)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override DynamicEntity Select(string entityName, object primaryKey)
         {
             throw new NotImplementedException();
         }
