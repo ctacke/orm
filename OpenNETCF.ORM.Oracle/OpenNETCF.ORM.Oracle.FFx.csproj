@@ -7,7 +7,7 @@
     <ProjectGuid>{F9BFB0B3-D558-4019-99E3-ABF55901E900}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>OpenNETCF.ORM.Oracle</RootNamespace>
+    <RootNamespace>OpenNETCF.ORM</RootNamespace>
     <AssemblyName>OpenNETCF.ORM.Oracle</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
@@ -35,8 +35,9 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Oracle.DataAccess">
-      <HintPath>ODAC\Oracle.DataAccess.dll</HintPath>
+    <Reference Include="Oracle.DataAccess, Version=2.112.3.0, Culture=neutral, PublicKeyToken=89b483f429c47342, processorArchitecture=x86">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>ODAC\x86\Oracle.DataAccess.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -50,6 +51,7 @@
       <Link>Properties\OpenNETCF.ORM.Version.cs</Link>
     </Compile>
     <Compile Include="OracleDataStore.cs" />
+    <Compile Include="OracleDataStore_dynamic.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="OracleConnectionInfo.cs" />
   </ItemGroup>

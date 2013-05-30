@@ -59,6 +59,9 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
         [Field(Length = int.MaxValue)]
         public string BigString { get; set; }
 
+        [Field(FieldName="Data")]
+        public DateTime TestDate { get; set; }
+
         public bool Equals(TestItem other)
         {
             return this.ID == other.ID;
@@ -105,6 +108,9 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
                     case "TS":
                         item.TS = value == DBNull.Value ? TimeSpan.MinValue : new TimeSpan((long)value);
                         break;
+                    case "TestDate":
+                        item.TestDate = value == DBNull.Value ? DateTime.MinValue : ((DateTime)value);
+                        break;
                     case "BigString":
                         item.BigString = value == DBNull.Value ? null : (string)value;
                         break;
@@ -126,7 +132,8 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
                 ITest = item.ITest,
                 Name = item.Name,
                 TS = item.TS,
-                UUID = item.UUID
+                UUID = item.UUID,
+                TestDate = item.TestDate
             };
         }
 
@@ -163,6 +170,10 @@ namespace OpenNETCF.ORM.SqlCE.Integration.Test
 
         [Field(Length = int.MaxValue)]
         public string BigString { get; set; }
+
+        //[Field(FieldName="Data")]
+        [Field(FieldName = "Data")]
+        public DateTime TestDate { get; set; }
 
         public bool Equals(TestItemD other)
         {
