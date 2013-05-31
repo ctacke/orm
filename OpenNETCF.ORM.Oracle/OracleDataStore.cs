@@ -260,7 +260,8 @@ namespace OpenNETCF.ORM
                             {
                                 altercmd.CommandText = alter.ToString();
                                 altercmd.Connection = connection;
-                                altercmd.ExecuteNonQuery();
+                                var result = altercmd.ExecuteNonQuery();
+                                altercmd.Dispose();
                             }
                         }
                         else
@@ -269,7 +270,76 @@ namespace OpenNETCF.ORM
                         }
                     }
                 }
+                
+///////////////////// TEST SECTION DUE TO ORACLE "BEHAVIOR"
+
+                //if (columnAdded) ValidateTable(connection, entity);
+
+                //(connection as OracleConnection).FlushCache();
+                //(connection as OracleConnection).PurgeStatementCache();
+
+                //connection.Close();
+                //connection.Open();
+
+                //ConnectionBehavior = ORM.ConnectionBehavior.AlwaysNew;
+                //using (var cmd = GetNewCommandObject())
+                //{
+                //    cmd.Connection = GetConnection(false);
+                //    cmd.CommandText = string.Format("SELECT * FROM {0}", entity.EntityAttribute.NameInStore);
+                //    cmd.Prepare();
+                //    //                    command.CommandText = string.Format("SELECT * FROM all_tab_cols WHERE table_name = '{0}'", entityName.ToUpper());
+                //    using (var reader = cmd.ExecuteReader())
+                //    {
+                //        var c = reader.FieldCount;
+                //    }
+
+                //    cmd.Dispose();
+                //}
+
+
+                //CheckOrdinals(entity.EntityAttribute.NameInStore);
+
+//////////////
             }
+        }
+
+        protected override void CheckOrdinals(string entityName)
+        {
+            // a bug in ODAC prevents the base implementation from working
+            if (Entities[entityName].Fields.OrdinalsAreValid) return;
+
+            var connection = GetConnection(true);
+            try
+            {
+                using (var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+                    command.CommandText = string.Format("SELECT column_name FROM all_tab_cols WHERE UPPER(table_name) = UPPER('{0}') order by column_id", entityName);
+
+                    int ordinal = 0;
+
+                    using (var reader = command.ExecuteReader())
+                    {
+                        while (reader.Read())
+                        {
+                            var field = reader.GetString(0);
+                            Debug.WriteLine(string.Format("Field {0} ordinal = {1}", field, ordinal));
+                            Entities[entityName].Fields[field].Ordinal = ordinal;
+                            ordinal++;
+                        }
+
+                        Entities[entityName].Fields.OrdinalsAreValid = true;
+                    }
+
+                    command.Dispose();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+
+            base.CheckOrdinals(entityName);
         }
 
         private OracleCommand GetInsertCommand(string entityName)
@@ -353,9 +423,8 @@ namespace OpenNETCF.ORM
         {
             if (item is DynamicEntity)
             {
-                throw new NotSupportedException("Dynamic entities not supported by this Provider");
-                //OnInsertDynamicEntity(item as DynamicEntity, insertReferences);
-                //return;
+                OnInsertDynamicEntity(item as DynamicEntity, insertReferences);
+                return;
             }
 
             string entityName;
@@ -806,9 +875,8 @@ namespace OpenNETCF.ORM
         {
             if (item is DynamicEntity)
             {
-                throw new NotSupportedException();
-//                OnUpdateDynamicEntity(item as DynamicEntity);
-//                return;
+                OnUpdateDynamicEntity(item as DynamicEntity);
+                return;
             }
 
             object keyValue;

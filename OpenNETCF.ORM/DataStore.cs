@@ -291,6 +291,14 @@ namespace OpenNETCF.ORM
 
         public void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition)
         {
+            foreach (var f in entityDefinition.Fields)
+            {
+                if (entityDefinition.EntityAttribute.KeyScheme == KeyScheme.Identity)
+                {
+                    throw new NotSupportedException("Oracle provider does not currently support Identity dynamic entities");
+                }
+            }
+
             RegisterDynamicEntity(entityDefinition, false);
         }
 
