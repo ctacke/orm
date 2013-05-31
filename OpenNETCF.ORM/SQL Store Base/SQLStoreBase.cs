@@ -757,7 +757,16 @@ namespace OpenNETCF.ORM
             }
             else
             {
-                sb = new StringBuilder(string.Format("SELECT * FROM {0}", entityName));
+//                sb = new StringBuilder(string.Format("SELECT * FROM {0}", entityName));
+                sb = new StringBuilder("SELECT ");
+
+                var count = Entities[entityName].Fields.Count;
+                foreach (var field in Entities[entityName].Fields)
+                {
+                    sb.Append(field.FieldName);
+                    if (--count > 0) sb.Append(", ");
+                }
+                sb.Append(string.Format(" FROM {0}", entityName));
             }
 
             if (filters != null)
@@ -862,7 +871,7 @@ namespace OpenNETCF.ORM
             try
             {
                 using (var command = GetNewCommandObject())
-                {
+                { 
                     command.Connection = connection;
                     command.CommandText = string.Format("SELECT * FROM {0}", entityName);
 
@@ -1504,10 +1513,20 @@ namespace OpenNETCF.ORM
 
         public IDataReader ExecuteReader(string sql)
         {
-            return ExecuteReader(sql, false);
+            return ExecuteReader(sql, null, false);
         }
 
         public virtual IDataReader ExecuteReader(string sql, bool throwExceptions)
+        {
+            return ExecuteReader(sql, null, throwExceptions);
+        }
+
+        public virtual IDataReader ExecuteReader(string sql, IEnumerable<IDataParameter> parameters)
+        {
+            return ExecuteReader(sql, parameters, false);
+        }
+
+        public virtual IDataReader ExecuteReader(string sql, IEnumerable<IDataParameter> parameters, bool throwExceptions)
         {
             if (ConnectionBehavior != ORM.ConnectionBehavior.Persistent)
             {
@@ -1522,6 +1541,14 @@ namespace OpenNETCF.ORM
                     command.CommandText = sql;
                     command.Connection = connection;
                     command.Transaction = CurrentTransaction;
+                    if(parameters != null)
+                    {
+                        foreach(var p in parameters)
+                        {
+                            command.Parameters.Add(p);
+                        }
+                    }
+
                     var reader = command.ExecuteReader(CommandBehavior.SingleResult);
                     return reader;
                 }

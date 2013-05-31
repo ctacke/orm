@@ -65,6 +65,7 @@
     <Compile Include="Entities\SeekItem.cs" />
     <Compile Include="Entities\TestItem.cs" />
     <Compile Include="Entities\TestTable.cs" />
+    <Compile Include="OracleDynamicEntityTest.cs" />
     <Compile Include="UnitTest1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -77,6 +78,32 @@
       <Project>{6e9c7da3-ad60-4e44-9d3a-7bbd3a20d79f}</Project>
       <Name>OpenNETCF.ORM.FFx</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\..\OpenNETCF.ORM.Oracle\ODAC\x86\oci.dll">
+      <Link>ODAC\x86\oci.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\OpenNETCF.ORM.Oracle\ODAC\x86\Oracle.DataAccess.dll">
+      <Link>ODAC\x86\Oracle.DataAccess.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\OpenNETCF.ORM.Oracle\ODAC\x86\orannzsbb11.dll">
+      <Link>ODAC\x86\orannzsbb11.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\OpenNETCF.ORM.Oracle\ODAC\x86\oraocci11.dll">
+      <Link>ODAC\x86\oraocci11.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\OpenNETCF.ORM.Oracle\ODAC\x86\oraociei11.dll">
+      <Link>ODAC\x86\oraociei11.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\OpenNETCF.ORM.Oracle\ODAC\x86\OraOps11w.dll">
+      <Link>ODAC\x86\OraOps11w.dll</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
@@ -98,6 +125,10 @@
   </Choose>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>
+    </PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
