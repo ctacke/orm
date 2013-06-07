@@ -154,10 +154,10 @@ namespace OpenNETCF.ORM
                     continue;
                 }
                 sbFields.Append("[" + field.FieldName + "],");
-                sbParams.Append("@" + field.FieldName + ",");
+                sbParams.Append(ParameterPrefix + field.FieldName + ",");
 
                 // TODO; verify that the 2-parameter method work on non-Phone implementations
-                insertCommand.Parameters.Add(new SqlParameter("@" + field.FieldName, field.DataType));
+                insertCommand.Parameters.Add(new SqlParameter(ParameterPrefix + field.FieldName, field.DataType));
             }
 
             // replace trailing commas
@@ -250,11 +250,11 @@ namespace OpenNETCF.ORM
                         var value = serializer.Invoke(item, new object[] { field.FieldName });
                         if (value == null)
                         {
-                            command.Parameters["@" + field.FieldName].Value = DBNull.Value;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = DBNull.Value;
                         }
                         else
                         {
-                            command.Parameters["@" + field.FieldName].Value = value;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = value;
                         }
                     }
                     else if (field.DataType == DbType.DateTime)
@@ -268,7 +268,7 @@ namespace OpenNETCF.ORM
                             // so we'll set it manually
                             dtValue = DateTime.Now;
                         }
-                        command.Parameters["@" + field.FieldName].Value = dtValue;
+                        command.Parameters[ParameterPrefix + field.FieldName].Value = dtValue;
                     }
                     else if (field.IsRowVersion)
                     {
@@ -281,12 +281,12 @@ namespace OpenNETCF.ORM
 
                         if (value == null)
                         {
-                            command.Parameters["@" + field.FieldName].Value = DBNull.Value;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = DBNull.Value;
                         }
                         else
                         {
                             var timespanTicks = ((TimeSpan)value).Ticks;
-                            command.Parameters["@" + field.FieldName].Value = timespanTicks;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = timespanTicks;
                         }
                     }
                     else
@@ -296,22 +296,22 @@ namespace OpenNETCF.ORM
                         {
                             if (field.DefaultValue != null)
                             {
-                                command.Parameters["@" + field.FieldName].Value = field.DefaultValue;
+                                command.Parameters[ParameterPrefix + field.FieldName].Value = field.DefaultValue;
                             }
                             else
                             {
                                 // this is specific to SQL Server
                                 if (field.DataType == DbType.Binary)
                                 {
-                                    command.Parameters["@" + field.FieldName].SqlDbType = SqlDbType.VarBinary;
-                                    command.Parameters["@" + field.FieldName].Size = -1;
+                                    command.Parameters[ParameterPrefix + field.FieldName].SqlDbType = SqlDbType.VarBinary;
+                                    command.Parameters[ParameterPrefix + field.FieldName].Size = -1;
                                 }
-                                command.Parameters["@" + field.FieldName].Value = DBNull.Value;
+                                command.Parameters[ParameterPrefix + field.FieldName].Value = DBNull.Value;
                             }
                         }
                         else
                         {
-                            command.Parameters["@" + field.FieldName].Value = value;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = value;
                         }
                     }
                 }

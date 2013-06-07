@@ -51,9 +51,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.Oracle.FFx", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.Oracle.Integration.Test", "Tests\OpenNETCF.ORM.Oracle.Integration.Test\OpenNETCF.ORM.Oracle.Integration.Test.csproj", "{848498E6-8707-4B79-B115-5C3F91E57D17}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MySQL", "MySQL", "{FCC94815-6AA4-4EDC-BD8B-2912F44C7B64}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.MySQL.FFx", "OpenNETCF.ORM.MySQL\OpenNETCF.ORM.MySQL.FFx.csproj", "{77196BF3-0C9E-452B-887E-B110985E2209}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.MySQL.Integration.Test", "Tests\OpenNETCF.ORM.MySQL.Integration.Test\OpenNETCF.ORM.MySQL.Integration.Test.csproj", "{5801398D-DB55-4308-8150-ABA0B08500C6}"
+EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 16
+		SccNumberOfProjects = 18
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs01
 		SccLocalPath0 = .
@@ -115,6 +121,14 @@ Global
 		SccProjectTopLevelParentUniqueName15 = OpenNETCF.ORM.FFx.VS12.sln
 		SccProjectName15 = Tests/OpenNETCF.ORM.Oracle.Integration.Test
 		SccLocalPath15 = Tests\\OpenNETCF.ORM.Oracle.Integration.Test
+		SccProjectUniqueName16 = OpenNETCF.ORM.MySQL\\OpenNETCF.ORM.MySQL.FFx.csproj
+		SccProjectTopLevelParentUniqueName16 = OpenNETCF.ORM.FFx.VS12.sln
+		SccProjectName16 = OpenNETCF.ORM.MySQL
+		SccLocalPath16 = OpenNETCF.ORM.MySQL
+		SccProjectUniqueName17 = Tests\\OpenNETCF.ORM.MySQL.Integration.Test\\OpenNETCF.ORM.MySQL.Integration.Test.csproj
+		SccProjectTopLevelParentUniqueName17 = OpenNETCF.ORM.FFx.VS12.sln
+		SccProjectName17 = Tests/OpenNETCF.ORM.MySQL.Integration.Test
+		SccLocalPath17 = Tests\\OpenNETCF.ORM.MySQL.Integration.Test
 	EndGlobalSection
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = OpenNETCF.ORM.FFx.vsmdi
@@ -278,6 +292,26 @@ Global
 		{848498E6-8707-4B79-B115-5C3F91E57D17}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{848498E6-8707-4B79-B115-5C3F91E57D17}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{848498E6-8707-4B79-B115-5C3F91E57D17}.Release|x86.ActiveCfg = Release|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Release|x86.ActiveCfg = Release|Any CPU
+		{5801398D-DB55-4308-8150-ABA0B08500C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5801398D-DB55-4308-8150-ABA0B08500C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5801398D-DB55-4308-8150-ABA0B08500C6}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{5801398D-DB55-4308-8150-ABA0B08500C6}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{5801398D-DB55-4308-8150-ABA0B08500C6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{5801398D-DB55-4308-8150-ABA0B08500C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5801398D-DB55-4308-8150-ABA0B08500C6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5801398D-DB55-4308-8150-ABA0B08500C6}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{5801398D-DB55-4308-8150-ABA0B08500C6}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{5801398D-DB55-4308-8150-ABA0B08500C6}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -296,5 +330,7 @@ Global
 		{7A8E5301-089B-4A38-8C1C-466607EB6361} = {761AAC27-EF50-4A1B-8A12-FB7DAE0DB440}
 		{F9BFB0B3-D558-4019-99E3-ABF55901E900} = {F4AE515A-A5D4-487C-A264-7CC9AC0D4230}
 		{848498E6-8707-4B79-B115-5C3F91E57D17} = {F4AE515A-A5D4-487C-A264-7CC9AC0D4230}
+		{77196BF3-0C9E-452B-887E-B110985E2209} = {FCC94815-6AA4-4EDC-BD8B-2912F44C7B64}
+		{5801398D-DB55-4308-8150-ABA0B08500C6} = {FCC94815-6AA4-4EDC-BD8B-2912F44C7B64}
 	EndGlobalSection
 EndGlobal

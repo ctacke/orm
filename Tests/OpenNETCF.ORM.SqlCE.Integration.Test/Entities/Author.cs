@@ -33,6 +33,9 @@ namespace OpenNETCF.ORM.Test.Entities
         [Field(IsPrimaryKey = true)]
         public int AuthorID { get; set; }
 
+        [Reference(typeof(Book), "AuthorID", Autofill = true)]
+        public Book[] Books { get; set; }
+
         [Field(SearchOrder = FieldSearchOrder.Ascending)]
         public string Name { get; set; }
     }

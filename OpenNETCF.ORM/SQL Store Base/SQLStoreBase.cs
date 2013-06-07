@@ -1130,7 +1130,10 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public abstract bool TableExists(string tableName);
+        public virtual bool TableExists(string tableName)
+        {
+            return GetTableNames().Contains(tableName, StringComparer.InvariantCultureIgnoreCase);
+        }
 
         public virtual void DropTable(string tableName)
         {
