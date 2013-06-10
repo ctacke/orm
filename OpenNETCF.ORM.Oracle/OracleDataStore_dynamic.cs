@@ -223,7 +223,7 @@ namespace OpenNETCF.ORM
                         ParameterPrefix);
 
                     command.CommandType = CommandType.Text;
-                    command.Parameters.Add(new OracleParameter(ParameterPrefix + "keyparam", keyValue));
+                    command.Parameters.Add(CreateParameterObject(ParameterPrefix + "keyparam", keyValue));
                     command.Transaction = CurrentTransaction;
 
                     var updateSQL = new StringBuilder(string.Format("UPDATE {0} SET ", entityName));
@@ -265,7 +265,7 @@ namespace OpenNETCF.ORM
                                     else
                                     {
                                         updateSQL.AppendFormat("{0}={1}{0}, ", field.Name, ParameterPrefix);
-                                        insertCommand.Parameters.Add(new OracleParameter(ParameterPrefix + field.Name, value));
+                                        insertCommand.Parameters.Add(CreateParameterObject(ParameterPrefix + field.Name, value));
                                     }
                                 }
                             }
@@ -276,7 +276,7 @@ namespace OpenNETCF.ORM
                                 // remove the trailing comma and append the filter
                                 updateSQL.Length -= 2;
                                 updateSQL.AppendFormat(" WHERE {0} = {1}keyparam", keyField, ParameterPrefix);
-                                insertCommand.Parameters.Add(new OracleParameter(ParameterPrefix + "keyparam", keyValue));
+                                insertCommand.Parameters.Add(CreateParameterObject(ParameterPrefix + "keyparam", keyValue));
                                 insertCommand.CommandText = updateSQL.ToString();
                                 insertCommand.Connection = connection;
                                 insertCommand.Transaction = CurrentTransaction;

@@ -64,6 +64,7 @@
     <Compile Include="Entities\SeekItem.cs" />
     <Compile Include="Entities\TestItem.cs" />
     <Compile Include="Entities\TestTable.cs" />
+    <Compile Include="MySqlDynamicEntityTest.cs" />
     <Compile Include="UnitTest1.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

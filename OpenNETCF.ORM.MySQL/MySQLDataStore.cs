@@ -208,8 +208,7 @@ namespace OpenNETCF.ORM
         {
             if (item is DynamicEntity)
             {
-                throw new NotSupportedException();
-                //OnInsertDynamicEntity(item as DynamicEntity, insertReferences);
+                OnInsertDynamicEntity(item as DynamicEntity, insertReferences);
                 return;
             }
 
@@ -408,15 +407,17 @@ namespace OpenNETCF.ORM
                         {
                             // field doesn't exist - we must create it
                             var alter = new StringBuilder(string.Format("ALTER TABLE {0} ", entity.EntityAttribute.NameInStore));
-                            alter.Append(string.Format("ADD [{0}] {1} {2}",
+                            alter.Append(string.Format("ADD {0} {1} {2}",
                                 field.FieldName,
                                 GetFieldDataTypeString(entity.EntityName, field),
                                 GetFieldCreationAttributes(entity.EntityAttribute, field)));
 
+                            using(var alterConnection = GetNewConnectionObject())
                             using (var altercmd = GetNewCommandObject())
                             {
+                                alterConnection.Open();
                                 altercmd.CommandText = alter.ToString();
-                                altercmd.Connection = connection;
+                                altercmd.Connection = alterConnection;
                                 altercmd.ExecuteNonQuery();
                             }
                         }
@@ -685,8 +686,7 @@ namespace OpenNETCF.ORM
         {
             if (item is DynamicEntity)
             {
-                throw new NotSupportedException();
-//                OnUpdateDynamicEntity(item as DynamicEntity);
+                OnUpdateDynamicEntity(item as DynamicEntity);
                 return;
             }
 

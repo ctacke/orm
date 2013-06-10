@@ -27,12 +27,13 @@ namespace OpenNETCF.ORM
 
                     command.Connection = connection;
 
-                    command.CommandText = string.Format("SELECT * FROM {0} WHERE [{1}] = @keyparam",
+                    command.CommandText = string.Format("SELECT * FROM {0} WHERE [{1}] = {2)keyparam",
                         entityName,
-                        Entities[entityName].Fields.KeyField.FieldName);
+                        Entities[entityName].Fields.KeyField.FieldName,
+                        ParameterPrefix);
 
                     command.CommandType = CommandType.Text;
-                    command.Parameters.Add(new SqlParameter("@keyparam", keyValue));
+                    command.Parameters.Add(CreateParameterObject(ParameterPrefix + "keyparam", keyValue));
                     command.Transaction = CurrentTransaction;
 
                     var updateSQL = new StringBuilder(string.Format("UPDATE {0} SET ", entityName));
@@ -74,7 +75,7 @@ namespace OpenNETCF.ORM
                                     else
                                     {
                                         updateSQL.AppendFormat("{0}=@{0}, ", field.Name);
-                                        insertCommand.Parameters.Add(new SqlParameter("@" + field.Name, value));
+                                        insertCommand.Parameters.Add(CreateParameterObject(ParameterPrefix + field.Name, value));
                                     }
                                 }
                             }
@@ -84,8 +85,8 @@ namespace OpenNETCF.ORM
                             {
                                 // remove the trailing comma and append the filter
                                 updateSQL.Length -= 2;
-                                updateSQL.AppendFormat(" WHERE {0} = @keyparam", keyField);
-                                insertCommand.Parameters.Add(new SqlParameter("@keyparam", keyValue));
+                                updateSQL.AppendFormat(" WHERE {0} = {1}keyparam", keyField, ParameterPrefix);
+                                insertCommand.Parameters.Add(CreateParameterObject(ParameterPrefix + "keyparam", keyValue));
                                 insertCommand.CommandText = updateSQL.ToString();
                                 insertCommand.Connection = connection;
                                 insertCommand.Transaction = CurrentTransaction;
@@ -115,7 +116,7 @@ namespace OpenNETCF.ORM
 
                 foreach (var field in item.Fields)
                 {
-                    command.Parameters["@" + field.Name].Value = field.Value;
+                    command.Parameters[ParameterPrefix + field.Name].Value = field.Value;
                 }
 
                 command.ExecuteNonQuery();
