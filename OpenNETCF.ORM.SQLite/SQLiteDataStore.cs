@@ -30,7 +30,7 @@ using System.Data.SQLite;
 
 namespace OpenNETCF.ORM
 {
-    public class SQLiteDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
+    public partial class SQLiteDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
     {
         private string m_connectionString;
 
@@ -127,6 +127,11 @@ namespace OpenNETCF.ORM
             get { return File.Exists(FileName); }
         }
 
+        protected override string ParameterPrefix
+        {
+            get { return string.Empty; }
+        }
+
         private SQLiteCommand GetInsertCommand(string entityName)
         {
             // TODO: support command caching to improve bulk insert speeds
@@ -169,6 +174,12 @@ namespace OpenNETCF.ORM
         /// </remarks>
         public override void OnInsert(object item, bool insertReferences)
         {
+            if (item is DynamicEntity)
+            {
+                OnInsertDynamicEntity(item as DynamicEntity, insertReferences);
+                return;
+            }
+
             var itemType = item.GetType();
             string entityName = m_entities.GetNameForType(itemType);
             var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
@@ -430,71 +441,56 @@ namespace OpenNETCF.ORM
                 return;
             }
 
+            var fieldData = new List< object[]>();
+
             using (var command = new SQLiteCommand())
             {
                 command.Connection = connection as SQLiteConnection;
                 command.CommandText = string.Format("PRAGMA table_info({0})", entity.EntityName);
                 using (var reader = command.ExecuteReader())
                 {
+                    while (reader.Read())
+                    {
+                        var values = new object[6];
+                        reader.GetValues(values);
+                        fieldData.Add(values);
+                    }
+                }
+            }
 
+            foreach(var field in entity.Fields)
+            {
+                // 0 = cid (column id)
+                // 1 = name
+                // 2 = type
+                // 3 = notnull
+                // 4 = dflt_value
+                // 5 = pk
+
+                var existing = fieldData.FirstOrDefault(f => string.Compare(f[1].ToString(), field.FieldName, true) == 0);
+
+                if (existing == null)
+                {
+                    // field doesn't exist - we must create it
+                    var alter = new StringBuilder(string.Format("ALTER TABLE {0} ", entity.EntityAttribute.NameInStore));
+                    alter.Append(string.Format("ADD [{0}] {1} {2}",
+                        field.FieldName,
+                        GetFieldDataTypeString(entity.EntityName, field),
+                        GetFieldCreationAttributes(entity.EntityAttribute, field)));
+
+                    using (var command = new SQLiteCommand(alter.ToString(), connection as SQLiteConnection))
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                }
+                else
+                {
+                    // TODO: verify field length, etc.
                 }
             }
 
             return;
 
-            throw new NotImplementedException();
-
-            // NOTE: THIS IS COPIED FROM THE SQL CE IMPLEMENTAION
-            // THE SQL IS NOT RIGHT AND NEEDS FIXING, WHICH IS WHY IT'S COMMENTED OUT
-
-
-            //using (var command = new SQLiteCommand())
-            //{
-            //    command.Connection = connection as SQLiteConnection;
-
-            //    foreach (var field in entity.Fields)
-            //    {
-            //        if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
-            //        {
-            //            throw new ReservedWordException(field.FieldName);
-            //        }
-
-            //        // yes, I realize hard-coded ordinals are not a good practice, but the SQL isn't changing, it's method specific
-            //        var sql = string.Format("SELECT column_name, "  // 0
-            //              + "data_type, "                       // 1
-            //              + "character_maximum_length, "        // 2
-            //              + "numeric_precision, "               // 3
-            //              + "numeric_scale, "                   // 4
-            //              + "is_nullable "
-            //              + "FROM information_schema.columns "
-            //              + "WHERE (table_name = '{0}' AND column_name = '{1}')",
-            //              entity.EntityAttribute.NameInStore, field.FieldName);
-
-            //        command.CommandText = sql;
-
-            //        using (var reader = command.ExecuteReader())
-            //        {
-            //            if (!reader.Read())
-            //            {
-            //                // field doesn't exist - we must create it
-            //                var alter = new StringBuilder(string.Format("ALTER TABLE {0} ", entity.EntityAttribute.NameInStore));
-            //                alter.Append(string.Format("ADD [{0}] {1} {2}",
-            //                    field.FieldName,
-            //                    GetFieldDataTypeString(entity.EntityName, field),
-            //                    GetFieldCreationAttributes(entity.EntityAttribute, field)));
-
-            //                using (var altercmd = new SQLiteCommand(alter.ToString(), connection as SQLiteConnection))
-            //                {
-            //                    altercmd.ExecuteNonQuery();
-            //                }
-            //            }
-            //            else
-            //            {
-            //                // TODO: verify field length, etc.
-            //            }
-            //        }
-            //    }
-            //}
         }
 
         protected override string VerifyIndex(string entityName, string fieldName, FieldSearchOrder searchOrder, IDbConnection connection)
@@ -560,6 +556,16 @@ namespace OpenNETCF.ORM
         {
             string entityName = m_entities.GetNameForType(objectType);
 
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(objectType);
+            }
+
+            return Select(entityName, objectType, filters, fetchCount, firstRowOffset, fillReferences);
+        }
+
+        private IEnumerable<object> Select(string entityName, Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
+        {
             if (entityName == null)
             {
                 throw new EntityNotFoundException(objectType);
@@ -764,6 +770,12 @@ namespace OpenNETCF.ORM
         
         public override void OnUpdate(object item, bool cascadeUpdates, string fieldName)
         {
+            if (item is DynamicEntity)
+            {
+                OnUpdateDynamicEntity(item as DynamicEntity);
+                return;
+            }
+
             object keyValue;
             var changeDetected = false;
             var itemType = item.GetType();
@@ -966,32 +978,6 @@ namespace OpenNETCF.ORM
         public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
             throw new NotSupportedException("Fetch is not currently supported with this Provider.");
-        }
-
-        public override IEnumerable<DynamicEntity> Select(string entityName)
-        {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
-        }
-
-        public override DynamicEntity Select(string entityName, object primaryKey)
-        {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
-        }
-
-        protected override void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility)
-        {
-            // TODO: just delete this method when implemented, the SqlDataStore base will create the table
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
-        }
-
-        public override void DiscoverDynamicEntity(string entityName)
-        {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
-        }
-
-        public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount)
-        {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
         }
 
         protected override string GetFieldDataTypeString(string entityName, FieldAttribute field)
