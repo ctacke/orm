@@ -24,6 +24,11 @@ namespace OpenNETCF.ORM
             m_info = info;
         }
 
+        public override string Name
+        {
+            get { return "SQLServerDB"; }
+        }
+
         private string BuildConnectionString(SqlConnectionInfo info)
         {
             var sb = new StringBuilder();
@@ -1045,7 +1050,6 @@ namespace OpenNETCF.ORM
 
         protected override string GetFieldDataTypeString(string entityName, FieldAttribute field)
         {
-            // a SQLite Int64 auto-increment key requires being called "INTEGER", not "BIGINT"
             if (field.IsPrimaryKey && (field.DataType == DbType.Int64))
             {
                 if (GetEntityInfo(entityName).EntityAttribute.KeyScheme == KeyScheme.Identity)

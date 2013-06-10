@@ -118,6 +118,14 @@ namespace OpenNETCF.ORM
             var names = new List<string>();
 
             var connection = GetConnection(true);
+
+            // TODO: move this to the base.  It can happen if we don't have a valid connection to the server and the error
+            // for the Open call is more helpful to our caller than the error that would happen below due to a closed connection
+            if (connection.State != ConnectionState.Open)
+            {
+                connection.Open();
+            }
+
             try
             {
                 using (var command = GetNewCommandObject())
