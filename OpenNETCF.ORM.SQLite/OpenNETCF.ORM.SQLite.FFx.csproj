@@ -50,6 +50,7 @@
     <Compile Include="..\OpenNETCF.ORM.Shared\OpenNETCF.ORM.Version.cs">
       <Link>Properties\OpenNETCF.ORM.Version.cs</Link>
     </Compile>
+    <Compile Include="SQLiteDataStore_dynamic.cs" />
     <Compile Include="SQLiteDataStore.cs" />
     <Compile Include="SQLiteException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
