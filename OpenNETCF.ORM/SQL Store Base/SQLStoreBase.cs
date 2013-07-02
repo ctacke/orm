@@ -1531,6 +1531,11 @@ namespace OpenNETCF.ORM
 
         public virtual IDataReader ExecuteReader(string sql, IEnumerable<IDataParameter> parameters, bool throwExceptions)
         {
+            return ExecuteReader(sql, parameters, CommandBehavior.Default, throwExceptions);
+        }
+
+        public virtual IDataReader ExecuteReader(string sql, IEnumerable<IDataParameter> parameters, CommandBehavior behavior, bool throwExceptions)
+        {
             if (ConnectionBehavior != ORM.ConnectionBehavior.Persistent)
             {
                 throw new Exception("ConnectionBehavior must be Persistent to use ExecuteReader");
@@ -1552,7 +1557,7 @@ namespace OpenNETCF.ORM
                         }
                     }
 
-                    var reader = command.ExecuteReader(CommandBehavior.SingleResult);
+                    var reader = command.ExecuteReader(behavior);
                     return reader;
                 }
             }
