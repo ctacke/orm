@@ -32,7 +32,7 @@ namespace OpenNETCF.ORM
     public class EntityAlreadyExistsException : Exception
     {
         public EntityAlreadyExistsException(string entityName)
-            : base(string.Format("An entity with name '{0}' already exisits in the Store", entityName))
+            : base(string.Format("An entity with the name '{0}' already exisits in the Store", entityName))
         {
         }
     }
