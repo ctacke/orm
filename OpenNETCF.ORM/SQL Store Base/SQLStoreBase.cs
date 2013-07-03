@@ -9,7 +9,7 @@ using System.Reflection;
 
 namespace OpenNETCF.ORM
 {
-    public abstract class SQLStoreBase<TEntityInfo> : DataStore<TEntityInfo>, IDisposable, ITableBasedStore
+    public abstract class SQLStoreBase<TEntityInfo> : DataStore<TEntityInfo>, IDisposable, ITableBasedStore, ISQLBasedStore
         where TEntityInfo : EntityInfo, new()
     {
         protected List<IndexInfo> m_indexNameCache = new List<IndexInfo>();
