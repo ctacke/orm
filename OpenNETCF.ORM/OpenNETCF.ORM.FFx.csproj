@@ -95,6 +95,7 @@
     <Compile Include="Interfaces\IEntityInfo.cs" />
     <Compile Include="Interfaces\IDataStore.cs" />
     <Compile Include="Interfaces\IDefaultValue.cs" />
+    <Compile Include="Interfaces\ISQLBasedStore.cs" />
     <Compile Include="Interfaces\ITableBasedStore.cs" />
     <Compile Include="Interfaces\ITableEntity.cs" />
     <Compile Include="KeyScheme.cs" />
