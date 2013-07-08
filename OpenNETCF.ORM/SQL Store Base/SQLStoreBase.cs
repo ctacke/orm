@@ -873,7 +873,9 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 { 
                     command.Connection = connection;
-                    command.CommandText = string.Format("SELECT * FROM {0}", entityName);
+
+                    // only bring back the structure, not any data (for improved speed)
+                    command.CommandText = string.Format("SELECT * FROM {0} WHERE 0 = 1", entityName);
 
                     using (var reader = command.ExecuteReader())
                     {

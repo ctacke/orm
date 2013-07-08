@@ -12,6 +12,7 @@ using EntityGenerator.Services;
 using EntityGenerator.Presenters;
 using EntityGenerator.Entities;
 using System.Reflection;
+using System.Diagnostics;
 
 namespace EntityGenerator.Views
 {
@@ -70,6 +71,8 @@ namespace EntityGenerator.Views
             Presenter.SetBuildOptions(BuildOptions);
 
             GeneratorService.GenerateCode(BuildOptions);
+
+            Process.Start("explorer.exe", BuildOptions.OutputFolder);
         }
     }
 }

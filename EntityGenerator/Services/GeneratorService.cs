@@ -94,8 +94,6 @@ namespace EntityGenerator.Services
                     //new CodeAttributeArgument("KeyScheme", new CodePrimitiveExpression(KeyScheme.None))
                     entityClass.CustomAttributes.Add(entityAttributeDeclaration);
 
-                    entityClass.Members.Add(GenerateEntityCreationProxy(entity));
-
                     var fieldList = new List<CodeMemberField>();
                     var propList = new List<CodeMemberProperty>();
 
@@ -112,9 +110,21 @@ namespace EntityGenerator.Services
                         fieldList.Add(backingField);
 
                         var prop = new CodeMemberProperty();
-                        prop.Name = field.FieldName;
                         prop.Attributes = MemberAttributes.Public | MemberAttributes.Final;  // TODO: get from UI
-                        prop.CustomAttributes.Add(new CodeAttributeDeclaration("Field", GenerateFieldArguments(field)));                            
+
+                        if (field.FieldName == entity.Entity.NameInStore)
+                        {
+                            // a property name cannot match the enclosing class name.  We'll do a rename here (maybe we should warn the user?)
+                            var name = string.Format("{0}_{1}", entity.Entity.NameInStore, field.FieldName);
+                            field.FieldName = name;
+                            prop.Name = name;
+                            prop.CustomAttributes.Add(new CodeAttributeDeclaration("Field", GenerateFieldArguments(field, field.FieldName)));
+                        }
+                        else
+                        {
+                            prop.Name = field.FieldName;
+                            prop.CustomAttributes.Add(new CodeAttributeDeclaration("Field", GenerateFieldArguments(field)));
+                        }
                         prop.Type = type;
                         prop.GetStatements.Add(
                             new CodeMethodReturnStatement(
@@ -128,7 +138,9 @@ namespace EntityGenerator.Services
 
                         propList.Add(prop);
                     }
-                    
+
+                    entityClass.Members.Add(GenerateEntityCreationProxy(entity));
+
                     foreach (var reference in entity.References)
                     {
                         var refType = new CodeTypeReference(reference.ReferenceTable);
@@ -271,7 +283,7 @@ namespace EntityGenerator.Services
                         break;
                     case DbType.Guid:
                         statement = new CodeExpressionStatement(new CodeSnippetExpression(
-                            string.Format("item.{0} = (value == DBNull.Value) ? null : (Guid{1})value",
+                            string.Format("item.{0} = (value == DBNull.Value) ? Guid.Empty : (Guid{1})value",
                             field.FieldName,
                             field.AllowsNulls ? "?" : string.Empty)));
                         break;
@@ -282,7 +294,7 @@ namespace EntityGenerator.Services
                         break;
                     case DbType.DateTime:
                         statement = new CodeExpressionStatement(new CodeSnippetExpression(
-                            string.Format("item.{0} = (value == DBNull.Value) ? null : (DateTime{1})value",
+                            string.Format("item.{0} = (value == DBNull.Value) ? default(DateTime) : (DateTime{1})value",
                             field.FieldName,
                             field.AllowsNulls ? "?" : string.Empty)));
                         break;
@@ -322,6 +334,11 @@ namespace EntityGenerator.Services
 
         private CodeAttributeArgument[] GenerateFieldArguments(FieldAttribute field)
         {
+            return GenerateFieldArguments(field, null);
+        }
+
+        private CodeAttributeArgument[] GenerateFieldArguments(FieldAttribute field, string nameAlias)
+        {
             var attrList = new List<CodeAttributeArgument>();
 
             // TODO add precision, etc.
@@ -334,6 +351,11 @@ namespace EntityGenerator.Services
             if (field.SearchOrder != FieldSearchOrder.NotSearchable)
             {
                 attrList.Add(new CodeAttributeArgument(new CodeSnippetExpression("SearchOrder=FieldSearchOrder." + field.SearchOrder.ToString())));
+            }
+
+            if (!string.IsNullOrEmpty(nameAlias))
+            {
+                attrList.Add(new CodeAttributeArgument(new CodeSnippetExpression(string.Format("FieldName=\"{0}\"", nameAlias))));
             }
 
             return attrList.ToArray();
