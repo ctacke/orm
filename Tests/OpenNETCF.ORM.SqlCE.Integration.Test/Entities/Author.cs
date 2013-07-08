@@ -10,13 +10,27 @@ namespace OpenNETCF.ORM.Test.Entities
     [Entity(KeyScheme.Identity)]
     public class Author
     {
+        private static Dictionary<string, int> m_nameToOrdinalMap;
+
         private static Author ORM_CreateProxy(FieldAttributeCollection fields, IDataReader results)
         {
+            if (m_nameToOrdinalMap == null)
+            {
+                m_nameToOrdinalMap = new Dictionary<string, int>();
+
+                foreach (var field in fields)
+                {
+                    m_nameToOrdinalMap.Add(field.FieldName, results.GetOrdinal(field.FieldName));
+                }
+            }
+
             var item = new Author();
 
             foreach (var field in fields)
             {
                 var value = results[field.Ordinal];
+                // var value = results[results.GetOrdinal(field.FieldName)];
+                var val = results[m_nameToOrdinalMap[field.FieldName]];
 
                 switch (field.FieldName)
                 {
