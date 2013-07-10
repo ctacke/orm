@@ -14,6 +14,8 @@ namespace OpenNETCF.ORM
     {
         protected List<IndexInfo> m_indexNameCache = new List<IndexInfo>();
         private IDbConnection m_connection;
+        private ConnectionBehavior m_connectionBehavior;
+
         private Dictionary<Type, MethodInfo> m_serializerCache = new Dictionary<Type, MethodInfo>();
         private Dictionary<Type, MethodInfo> m_deserializerCache = new Dictionary<Type, MethodInfo>();
         private Dictionary<Type, object[]> m_referenceCache = new Dictionary<Type, object[]>();
@@ -22,8 +24,6 @@ namespace OpenNETCF.ORM
         public int DefaultNumericFieldPrecision { get; set; }
         public int DefaultVarBinaryLength { get; set; }
         protected abstract string AutoIncrementFieldIdentifier { get; }
-
-        public ConnectionBehavior ConnectionBehavior { get; set; }
 
         public abstract override void CreateStore();
         public abstract override void DeleteStore();
@@ -53,6 +53,8 @@ namespace OpenNETCF.ORM
 
         protected IDbTransaction CurrentTransaction { get; set; }
 
+        public abstract string ConnectionString { get; }
+
         private object m_transactionSyncRoot = new object();
 
         public SQLStoreBase()
@@ -67,6 +69,25 @@ namespace OpenNETCF.ORM
         ~SQLStoreBase()
         {
             Dispose();
+        }
+
+        public ConnectionBehavior ConnectionBehavior
+        {
+            get { return m_connectionBehavior; }
+            set
+            {
+                if (m_connectionBehavior == value) return;
+
+                lock (m_transactionSyncRoot)
+                {
+                    if (CurrentTransaction != null)
+                    {
+                        throw new Exception("You cannot change ConnectionBehavior while a Transaction is pending");
+                    }
+
+                    m_connectionBehavior = m_nonTransactionConnectionBehavior = value;
+                }
+            }
         }
 
         protected virtual int MaxSizedStringLength

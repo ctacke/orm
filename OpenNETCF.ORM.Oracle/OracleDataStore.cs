@@ -16,6 +16,16 @@ namespace OpenNETCF.ORM
         private string m_connectionString; 
         private OracleConnectionInfo m_info;
 
+        public override string Name
+        {
+            get { return "Oracle Data Store"; }
+        }
+
+        public OracleDataStore(string connectionString)
+        {
+            m_connectionString = connectionString;
+        }
+
         public OracleDataStore(OracleConnectionInfo info)
         {
             m_info = info;
@@ -37,7 +47,7 @@ namespace OpenNETCF.ORM
             return cs;
         }
 
-        private string ConnectionString
+        public override string ConnectionString
         {
             get
             {
@@ -277,37 +287,7 @@ namespace OpenNETCF.ORM
                             // TODO: verify field length, etc.
                         }
                     }
-                }
-                
-///////////////////// TEST SECTION DUE TO ORACLE "BEHAVIOR"
-
-                //if (columnAdded) ValidateTable(connection, entity);
-
-                //(connection as OracleConnection).FlushCache();
-                //(connection as OracleConnection).PurgeStatementCache();
-
-                //connection.Close();
-                //connection.Open();
-
-                //ConnectionBehavior = ORM.ConnectionBehavior.AlwaysNew;
-                //using (var cmd = GetNewCommandObject())
-                //{
-                //    cmd.Connection = GetConnection(false);
-                //    cmd.CommandText = string.Format("SELECT * FROM {0}", entity.EntityAttribute.NameInStore);
-                //    cmd.Prepare();
-                //    //                    command.CommandText = string.Format("SELECT * FROM all_tab_cols WHERE table_name = '{0}'", entityName.ToUpper());
-                //    using (var reader = cmd.ExecuteReader())
-                //    {
-                //        var c = reader.FieldCount;
-                //    }
-
-                //    cmd.Dispose();
-                //}
-
-
-                //CheckOrdinals(entity.EntityAttribute.NameInStore);
-
-//////////////
+                }                
             }
         }
 

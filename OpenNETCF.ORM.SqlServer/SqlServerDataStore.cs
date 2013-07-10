@@ -24,6 +24,11 @@ namespace OpenNETCF.ORM
             m_info = info;
         }
 
+        public SqlServerDataStore(string connectionString)
+        {
+            m_connectionString = connectionString;
+        }
+
         public override string Name
         {
             get { return "SQLServerDB"; }
@@ -60,7 +65,7 @@ namespace OpenNETCF.ORM
             return sb.ToString();
         }
 
-        private string ConnectionString
+        public override string ConnectionString
         {
             get
             {

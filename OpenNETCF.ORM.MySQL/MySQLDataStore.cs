@@ -49,7 +49,7 @@ namespace OpenNETCF.ORM
             return cs;
         }
 
-        private string ConnectionString
+        public override string ConnectionString
         {
             get
             {
