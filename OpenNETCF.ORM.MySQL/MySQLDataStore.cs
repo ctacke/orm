@@ -21,6 +21,14 @@ namespace OpenNETCF.ORM
             m_info = info;
         }
 
+        public override string Name
+        {
+            get
+            {
+                return string.Format("{0}.{1}", m_info.ServerAddress, m_info.DatabaseName);
+            }
+        }
+
         private string BuildConnectionString(MySQLConnectionInfo info, bool useSystem)
         {
 
@@ -162,6 +170,10 @@ namespace OpenNETCF.ORM
                     return MySqlDbType.Blob;
                 case DbType.Guid:
                     return MySqlDbType.Binary;
+                case DbType.Boolean:
+                    return MySqlDbType.Bit;
+                case DbType.Byte:
+                    return MySqlDbType.Byte;
                 default:
                     throw new NotSupportedException(string.Format("Cannot translate DbType '{0}' to OracleDbType", type.ToString()));
             }
