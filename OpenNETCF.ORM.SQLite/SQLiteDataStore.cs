@@ -57,7 +57,7 @@ namespace OpenNETCF.ORM
             get { return "CURRENT_TIMESTAMP"; }
         }
 
-        private string ConnectionString
+        public override string ConnectionString
         {
             get
             {

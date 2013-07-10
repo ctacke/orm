@@ -394,7 +394,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        private string ConnectionString
+        public override string ConnectionString
         {
             get
             {
