@@ -74,8 +74,6 @@ namespace OpenNETCF.ORM
         public abstract IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField) where T : new();
         public abstract IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences) where T : new();
 
-        public abstract IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount);
-
         public abstract int Count(string entityName);
         public abstract int Count<T>(IEnumerable<FilterCondition> filters);
         public abstract bool Contains(object item);
@@ -598,6 +596,11 @@ namespace OpenNETCF.ORM
         public virtual void Rollback()
         {
             throw new NotSupportedException("Transactions are not supported by this provider");
+        }
+
+        public virtual IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount)
+        {
+            return Select(entityName).Take(fetchCount);
         }
     }
 }
