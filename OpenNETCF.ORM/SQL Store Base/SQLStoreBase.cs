@@ -41,7 +41,6 @@ namespace OpenNETCF.ORM
         public abstract override void OnUpdate(object item, bool cascadeUpdates, string fieldName);
 
         public abstract override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences);
-        public abstract override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount);
 
         public abstract override int Count<T>(IEnumerable<FilterCondition> filters);
 
