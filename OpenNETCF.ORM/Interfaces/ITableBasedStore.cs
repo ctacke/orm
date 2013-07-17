@@ -5,7 +5,7 @@ using System.Text;
 
 namespace OpenNETCF.ORM
 {
-    public interface ITableBasedStore
+    public interface ITableBasedStore : IDataStore
     {
         bool TableExists(string tableName);
         void TruncateTable(string tableName);
