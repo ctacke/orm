@@ -6,8 +6,10 @@ using System.Text;
 
 namespace OpenNETCF.ORM
 {
-    public interface ISQLBasedStore
+    public interface ISQLBasedStore : IDataStore
     {
+        ConnectionBehavior ConnectionBehavior { get; set; }
+
         int ExecuteNonQuery(string sql, bool throwExceptions);
         int ExecuteNonQuery(string sql);
         object ExecuteScalar(string sql);
