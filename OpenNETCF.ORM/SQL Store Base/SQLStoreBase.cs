@@ -781,8 +781,11 @@ namespace OpenNETCF.ORM
                 sb = new StringBuilder("SELECT ");
 
                 var count = Entities[entityName].Fields.Count;
+                var ordinal = 0;
                 foreach (var field in Entities[entityName].Fields)
                 {
+                    field.Ordinal = ordinal;
+                    ordinal++;
                     sb.Append(field.FieldName);
                     if (--count > 0) sb.Append(", ");
                 }

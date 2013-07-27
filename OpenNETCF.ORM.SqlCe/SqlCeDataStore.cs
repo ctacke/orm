@@ -243,9 +243,22 @@ namespace OpenNETCF.ORM
 
             foreach (var field in Entities[entityName].Fields)
             {
-                if ((keyScheme == KeyScheme.Identity) && field.IsPrimaryKey)
+                if (field.IsPrimaryKey)
                 {
-                    identity = field;
+                    switch(keyScheme)
+                    {
+                        case KeyScheme.Identity:
+                            identity = field;
+                            break;
+                        case KeyScheme.GUID:
+                            var value = GetInstanceValue(field, item);
+                            if (value.Equals(Guid.Empty))
+                            {
+                                SetInstanceValue(field, item, Guid.NewGuid());
+                            }
+                            setter(field.Ordinal, value);
+                            break;
+                    }
                 }
                 else if (field.DataType == DbType.Object)
                 {
