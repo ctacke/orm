@@ -254,7 +254,8 @@ namespace OpenNETCF.ORM
                             var value = GetInstanceValue(field, item);
                             if (value.Equals(Guid.Empty))
                             {
-                                SetInstanceValue(field, item, Guid.NewGuid());
+                                value = Guid.NewGuid();
+                                SetInstanceValue(field, item, value);
                             }
                             setter(field.Ordinal, value);
                             break;

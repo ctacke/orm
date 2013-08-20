@@ -62,6 +62,7 @@
     <Compile Include="SQLiteDataStoreTest.cs" />
     <Compile Include="Test Entities\Entities.cs" />
     <Compile Include="Test Entities\Orders.cs" />
+    <Compile Include="Test Entities\OSATestSettings.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\OpenNETCF.ORM.SQLite\OpenNETCF.ORM.SQLite.FFx.csproj">

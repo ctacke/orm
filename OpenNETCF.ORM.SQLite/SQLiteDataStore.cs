@@ -129,7 +129,7 @@ namespace OpenNETCF.ORM
 
         protected override string ParameterPrefix
         {
-            get { return string.Empty; }
+            get { return "@"; }
         }
 
         private SQLiteCommand GetInsertCommand(string entityName)
@@ -397,7 +397,9 @@ namespace OpenNETCF.ORM
                     {
                         while (reader.Read())
                         {
-                            names.Add(reader.GetString(0));
+                            var n = reader.GetString(0);
+                            if (n == "sqlite_sequence") continue;
+                            names.Add(n);
                         }
                     }
 
@@ -695,27 +697,27 @@ namespace OpenNETCF.ORM
                                             // When we query those back, we must convert to put them into the property or we crash hard
                                             if (field.PropertyInfo.PropertyType.Equals(typeof(UInt32)))
                                             {
-                                                var t = value.GetType();
                                                 field.PropertyInfo.SetValue(item, Convert.ToUInt32(value), null);
                                             }
                                             else if ((field.PropertyInfo.PropertyType.Equals(typeof(Int32))) || (field.PropertyInfo.PropertyType.Equals(typeof(Int32?))))
                                             {
-                                                var t = value.GetType();
                                                 field.PropertyInfo.SetValue(item, Convert.ToInt32(value), null);
                                             }
                                             else if (field.PropertyInfo.PropertyType.Equals(typeof(decimal)))
                                             {
-                                                var t = value.GetType();
                                                 field.PropertyInfo.SetValue(item, Convert.ToDecimal(value), null);
                                             }
                                             else if (field.PropertyInfo.PropertyType.Equals(typeof(float)))
                                             {
-                                                var t = value.GetType();
                                                 field.PropertyInfo.SetValue(item, Convert.ToSingle(value), null);
+                                            }
+                                            else if (field.PropertyInfo.PropertyType.IsEnum)
+                                            {
+                                                var e = Enum.ToObject(field.PropertyInfo.PropertyType, value);
+                                                field.PropertyInfo.SetValue(item, e, null);
                                             }
                                             else
                                             {
-                                                var t = value.GetType();
                                                 field.PropertyInfo.SetValue(item, value, null);
                                             }
                                         }
@@ -780,6 +782,8 @@ namespace OpenNETCF.ORM
             var changeDetected = false;
             var itemType = item.GetType();
             string entityName = m_entities.GetNameForType(itemType);
+            var insertCommand = GetNewCommandObject();
+            var updateSQL = new StringBuilder(string.Format("UPDATE {0} SET ", entityName));
 
             if (entityName == null)
             {
@@ -803,15 +807,14 @@ namespace OpenNETCF.ORM
 
                     command.Connection = connection;
 
-                    command.CommandText = string.Format("SELECT * FROM {0} WHERE [{1}] = @keyparam",
+                    command.CommandText = string.Format("SELECT * FROM {0} WHERE [{1}] = {2}keyparam",
                         entityName,
-                        Entities[entityName].Fields.KeyField.FieldName);
+                        Entities[entityName].Fields.KeyField.FieldName,
+                        ParameterPrefix);
 
                     command.CommandType = CommandType.Text;
-                    command.Parameters.Add(new SQLiteParameter("@keyparam", keyValue));
+                    command.Parameters.Add(new SQLiteParameter(ParameterPrefix + "keyparam", keyValue));
                     command.Transaction = CurrentTransaction;
-
-                    var updateSQL = new StringBuilder(string.Format("UPDATE {0} SET ", entityName));
 
                     using (var reader = command.ExecuteReader() as SQLiteDataReader)
                     {
@@ -824,104 +827,110 @@ namespace OpenNETCF.ORM
 
                         reader.Read();
 
-                        using (var insertCommand = GetNewCommandObject())
+                        // update the values
+                        foreach (var field in Entities[entityName].Fields)
                         {
-                            // update the values
-                            foreach (var field in Entities[entityName].Fields)
+                            // do not update PK fields
+                            if (field.IsPrimaryKey)
                             {
-                                // do not update PK fields
-                                if (field.IsPrimaryKey)
-                                {
-                                    continue;
-                                }
-                                else if (fieldName != null && field.FieldName != fieldName)
-                                {
-                                    continue; // if we pass in a field name, skip over any fields that don't match
-                                }
-                                else if (field.IsRowVersion)
-                                {
-                                    // read-only, so do nothing
-                                }
-                                else if (field.DataType == DbType.Object)
-                                {
-                                    changeDetected = true;
-                                    // get serializer
-                                    var serializer = GetSerializer(itemType);
+                                continue;
+                            }
+                            else if (fieldName != null && field.FieldName != fieldName)
+                            {
+                                continue; // if we pass in a field name, skip over any fields that don't match
+                            }
+                            else if (field.IsRowVersion)
+                            {
+                                // read-only, so do nothing
+                            }
+                            else if (field.DataType == DbType.Object)
+                            {
+                                changeDetected = true;
+                                // get serializer
+                                var serializer = GetSerializer(itemType);
 
-                                    if (serializer == null)
-                                    {
-                                        throw new MissingMethodException(
-                                            string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
-                                            field.FieldName, entityName));
-                                    }
-                                    var value = serializer.Invoke(item, new object[] { field.FieldName });
-
-                                    if (value == null)
-                                    {
-                                        updateSQL.AppendFormat("{0}=NULL, ", field.FieldName);
-                                    }
-                                    else
-                                    {
-                                        updateSQL.AppendFormat("{0}=@{0}, ", field.FieldName);
-                                        insertCommand.Parameters.Add(new SQLiteParameter("@" + field.FieldName, value));
-                                    }
-                                }
-                                else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
+                                if (serializer == null)
                                 {
-                                    changeDetected = true;
-                                    // SQL Compact doesn't support Time, so we're convert to ticks in both directions
-                                    var value = field.PropertyInfo.GetValue(item, null);
-                                    if (value == null)
-                                    {
-                                        updateSQL.AppendFormat("{0}=NULL, ", field.FieldName);
-                                    }
-                                    else
-                                    {
-                                        var ticks = ((TimeSpan)value).Ticks;
-                                        updateSQL.AppendFormat("{0}=@{0}, ", field.FieldName);
-                                        insertCommand.Parameters.Add(new SQLiteParameter("@" + field.FieldName, ticks));
-                                    }
+                                    throw new MissingMethodException(
+                                        string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
+                                        field.FieldName, entityName));
+                                }
+                                var value = serializer.Invoke(item, new object[] { field.FieldName });
+
+                                if (value == null)
+                                {
+                                    updateSQL.AppendFormat("{0}=NULL, ", field.FieldName);
                                 }
                                 else
                                 {
-                                    var value = field.PropertyInfo.GetValue(item, null);
+                                    updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
+                                    insertCommand.Parameters.Add(new SQLiteParameter(ParameterPrefix + field.FieldName, value));
+                                }
+                            }
+                            else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
+                            {
+                                changeDetected = true;
+                                // SQL Compact doesn't support Time, so we're convert to ticks in both directions
+                                var value = field.PropertyInfo.GetValue(item, null);
+                                if (value == null)
+                                {
+                                    updateSQL.AppendFormat("{0}=NULL, ", field.FieldName);
+                                }
+                                else
+                                {
+                                    var ticks = ((TimeSpan)value).Ticks;
+                                    updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
+                                    insertCommand.Parameters.Add(new SQLiteParameter(ParameterPrefix + field.FieldName, ticks));
+                                }
+                            }
+                            else
+                            {
+                                var value = field.PropertyInfo.GetValue(item, null);
 
-                                    if (reader[field.FieldName] != value)
+                                if (reader[field.FieldName] != value)
+                                {
+                                    changeDetected = true;
+
+                                    if (value == null)
                                     {
-                                        changeDetected = true;
-
-                                        if (value == null)
-                                        {
-                                            updateSQL.AppendFormat("{0}=NULL, ", field.FieldName);
-                                        }
-                                        else
-                                        {
-                                            updateSQL.AppendFormat("{0}=@{0}, ", field.FieldName);
-                                            insertCommand.Parameters.Add(new SQLiteParameter("@" + field.FieldName, value));
-                                        }
+                                        updateSQL.AppendFormat("{0}=NULL, ", field.FieldName);
+                                    }
+                                    else
+                                    {
+                                        updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
+                                        insertCommand.Parameters.Add(new SQLiteParameter(ParameterPrefix + field.FieldName, value));
                                     }
                                 }
                             }
-
-                            // only execute if a change occurred
-                            if (changeDetected)
-                            {
-                                // remove the trailing comma and append the filter
-                                updateSQL.Length -= 2;
-                                updateSQL.AppendFormat(" WHERE {0} = @keyparam", Entities[entityName].Fields.KeyField.FieldName);
-                                insertCommand.Parameters.Add(new SQLiteParameter("@keyparam", keyValue));
-                                insertCommand.CommandText = updateSQL.ToString();
-                                insertCommand.Connection = connection;
-                                insertCommand.Transaction = CurrentTransaction;
-                                insertCommand.ExecuteNonQuery();
-                            }
-                        }
-                    }
-                }
-            }
+                        } // foreach
+                    } // execute reader
+                } // using command
+            } // try
             finally
             {
                 DoneWithConnection(connection, false);
+            }
+
+            // only execute if a change occurred
+            if (changeDetected)
+            {
+                connection = GetConnection(false);
+
+                try
+                {
+                    // remove the trailing comma and append the filter
+                    updateSQL.Length -= 2;
+                    updateSQL.AppendFormat(" WHERE {0} = {1}keyparam", Entities[entityName].Fields.KeyField.FieldName, ParameterPrefix);
+                    insertCommand.Parameters.Add(new SQLiteParameter(ParameterPrefix + "keyparam", keyValue));
+                    insertCommand.CommandText = updateSQL.ToString();
+                    insertCommand.Connection = connection;
+                    insertCommand.Transaction = CurrentTransaction;
+                    insertCommand.ExecuteNonQuery();
+                }
+                finally
+                {
+                    DoneWithConnection(connection, false);
+                }
             }
 
             if (cascadeUpdates)

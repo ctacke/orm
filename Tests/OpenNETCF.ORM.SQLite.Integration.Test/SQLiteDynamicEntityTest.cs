@@ -37,7 +37,14 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             return store;
         }
 
+        [TestInitialize]
+        public void Setup()
+        {
+
+        }
+
         [TestMethod()]
+        [DeploymentItem("SQLite.Interop.dll")]
         public void BasicDynamicCRUDTest()
         {
 
@@ -69,10 +76,13 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             var exists = store.TableExists(definition.EntityName);
             if (exists)
             {
-                store.DropTable(definition.EntityName);
+                store.DiscoverDynamicEntity("People");
+                //                store.DropTable(definition.EntityName);
             }
-
-            store.RegisterDynamicEntity(definition);
+            else
+            {
+                store.RegisterDynamicEntity(definition);
+            }
 
             Assert.IsTrue(store.TableExists(definition.EntityName));
 
@@ -127,6 +137,7 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             store.RegisterDynamicEntity(newDefinition, true);
 
             items = store.Select("People");
+
             DumpData(items);
         }
 

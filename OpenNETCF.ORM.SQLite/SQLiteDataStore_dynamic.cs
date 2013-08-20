@@ -200,75 +200,39 @@ namespace OpenNETCF.ORM
                     cmd.Connection = connection;
                     cmd.Transaction = CurrentTransaction;
 
-                    cmd.CommandText = string.Format("SELECT COLUMN_NAME, ORDINAL_POSITION, IS_NULLABLE, DATA_TYPE, NUMERIC_PRECISION, NUMERIC_SCALE FROM information_schema.columns WHERE TABLE_NAME = '{0}' ORDER BY ORDINAL_POSITION", entityName);
+                    cmd.CommandText = string.Format("PRAGMA table_info({0})", entityName);
 
+                    // cid, name, type, notnull, dflt_value, pk
                     var fields = new List<FieldAttribute>();
 
                     using (var reader = cmd.ExecuteReader())
                     {
                         while (reader.Read())
                         {
-                            var name = reader.GetString(0);
-                            var nullable = string.Compare(reader.GetString(2), "YES", true) == 0;
-                            var type = reader.GetString(3).ParseToDbType();
+                            var cid = reader.GetInt64(0);
+                            var name = reader.GetString(1);
+                            var type = reader.GetString(2).ParseToDbType();
+                            var nullable = reader.GetInt64(3) == 0;
+                            // 4 == default value - TODO
+                            var isPK = reader.GetInt64(5) == 1;
 
                             var field = new FieldAttribute()
                             {
                                 DataType = type,
                                 FieldName = name,
                                 AllowsNulls = nullable,
+                                IsPrimaryKey = isPK
                             };
-
-                            if (!reader.IsDBNull(4))
-                            {
-                                field.Precision = Convert.ToInt32(reader.GetValue(4));
-                            }
-                            if (!reader.IsDBNull(5))
-                            {
-                                field.Scale = Convert.ToInt32(reader.GetValue(5));
-                            }
 
                             fields.Add(field);
                         }
                     }
 
-                    cmd.CommandText = string.Format(
-                        "SELECT ac.name, ind.is_primary_key, ind.is_unique, ic.is_descending_key, col.collation_name " +
-                        "FROM sys.indexes ind " +
-                        "INNER JOIN sys.index_columns ic " +
-                        "  ON  ind.object_id = ic.object_id and ind.index_id = ic.index_id " +
-                        "INNER JOIN sys.columns col  " +
-                        "  ON ic.object_id = col.object_id and ic.column_id = col.column_id  " +
-                        "INNER JOIN sys.tables t  " +
-                        "  ON ind.object_id = t.object_id " +
-                        "INNER JOIN sys.columns ac " +
-                        "  ON ac.object_id = col.object_id and ac.column_id = col.column_id " +
-                        "WHERE t.name = '{0}'", entityName);
-
-                    using (var reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            var column = reader.GetString(0);
-                            var pk = Convert.ToBoolean(reader.GetValue(1));
-                            var unique = Convert.ToBoolean(reader.GetValue(2));
-
-                            var field = fields.FirstOrDefault(f => f.FieldName == column);
-                            if (pk)
-                            {
-                                field.IsPrimaryKey = true;
-                            }
-                            else
-                            {
-                                var isdescending = Convert.ToInt32(reader.GetValue(3));
-                                field.SearchOrder = isdescending == 0 ? FieldSearchOrder.Ascending : FieldSearchOrder.Descending;
-                            }
-                            if (unique)
-                            {
-                                field.RequireUniqueValue = true;
-                            }
-                        }
-                    }
+                    // TODO: handle index metadata (ascending/descending, unique, etc)
+                    // PRAGMA index_list(TABLENAME)
+                    // seq | name | unique
+                    // PRAGMA index_info(INDEXNAME)
+                    // seqno | cid | name | 
 
 
                     var entityDefinition = new DynamicEntityDefinition(entityName, fields);
