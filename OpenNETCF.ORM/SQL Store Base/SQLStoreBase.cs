@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Data;
 using System.Data.Common;
 using System.Reflection;
+using System.Threading;
 
 namespace OpenNETCF.ORM
 {
@@ -15,6 +16,7 @@ namespace OpenNETCF.ORM
         protected List<IndexInfo> m_indexNameCache = new List<IndexInfo>();
         private IDbConnection m_connection;
         private ConnectionBehavior m_connectionBehavior;
+        private int m_connectionCount = 0;
 
         private Dictionary<Type, MethodInfo> m_serializerCache = new Dictionary<Type, MethodInfo>();
         private Dictionary<Type, MethodInfo> m_deserializerCache = new Dictionary<Type, MethodInfo>();
@@ -68,6 +70,11 @@ namespace OpenNETCF.ORM
         ~SQLStoreBase()
         {
             Dispose();
+        }
+
+        public int OpenConnectionCount
+        {
+            get { return m_connectionCount; }
         }
 
         public ConnectionBehavior ConnectionBehavior
@@ -139,22 +146,26 @@ namespace OpenNETCF.ORM
                 case ConnectionBehavior.AlwaysNew:
                     var connection = GetNewConnectionObject();
                     connection.Open();
+                    Interlocked.Increment(ref m_connectionCount);
                     return connection;
                 case ConnectionBehavior.HoldMaintenance:
                     if (m_connection == null)
                     {
                         m_connection = GetNewConnectionObject();
                         m_connection.Open();
+                        Interlocked.Increment(ref m_connectionCount);
                     }
                     if (maintenance) return m_connection;
                     var connection2 = GetNewConnectionObject();
                     connection2.Open();
+                    Interlocked.Increment(ref m_connectionCount);
                     return connection2;
                 case ConnectionBehavior.Persistent:
                     if (m_connection == null)
                     {
                         m_connection = GetNewConnectionObject();
                         m_connection.Open();
+                        Interlocked.Increment(ref m_connectionCount);
                     }
                     return m_connection;
                 default:
@@ -169,11 +180,13 @@ namespace OpenNETCF.ORM
                 case ConnectionBehavior.AlwaysNew:
                     connection.Close();
                     connection.Dispose();
+                    Interlocked.Decrement(ref m_connectionCount);
                     break;
                 case ConnectionBehavior.HoldMaintenance:
                     if (maintenance) return;
                     connection.Close();
                     connection.Dispose();
+                    Interlocked.Decrement(ref m_connectionCount);
                     break;
                 case ConnectionBehavior.Persistent:
                     return;
@@ -824,7 +837,7 @@ namespace OpenNETCF.ORM
                             throw new NotSupportedException();
                     }
 
-                    string paramName = string.Format(ParameterPrefix + "{0}", i);
+                    string paramName = string.Format("{0}p{1}", ParameterPrefix, i);
                     sb.Append(paramName);
 
                     var param = new TParameter()

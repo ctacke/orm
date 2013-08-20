@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Linq;
+using AFL.OSA.Models;
 
 namespace OpenNETCF.ORM.SQLite.Integration.Test
 {
@@ -146,5 +147,17 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             store.Insert(new BigID("Foo"));
             var bid = store.Select<BigID>();
         }
+
+        [TestMethod()]
+        [DeploymentItem("SQLite.Interop.dll")]
+        public void BitTest()
+        {
+            var store = new SQLiteDataStore(@"E:\d\shared\TFS01\orm\Tests\OpenNETCF.ORM.SQLite.Integration.Test\testdb.sqlite");
+            store.AddType<OSATestSettings>();
+
+            var settings = store.Select<OSATestSettings>().ToArray();
+        }
+
+        
     }
 }
