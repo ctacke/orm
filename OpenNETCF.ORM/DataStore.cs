@@ -385,8 +385,18 @@ namespace OpenNETCF.ORM
 
                     if (!attribute.DataTypeIsValid)
                     {
-                        // TODO: add custom converter support here
-                        attribute.DataType = prop.PropertyType.ToDbType();
+                        // first call any custom type converter
+                        var dt = PropertyTypeToDbType(prop.PropertyType);
+
+                        if (dt.HasValue)
+                        {
+                            attribute.DataType = dt.Value;
+                        }
+                        else
+                        {
+                            // no custom override, use the default
+                            attribute.DataType = prop.PropertyType.ToDbType();
+                        }
                     }
 
                     map.Fields.Add(attribute);
@@ -426,6 +436,11 @@ namespace OpenNETCF.ORM
                 var args = new EntityTypeAddedArgs(info);
                 handler(this, args);
             }
+        }
+
+        protected virtual DbType? PropertyTypeToDbType(Type propertyType)
+        {
+            return null;
         }
 
         protected virtual void AfterAddEntityType(Type entityType, bool ensureCompatibility)
