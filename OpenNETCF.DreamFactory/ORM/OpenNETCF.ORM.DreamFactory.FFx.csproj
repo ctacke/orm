@@ -1,15 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{750ED0AF-FE89-4EFC-BF7A-C29CBDD8AA7F}</ProjectGuid>
+    <ProjectGuid>{1AA3827F-2B66-43F2-8C88-9EED8D15D76B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>OpenNETCF.ORM.SQLite</RootNamespace>
-    <AssemblyName>OpenNETCF.ORM.SQLite</AssemblyName>
+    <RootNamespace>OpenNETCF.ORM</RootNamespace>
+    <AssemblyName>OpenNETCF.ORM.DreamFactory</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>
@@ -29,7 +28,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\bin\Release\FFx\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -37,33 +36,24 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Data.SQLite, Version=1.0.66.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>references\FFx\x32\System.Data.SQLite.dll</HintPath>
-    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\OpenNETCF.ORM.Shared\OpenNETCF.ORM.Version.cs">
-      <Link>Properties\OpenNETCF.ORM.Version.cs</Link>
-    </Compile>
-    <Compile Include="SQLiteDataStore_dynamic.cs" />
-    <Compile Include="SQLiteDataStore.cs" />
-    <Compile Include="SQLiteException.cs" />
+    <Compile Include="DreamFactoryDataStore.cs" />
+    <Compile Include="FieldFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="SQLite.Interop.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\OpenNETCF.ORM\OpenNETCF.ORM.FFx.csproj">
-      <Project>{6E9C7DA3-AD60-4E44-9D3A-7BBD3A20D79F}</Project>
+    <ProjectReference Include="..\..\..\ORM\OpenNETCF.ORM\OpenNETCF.ORM.FFx.csproj">
+      <Project>{6e9c7da3-ad60-4e44-9d3a-7bbd3a20d79f}</Project>
       <Name>OpenNETCF.ORM.FFx</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library\OpenNETCF.DreamFactory.FFx.csproj">
+      <Project>{4d8ffd95-87bd-4873-83ce-01ba4a5cd5f1}</Project>
+      <Name>OpenNETCF.DreamFactory.FFx</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
