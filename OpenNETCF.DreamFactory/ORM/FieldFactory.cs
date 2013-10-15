@@ -9,6 +9,9 @@ namespace OpenNETCF.ORM
 {
     internal static class FieldFactory
     {
+        private const int DefaultStringLength = 256;
+        private const int MaxStringLength = 8000;
+
         public static Field GetFieldForAttribute(FieldAttribute attrib, KeyScheme keyScheme)
         {
             Field field = null;
@@ -38,6 +41,19 @@ namespace OpenNETCF.ORM
                     break;
                 case System.Data.DbType.String:
                     field = new Field<string>(attrib.FieldName);
+                    if (attrib.Length <= 0)
+                    {
+                        field.Length = DefaultStringLength;
+                    }
+                    else if (attrib.Length > MaxStringLength)
+                    {
+                        field.Length = MaxStringLength;
+                    }
+                    else
+                    {
+                        field.Length = attrib.Length;
+                    }
+
                     break;
                 case System.Data.DbType.Boolean:
                     field = new Field<bool>(attrib.FieldName);

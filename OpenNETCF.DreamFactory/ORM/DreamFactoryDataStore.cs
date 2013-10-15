@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using OpenNETCF.DreamFactory;
 using System.Reflection;
+using System.Diagnostics;
 
 namespace OpenNETCF.ORM
 {
@@ -123,10 +124,29 @@ namespace OpenNETCF.ORM
             TruncateTable(name);
         }
 
+        public override void Delete(string entityName, string fieldName, object matchValue)
+        {
+            var filter = string.Format("{0}='{1}'", fieldName, matchValue);
+            var table = m_session.Data.GetTable(entityName);
+            table.DeleteFilteredRecords(filter);
+        }
+
+        public override void Delete(string entityName, object primaryKey)
+        {
+            var table = m_session.Data.GetTable(entityName);
+            table.DeleteRecords(primaryKey);
+        }
+
+        public override void Delete<T>(string fieldName, object matchValue)
+        {
+            var entityName = Entities.GetNameForType(typeof(T));
+            Delete(entityName, fieldName, matchValue);
+        }
+
         public override void OnDelete(object item)
         {
             var entityType = item.GetType();
-            var entityName = Entities.GetNameForType(entityType);
+            var entityName = GetEntityNameForInstance(item);
             var table = m_session.Data.GetTable(entityName);
             FieldAttribute idField;
             var key = GetEntityKeyValue(entityName, item, out idField);
@@ -163,9 +183,27 @@ namespace OpenNETCF.ORM
             }
 
             var entityName = Entities.GetNameForType(entityType);
-            var table = m_session.Data.GetTable(entityName);
 
-            var records = table.GetRecords();
+            Table table;
+            IEnumerable<object[]> records;
+
+            try
+            {
+                table = m_session.Data.GetTable(entityName);
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+
+            try
+            {
+                records = table.GetRecords();
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
 
             var items = new List<object>();
 
@@ -203,6 +241,11 @@ namespace OpenNETCF.ORM
             return items.Cast<T>();
         }
 
+        public override IEnumerable<object> Select(Type entityType)
+        {
+            return Select(entityType, false);
+        }
+
         public override IEnumerable<T> Select<T>(string searchFieldName, object matchValue)
         {
             return Select<T>(searchFieldName, matchValue, false);
@@ -220,6 +263,81 @@ namespace OpenNETCF.ORM
             return Select<T>(false);
         }
 
+        public override IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences)
+        {
+            if (fillReferences)
+            {
+                throw new NotSupportedException("References not currently supported in this DataStore implementation");
+            }
+
+            var entityType = typeof(T);
+            var entityName = Entities.GetNameForType(entityType);
+            var table = m_session.Data.GetTable(entityName);
+
+            IEnumerable<object[]> records;
+
+            if ((filters != null) && (filters.Count() > 0))
+            {
+                var filter = string.Join(" AND ", (from f in filters
+                                                   select FilterToString(f)).ToArray());
+
+                records = table.GetRecords(filter);
+            }
+            else
+            {
+                records = table.GetRecords();
+            }
+
+            var items = new List<object>();
+
+            foreach (var record in records)
+            {
+                var instance = RehydrateObjectFromEntityValueDictionary(entityType, entityName, record);
+                items.Add(instance);
+            }
+
+            return items.Cast<T>();
+        }
+
+        private string FilterToString(FilterCondition f)
+        {
+            var filter = new StringBuilder(f.FieldName);
+
+            switch(f.Operator)
+            {
+                case FilterCondition.FilterOperator.Equals:
+                    filter.AppendFormat(" = '{0}'", f.Value);
+                    break;
+                case FilterCondition.FilterOperator.GreaterThan:
+                    filter.AppendFormat(" > '{0}'", f.Value);
+                    break;
+                case FilterCondition.FilterOperator.LessThan:
+                    filter.AppendFormat(" < '{0}'", f.Value);
+                    break;
+                case FilterCondition.FilterOperator.Like:
+                    filter.AppendFormat(" LIKE '{0}'", f.Value);
+                    break;
+            }
+
+            return filter.ToString();
+        }
+
+        public override IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters)
+        {
+            return Select<T>(filters, false);
+        }
+
+        private string GetEntityNameForInstance(object item)
+        {
+            if (item is DynamicEntity)
+            {
+                return (item as DynamicEntity).EntityName;
+            }
+
+            var itemType = item.GetType();
+            return m_entities.GetNameForType(itemType);
+        }
+
         public override void OnInsert(object item, bool insertReferences)
         {
             if (insertReferences)
@@ -227,7 +345,7 @@ namespace OpenNETCF.ORM
                 throw new NotSupportedException("References not currently supported in this DataStore implementation");
             }
 
-            var entityName = Entities.GetNameForType(item.GetType());
+            var entityName = GetEntityNameForInstance(item);
 
             var table = m_session.Data.GetTable(entityName);
 
@@ -246,7 +364,7 @@ namespace OpenNETCF.ORM
 
         public override void OnUpdate(object item, bool cascadeUpdates, string fieldName)
         {
-            var entityName = Entities.GetNameForType(item.GetType());
+            var entityName = GetEntityNameForInstance(item);
 
             var table = m_session.Data.GetTable(entityName);
 
@@ -259,7 +377,7 @@ namespace OpenNETCF.ORM
         public override bool Contains(object item)
         {
             var entityType = item.GetType();
-            var entityName = Entities.GetNameForType(entityType);
+            var entityName = GetEntityNameForInstance(item);
             FieldAttribute idField;
             var key = GetEntityKeyValue(entityName, item, out idField);
 
@@ -288,35 +406,63 @@ namespace OpenNETCF.ORM
 
         private Dictionary<string, object> GetEntityValueDictionary(object item, out FieldAttribute identityField)
         {
-            var entityName = Entities.GetNameForType(item.GetType());
+            var entityName = GetEntityNameForInstance(item);
 
             var values = new Dictionary<string, object>();
 
             identityField = null;
 
-            foreach (var field in Entities[entityName].Fields)
+            if (item is DynamicEntity)
             {
-                if (field.IsPrimaryKey) identityField = field;
+                var de = item as DynamicEntity;
 
-                var value = field.PropertyInfo.GetValue(item, null);
-
-                switch (field.DataType)
+                foreach (var field in Entities[entityName].Fields)
                 {
-                    case System.Data.DbType.Time:
-                        values.Add(field.FieldName, ((TimeSpan)value).ToString());
-                        break;
-                    case System.Data.DbType.Date:
-                    case System.Data.DbType.DateTime:
-                    case System.Data.DbType.DateTime2:
-                        values.Add(field.FieldName, Convert.ToDateTime(value).ToString("s"));
-                        break;
-                    default:
-                        values.Add(field.FieldName, value);
-                        break;
+                    if (field.IsPrimaryKey) identityField = field;
+
+                    var value = de.Fields[field.FieldName];
+
+                    switch (field.DataType)
+                    {
+                        case System.Data.DbType.Time:
+                            values.Add(field.FieldName, ((TimeSpan)value).ToString());
+                            break;
+                        case System.Data.DbType.Date:
+                        case System.Data.DbType.DateTime:
+                        case System.Data.DbType.DateTime2:
+                            values.Add(field.FieldName, Convert.ToDateTime(value).ToString("s"));
+                            break;
+                        default:
+                            values.Add(field.FieldName, value);
+                            break;
+                    }
+
                 }
-
             }
+            else
+            {
+                foreach (var field in Entities[entityName].Fields)
+                {
+                    if (field.IsPrimaryKey) identityField = field;
 
+                    var value = field.PropertyInfo.GetValue(item, null);
+
+                    switch (field.DataType)
+                    {
+                        case System.Data.DbType.Time:
+                            values.Add(field.FieldName, ((TimeSpan)value).ToString());
+                            break;
+                        case System.Data.DbType.Date:
+                        case System.Data.DbType.DateTime:
+                        case System.Data.DbType.DateTime2:
+                            values.Add(field.FieldName, Convert.ToDateTime(value).ToString("s"));
+                            break;
+                        default:
+                            values.Add(field.FieldName, value);
+                            break;
+                    }
+                }
+            }
             return values;
         }
 
@@ -324,6 +470,63 @@ namespace OpenNETCF.ORM
             where T : class
         {
             return RehydrateObjectFromEntityValueDictionary(typeof(T), entityName, record) as T;
+        }
+
+        private DynamicEntity DynamicEntityFromEntityValueDictionary(string entityName, object[] record)
+        {
+            var instance = new DynamicEntity(entityName);
+
+            var f = 0;
+            foreach (var field in Entities[entityName].Fields)
+            {
+                if (record[f] is string)
+                {
+                    switch (field.DataType)
+                    {
+                        case System.Data.DbType.Int16:
+                        case System.Data.DbType.UInt16:
+                            instance.Fields[field.FieldName] = Convert.ToInt16(record[f]);
+                            break;
+                        case System.Data.DbType.Int32:
+                        case System.Data.DbType.UInt32:
+                            instance.Fields[field.FieldName] = Convert.ToInt32(record[f]);
+                            break;
+                        case System.Data.DbType.Int64:
+                        case System.Data.DbType.UInt64:
+                            instance.Fields[field.FieldName] = Convert.ToInt64(record[f]);
+                            break;
+                        case System.Data.DbType.Double:
+                            instance.Fields[field.FieldName] = Convert.ToDouble(record[f]);
+                            break;
+                        case System.Data.DbType.Single:
+                            instance.Fields[field.FieldName] = Convert.ToSingle(record[f]);
+                            break;
+                        case System.Data.DbType.Decimal:
+                            instance.Fields[field.FieldName] = Convert.ToDecimal(record[f]);
+                            break;
+                        case System.Data.DbType.Guid:
+                            instance.Fields[field.FieldName] = new Guid(record[f] as string);
+                            break;
+                        case System.Data.DbType.Time:
+                            instance.Fields[field.FieldName] = TimeSpan.Parse(record[f] as string);
+                            break;
+                        case System.Data.DbType.Date:
+                        case System.Data.DbType.DateTime:
+                            instance.Fields[field.FieldName] = DateTime.Parse(record[f] as string);
+                            break;
+                        default:
+                            instance.Fields[field.FieldName] = record[f];
+                            break;
+                    }
+                }
+                else
+                {
+                    instance.Fields[field.FieldName] = record[f];
+                }
+                f++;
+            }
+
+            return instance;
         }
 
         private object RehydrateObjectFromEntityValueDictionary(Type type, string entityName, object[] record)
@@ -337,7 +540,7 @@ namespace OpenNETCF.ORM
             var f = 0;
             foreach (var field in Entities[entityName].Fields)
             {
-                // DreamFactory has a bug where some numerics are returnd in JSON as strings, so we 
+                // DreamFactory has a bug where some numerics are returnd in JSON as strings, so we need to handle that here
                 if(record[f] is string)
                 {
                     var dbtype = PropertyTypeToDbType(field.PropertyInfo.PropertyType);
@@ -397,71 +600,103 @@ namespace OpenNETCF.ORM
             return table.GetRecordCount();
         }
 
-
-
-
-        public override IEnumerable<DynamicEntity> Select(string entityName)
+        public override bool StoreExists
         {
-            throw new NotImplementedException();
+            // TODO: what should this check?
+            get { return true; }
         }
 
-        public override IEnumerable<object> Select(Type entityType)
+        public string[] GetTableNames()
         {
-            throw new NotImplementedException();
+            return m_session.Data.GetTables().Select(t => t.Name).ToArray();
         }
 
-        public override IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences)
+        public override void EnsureCompatibility()
         {
-            throw new NotImplementedException();
+            // TODO:
+            // foreach registered type
+            // { 
+            //        if (!TableExists(name))
+            //        {
+            //            CreateTable(entity);
+            //        }
+            //        else
+            //        {
+            //            ValidateTable(entity);
+            //        }
+            // }
         }
-
-        public override IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters)
-        {
-            throw new NotImplementedException();
-        }
-
-
-
-
-
-
 
         protected override void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility)
         {
-            throw new NotImplementedException();
+            string name = definition.EntityName;
+
+            if (!TableExists(name))
+            {
+                var fields = new List<Field>();
+
+                foreach (var field in definition.Fields)
+                {
+                    if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
+                    {
+                        throw new ReservedWordException(field.FieldName);
+                    }
+
+                    fields.Add(FieldFactory.GetFieldForAttribute(field, KeyScheme.Identity));
+                }
+
+                m_session.Data.CreateTable(name, name, fields);
+            }
+            else
+            {
+                // TODO: ValidateTable
+            }
         }
+
+        public override IEnumerable<DynamicEntity> Select(string entityName)
+        {
+            var table = m_session.Data.GetTable(entityName);
+            var records = table.GetRecords();
+
+            var items = new List<DynamicEntity>();
+
+            foreach (var record in records)
+            {
+                var instance = DynamicEntityFromEntityValueDictionary(entityName, record);
+                items.Add(instance);
+            }
+
+            return items;
+        }
+
+        public override DynamicEntity Select(string entityName, object primaryKey)
+        {
+            var table = m_session.Data.GetTable(entityName);
+            var record = table.GetRecords(primaryKey).FirstOrDefault();
+
+            if (record == null) return null;
+
+            return DynamicEntityFromEntityValueDictionary(entityName, record);
+        }
+
+        public override void DiscoverDynamicEntity(string entityName)
+        {
+            // TODO:
+        }
+
+
+
+
+
+
+
 
         public override int Count<T>(IEnumerable<FilterCondition> filters)
         {
             throw new NotImplementedException();
         }
 
-        public override void Delete(string entityName, string fieldName, object matchValue)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Delete(string entityName, object primaryKey)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void Delete<T>(string fieldName, object matchValue)
-        {
-            throw new NotImplementedException();
-        }
-
         public override void DeleteStore()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void DiscoverDynamicEntity(string entityName)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override void EnsureCompatibility()
         {
             throw new NotImplementedException();
         }
@@ -490,26 +725,5 @@ namespace OpenNETCF.ORM
         {
             throw new NotImplementedException();
         }
-
-        public override DynamicEntity Select(string entityName, object primaryKey)
-        {
-            throw new NotImplementedException();
-        }
-
-
-        public override bool StoreExists
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-
-        #region ITableBasedStore Members
-
-        public string[] GetTableNames()
-        {
-            throw new NotImplementedException();
-        }
-
-        #endregion
     }
 }
