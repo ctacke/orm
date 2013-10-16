@@ -42,6 +42,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\OpenNETCF.ORM.Shared\OpenNETCF.ORM.Version.cs">
+      <Link>Properties\OpenNETCF.ORM.Version.cs</Link>
+    </Compile>
     <Compile Include="DreamFactoryDataStore.cs" />
     <Compile Include="FieldFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

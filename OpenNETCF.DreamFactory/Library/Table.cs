@@ -29,32 +29,35 @@ namespace OpenNETCF.DreamFactory
 
             var response = Session.Client.Execute<TableDescriptor>(request);
 
-            if (response.StatusCode != HttpStatusCode.OK)
+            switch (response.StatusCode)
             {
-                // TODO parse
-                throw new Exception(response.Content);
+                case HttpStatusCode.OK:
+                    var descriptor = response.Data;
+
+                    Name = descriptor.name;
+                    Label = descriptor.label;
+
+                    var fieldList = new List<Field>();
+
+                    foreach (var f in descriptor.field)
+                    {
+                        var fld = f.AsField();
+                        fieldList.Add(fld);
+                        if (f.is_primary_key.HasValue && f.is_primary_key.Value)
+                        {
+                            KeyField = fld;
+                        }
+                    }
+
+                    Fields = fieldList.ToArray();
+                    break;
+                default:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
+                    // TODO: make a library-specific Exception class
+                    throw new Exception(error.error[0].message);
             }
-
-//            var json = Encoding.UTF8.GetString(response.RawBytes);
-
-            var descriptor = response.Data;
-
-            Name = descriptor.name;
-            Label = descriptor.label;
-
-            var fieldList = new List<Field>();
-
-            foreach (var f in descriptor.field)
-            {
-                var fld = f.AsField();
-                fieldList.Add(fld);
-                if (f.is_primary_key.HasValue && f.is_primary_key.Value)
-                {
-                    KeyField = fld;
-                }
-            }
-
-            Fields = fieldList.ToArray();
         }
 
         public Field KeyField { get; private set; }
@@ -62,11 +65,6 @@ namespace OpenNETCF.DreamFactory
 
         public string Name { get; private set; }
         public string Label { get; private set; }
-
-        public IEnumerable<object> GetRecords(string[] resourceIDs)
-        {
-            throw new NotImplementedException();
-        }
 
         private IRestRequest GetSessionRequest (string path, Method method)
         {
@@ -160,14 +158,35 @@ namespace OpenNETCF.DreamFactory
 
         public int GetRecordCount()
         {
+            return GetRecordCount(null);
+        }
+
+        public int GetRecordCount(string filter)
+        {
             var request = GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.GET);
             request.Parameters.Add(new Parameter() { Name = "limit", Value = 1, Type = ParameterType.GetOrPost });
             request.Parameters.Add(new Parameter() { Name = "include_count", Value = "true", Type = ParameterType.GetOrPost });
 
+            if (!string.IsNullOrEmpty(filter))
+            {
+                request.Parameters.Add(new Parameter() { Name = "filter", Value = filter, Type = ParameterType.GetOrPost });
+            }
+
             var response = Session.Client.Execute<ResourceDescriptorList>(request);
 
-            // TODO: this feels fragile - we should look at improving it
-            return Convert.ToInt32(((SimpleJson.DeserializeObject(response.Content) as JsonObject)[1] as JsonObject)[0]);
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.OK:
+                    // TODO: this feels fragile - we should look at improving it
+                    return Convert.ToInt32(((SimpleJson.DeserializeObject(response.Content) as JsonObject)[1] as JsonObject)[0]);
+
+                default:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
+                    // TODO: make a library-specific Exception class
+                    throw new Exception(error.error[0].message);
+            }
         }
 
         public IEnumerable<object[]> GetRecords()
@@ -177,10 +196,27 @@ namespace OpenNETCF.DreamFactory
 
         public IEnumerable<object[]> GetRecords(int limit)
         {
+            return GetRecords(limit, 0, null, null);
+        }
+
+        public IEnumerable<object[]> GetRecords(int limit, int offset, string filter, string order)
+        {
             var request = GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.GET);
             if (limit > 0)
             {
                 request.Parameters.Add(new Parameter() { Name = "limit", Value = limit, Type = ParameterType.GetOrPost });
+            }
+            if (offset > 0)
+            {
+                request.Parameters.Add(new Parameter() { Name = "offset", Value = offset, Type = ParameterType.GetOrPost });
+            }
+            if (!filter.IsNullOrEmpty())
+            {
+                request.Parameters.Add(new Parameter() { Name = "filter", Value = filter, Type = ParameterType.GetOrPost });
+            }
+            if (!filter.IsNullOrEmpty())
+            {
+                request.Parameters.Add(new Parameter() { Name = "order", Value = order, Type = ParameterType.GetOrPost });
             }
 
             var response = Session.Client.Execute<ResourceDescriptorList>(request);
@@ -210,7 +246,35 @@ namespace OpenNETCF.DreamFactory
                 default:
                     if (Debugger.IsAttached) Debugger.Break();
 
-                    throw new Exception();
+                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
+                    // TODO: make a library-specific Exception class
+                    throw new Exception(error.error[0].message);
+            }
+        }
+
+        public void DeleteFilteredRecords(string filter)
+        {
+            var request = GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.DELETE);
+
+            request.Parameters.Add(new Parameter()
+            {
+                Name = "filter",
+                Value = filter,
+                Type = ParameterType.GetOrPost
+            });
+
+            var response = Session.Client.Execute(request);
+
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.Created:
+                    return;
+                case HttpStatusCode.BadRequest:
+                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
+                    // TODO: make a library-specific Exception class
+                    throw new Exception(error.error[0].message);
+                default:
+                    break;
             }
         }
 
@@ -229,6 +293,7 @@ namespace OpenNETCF.DreamFactory
             }
             else
             {
+                // this is to delete all - we're setting up a "filter" that (hopefully) matches no record in the table
                 if (KeyField != null)
                 {
                     request.Parameters.Add(new Parameter()
@@ -257,7 +322,8 @@ namespace OpenNETCF.DreamFactory
                     return;
                 case HttpStatusCode.BadRequest:
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    throw new Exception("");
+                    // TODO: make a library-specific Exception class
+                    throw new Exception(error.error[0].message);
                 default:
                     break;
             }

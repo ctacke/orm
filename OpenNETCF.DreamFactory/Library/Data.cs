@@ -53,15 +53,28 @@ namespace OpenNETCF.DreamFactory
 
             var response = Session.Client.Execute<ResourceDescriptorList>(request);
 
-            var list = new List<Table>();
-
-            foreach (var resource in response.Data.resource)
+            switch (response.StatusCode)
             {
-                var t = new Table(Session, resource);
-                list.Add(t);
-            }
+                case HttpStatusCode.OK:
+                    var list = new List<Table>();
 
-            return list.ToArray();
+                    foreach (var resource in response.Data.resource)
+                    {
+                        var t = new Table(Session, resource);
+                        list.Add(t);
+                    }
+
+                    return list.ToArray();
+
+                default:
+                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
+                    if (error.error.Count > 0)
+                    {
+                        throw new Exception(error.error[0].message);
+                    }
+
+                    throw new Exception();
+            }
         }
 
         public Table CreateTable(string tableName, string label, params Field[] fields)
