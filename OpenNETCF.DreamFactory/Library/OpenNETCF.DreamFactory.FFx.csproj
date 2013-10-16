@@ -48,9 +48,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Applications.cs" />
+    <Compile Include="Container.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Field.cs" />
     <Compile Include="Data.cs" />
+    <Compile Include="JSON Classes\ContainerDescriptor.cs" />
     <Compile Include="JSON Classes\ErrorDescriptor.cs" />
     <Compile Include="JSON Classes\TableDescriptor.cs" />
     <Compile Include="JSON Classes\FieldDescriptor.cs" />

@@ -12,6 +12,11 @@ namespace OpenNETCF.DreamFactory
 {
     public sealed class Table
     {
+        public Field KeyField { get; private set; }
+        public Field[] Fields { get; private set; }
+        public string Name { get; private set; }
+        public string Label { get; private set; }
+
         private Session Session { get; set; }
         
         internal Table(Session session, ResourceDescriptor resource)
@@ -22,10 +27,7 @@ namespace OpenNETCF.DreamFactory
         internal Table(Session session, string tableName)
         {
             Session = session;
-            RestRequest request = new RestRequest(string.Format("/rest/schema/{0}", tableName), Method.GET);
-            request.AddHeader("X-DreamFactory-Application-Name", Session.ApplicationName);
-            request.AddHeader("X-DreamFactory-Session-Token", Session.ID);
-            request.RequestFormat = DataFormat.Json;
+            var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.GET);
 
             var response = Session.Client.Execute<TableDescriptor>(request);
 
@@ -60,23 +62,6 @@ namespace OpenNETCF.DreamFactory
             }
         }
 
-        public Field KeyField { get; private set; }
-        public Field[] Fields { get; private set; }
-
-        public string Name { get; private set; }
-        public string Label { get; private set; }
-
-        private IRestRequest GetSessionRequest (string path, Method method)
-        {
-            var request = new RestRequest(path, method)
-                .AddHeader("X-DreamFactory-Application-Name", Session.ApplicationName)
-                .AddHeader("X-DreamFactory-Session-Token", Session.ID);
-
-            request.RequestFormat = DataFormat.Json;
-
-            return request;
-        }
-
         public IEnumerable<object[]> GetRecords(string filterStatement)
         {
             return GetRecords(filterStatement, null);
@@ -89,7 +74,7 @@ namespace OpenNETCF.DreamFactory
 
         public IEnumerable<object[]> GetRecords(string filterStatement, params object[] resourceIDs)
         {
-            var request = GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.GET);
+            var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.GET);
 
             if ((resourceIDs != null) && (resourceIDs.Length > 0))
             {
@@ -163,7 +148,7 @@ namespace OpenNETCF.DreamFactory
 
         public int GetRecordCount(string filter)
         {
-            var request = GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.GET);
+            var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.GET);
             request.Parameters.Add(new Parameter() { Name = "limit", Value = 1, Type = ParameterType.GetOrPost });
             request.Parameters.Add(new Parameter() { Name = "include_count", Value = "true", Type = ParameterType.GetOrPost });
 
@@ -201,7 +186,7 @@ namespace OpenNETCF.DreamFactory
 
         public IEnumerable<object[]> GetRecords(int limit, int offset, string filter, string order)
         {
-            var request = GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.GET);
+            var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.GET);
             if (limit > 0)
             {
                 request.Parameters.Add(new Parameter() { Name = "limit", Value = limit, Type = ParameterType.GetOrPost });
@@ -254,7 +239,7 @@ namespace OpenNETCF.DreamFactory
 
         public void DeleteFilteredRecords(string filter)
         {
-            var request = GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.DELETE);
+            var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.DELETE);
 
             request.Parameters.Add(new Parameter()
             {
@@ -269,18 +254,16 @@ namespace OpenNETCF.DreamFactory
             {
                 case HttpStatusCode.Created:
                     return;
-                case HttpStatusCode.BadRequest:
+                default:
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
                     // TODO: make a library-specific Exception class
                     throw new Exception(error.error[0].message);
-                default:
-                    break;
             }
         }
 
         public void DeleteRecords(params object[] resourceIDs)
         {
-            var request = GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.DELETE);
+            var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.DELETE);
 
             if ((resourceIDs != null) && (resourceIDs.Length > 0))
             {
@@ -341,7 +324,7 @@ namespace OpenNETCF.DreamFactory
 
         private object SendRecord(Dictionary<string, object> fields, bool isUpdate)
         {
-            var request = GetSessionRequest(string.Format("/rest/db/{0}", Name), isUpdate ? Method.PUT : Method.POST);
+            var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), isUpdate ? Method.PUT : Method.POST);
 
             // "{\"record\":[{\"ID\":\"1\",\"Name\":\"Item #1\",\"UUID\":null,\"ITest\":23,\"Address\":\"Foo\",\"FTest\":\"2.4\",\"DBTest\":null,\"DETest\":null,\"TS\":0}]}"
             var o = SimpleJson.SerializeObject(fields);
@@ -364,16 +347,11 @@ namespace OpenNETCF.DreamFactory
                     var name = key.Keys.First();
                     var value = key[name];
                     return value;
-//                    return new KeyValuePair<string, object>(name, value);
-                case HttpStatusCode.BadRequest:
+                default:
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
                     // TODO: make a library-specific Exception class
                     throw new Exception(error.error[0].message);
-                default:
-                    break;
             }
-
-            return null;
         }
     }
 

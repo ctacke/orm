@@ -20,11 +20,9 @@ namespace OpenNETCF.DreamFactory
 
         public Table GetTable(string tableName)
         {
-            var request = new RestRequest(string.Format("/rest/schema/{0}", tableName, Method.GET));
-            request.AddHeader("X-DreamFactory-Application-Name", Session.ApplicationName);
-            request.AddHeader("X-DreamFactory-Session-Token", Session.ID);
+            // TODO: enable caching of this info
 
-            request.RequestFormat = DataFormat.Json;
+            var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.GET);
 
             var response = Session.Client.Execute<ResourceDescriptor>(request);
 
@@ -45,11 +43,7 @@ namespace OpenNETCF.DreamFactory
 
         public Table[] GetTables()
         {
-            var request = new RestRequest("/rest/db", Method.GET);
-            request.AddHeader("X-DreamFactory-Application-Name", Session.ApplicationName);
-            request.AddHeader("X-DreamFactory-Session-Token", Session.ID);
-
-            request.RequestFormat = DataFormat.Json;
+            var request = Session.GetSessionRequest("/rest/db", Method.GET);
 
             var response = Session.Client.Execute<ResourceDescriptorList>(request);
 
@@ -103,10 +97,8 @@ namespace OpenNETCF.DreamFactory
             tableDescriptor.field = fieldDescriptors;
 
             // build up a request to create the table
-            var request = new RestRequest("/rest/schema", Method.POST);
-            request.AddHeader("X-DreamFactory-Application-Name", Session.ApplicationName);
-            request.AddHeader("X-DreamFactory-Session-Token", Session.ID);
-            request.RequestFormat = DataFormat.Json;
+            var request = Session.GetSessionRequest("/rest/schema", Method.POST);
+
             request.JsonSerializer.ContentType = "application/json; charset=utf-8";
             request.JsonSerializer.Options = new SerializerOptions()
             {
@@ -120,9 +112,6 @@ namespace OpenNETCF.DreamFactory
             // TODO: check response
             switch (response.StatusCode)
             {
-                case HttpStatusCode.BadRequest:
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptor>(response.Content);
-                    throw new Exception(error.message);
                 case HttpStatusCode.Created:
                     // query the table schema back
                     var actualTable = new Table(Session, tableName);
@@ -131,19 +120,14 @@ namespace OpenNETCF.DreamFactory
 
                     return actualTable;
                 default:
-                    if (Debugger.IsAttached)
-                    {
-                        Debugger.Break();
-                    }
-                    return null;
+                    var error = SimpleJson.DeserializeObject<ErrorDescriptor>(response.Content);
+                    throw new Exception(error.message);
             }
         }
 
         public void DeleteTable(string tableName)
         {
-            var request = new RestRequest(string.Format("/rest/schema/{0}", tableName), Method.DELETE);
-            request.AddHeader("X-DreamFactory-Application-Name", Session.ApplicationName);
-            request.AddHeader("X-DreamFactory-Session-Token", Session.ID);
+            var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.DELETE);
 
             // delete the table
             var response = Session.Client.Execute(request);
@@ -153,11 +137,7 @@ namespace OpenNETCF.DreamFactory
 
         public object GetRecords(string tableName)
         {
-            var request = new RestRequest(string.Format("/rest/db/{0}", tableName), Method.GET);
-            request.AddHeader("X-DreamFactory-Application-Name", Session.ApplicationName);
-            request.AddHeader("X-DreamFactory-Session-Token", Session.ID);
-
-            request.RequestFormat = DataFormat.Json;
+            var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", tableName), Method.GET);
 
             var response = Session.Client.Execute(request);
 

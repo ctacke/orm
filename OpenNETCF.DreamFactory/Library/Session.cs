@@ -19,6 +19,7 @@ namespace OpenNETCF.DreamFactory
         private SessionDescriptor SessionDescriptor { get; set; }
 
         public Data Data { get; private set; }
+        public Applications Applications { get; private set; }
 
         public Session(string dspRootAddress, string application, string username, string password)
         {
@@ -49,12 +50,24 @@ namespace OpenNETCF.DreamFactory
             request.AddBody(creds);
 
             var response = Client.Execute<SessionDescriptor>(request);
-            
+
             SessionDescriptor = response.Data;
 
             // TODO: set some properties that might be of interest
 
             Data = new Data(this);
+            Applications = new Applications(this);
+        }
+
+        internal IRestRequest GetSessionRequest(string path, Method method)
+        {
+            var request = new RestRequest(path, method)
+                .AddHeader("X-DreamFactory-Application-Name", this.ApplicationName)
+                .AddHeader("X-DreamFactory-Session-Token", this.ID);
+
+            request.RequestFormat = DataFormat.Json;
+
+            return request;
         }
     }
 }
