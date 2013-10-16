@@ -92,17 +92,6 @@ namespace OpenNETCF.ORM
             m_session.Data.CreateTable(name, name, fields); 
         }
 
-        private void ValidateTable(IEntityInfo entity)
-        {
-            // TODO:
-        }
-
-        public override void CreateStore()
-        {
-            // todo: create application? For now, assume it's there
-        }
-
-
         public void DropTable(string tableName)
         {
             m_session.Data.DeleteTable(tableName);
@@ -594,37 +583,9 @@ namespace OpenNETCF.ORM
             return instance;
         }
 
-        public override int Count(string entityName)
-        {
-            var table = m_session.Data.GetTable(entityName);
-            return table.GetRecordCount();
-        }
-
-        public override bool StoreExists
-        {
-            // TODO: what should this check?
-            get { return true; }
-        }
-
         public string[] GetTableNames()
         {
             return m_session.Data.GetTables().Select(t => t.Name).ToArray();
-        }
-
-        public override void EnsureCompatibility()
-        {
-            // TODO:
-            // foreach registered type
-            // { 
-            //        if (!TableExists(name))
-            //        {
-            //            CreateTable(entity);
-            //        }
-            //        else
-            //        {
-            //            ValidateTable(entity);
-            //        }
-            // }
         }
 
         protected override void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility)
@@ -684,16 +645,116 @@ namespace OpenNETCF.ORM
             // TODO:
         }
 
+        public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        {
+            if (fillReferences)
+            {
+                throw new NotSupportedException("References not currently supported in this DataStore implementation");
+            }
 
+            var entityType = typeof(T);
+            var entityName = Entities.GetNameForType(entityType);
+            var table = m_session.Data.GetTable(entityName);
 
+            string orderString = null;
+            string filterString = null;
 
+            if (!string.IsNullOrEmpty(sortField))
+            {
+                switch(sortOrder)
+                {
+                    case FieldSearchOrder.Ascending:
+                        orderString = string.Format("{0} ASC", sortField);
+                        break;
+                    case FieldSearchOrder.Descending:
+                        orderString = string.Format("{0} DESC", sortField);
+                        break;
+                }                
+            }
 
+            if (filter != null)
+            {
+                filterString = FilterToString(filter);
+            }
 
+            return table.GetRecords(fetchCount, firstRowOffset, filterString, orderString).Cast<T>();
+        }
 
+        public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField)
+        {
+            return Fetch<T>(fetchCount, firstRowOffset, sortField, FieldSearchOrder.Ascending, null, false);
+        }
+
+        public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset)
+        {
+            return Fetch<T>(fetchCount, firstRowOffset, null, FieldSearchOrder.NotSearchable, null, false);
+        }
+
+        public override IEnumerable<T> Fetch<T>(int fetchCount)
+        {
+            var entityType = typeof(T);
+            var entityName = Entities.GetNameForType(entityType);
+            var table = m_session.Data.GetTable(entityName);
+
+            return table.GetRecords(fetchCount).Cast<T>();
+        }
+
+        public override int Count(string entityName)
+        {
+            var table = m_session.Data.GetTable(entityName);
+            return table.GetRecordCount();
+        }
 
         public override int Count<T>(IEnumerable<FilterCondition> filters)
         {
-            throw new NotImplementedException();
+            var entityType = typeof(T);
+            var entityName = Entities.GetNameForType(entityType);
+
+            var table = m_session.Data.GetTable(entityName);
+
+            if ((filters != null) && (filters.Count() > 0))
+            {
+                var filter = string.Join(" AND ", (from f in filters
+                                                   select FilterToString(f)).ToArray());
+
+                return table.GetRecordCount(filter);
+            }
+            else
+            {
+                return table.GetRecordCount();
+            }            
+        }
+
+        public override void EnsureCompatibility()
+        {
+            // TODO:
+            // foreach registered type
+            // { 
+            //        if (!TableExists(name))
+            //        {
+            //            CreateTable(entity);
+            //        }
+            //        else
+            //        {
+            //            ValidateTable(entity);
+            //        }
+            // }
+        }
+
+        private void ValidateTable(IEntityInfo entity)
+        {
+            // TODO:
+        }
+
+        public override void CreateStore()
+        {
+            // todo: create application? For now, assume it's there
+        }
+
+        public override bool StoreExists
+        {
+            // TODO: what should this check?
+            get { return true; }
         }
 
         public override void DeleteStore()
@@ -701,29 +762,9 @@ namespace OpenNETCF.ORM
             throw new NotImplementedException();
         }
 
-        public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override IEnumerable<T> Fetch<T>(int fetchCount)
-        {
-            throw new NotImplementedException();
-        }
-
         public override void FillReferences(object instance)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException("References not currently supported in this DataStore implementation");
         }
     }
 }
