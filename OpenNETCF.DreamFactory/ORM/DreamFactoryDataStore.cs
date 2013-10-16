@@ -748,18 +748,26 @@ namespace OpenNETCF.ORM
 
         public override void CreateStore()
         {
-            // todo: create application? For now, assume it's there
+            if(StoreExists)
+            {
+                throw new StoreAlreadyExistsException();
+            }
+
+            m_session.Applications.CreateContainer(m_session.ApplicationName);
         }
 
         public override bool StoreExists
         {
-            // TODO: what should this check?
-            get { return true; }
+            get 
+            {
+                var existingContainer = m_session.Applications.GetContainer(m_session.ApplicationName);
+                return existingContainer != null; 
+            }
         }
 
         public override void DeleteStore()
         {
-            throw new NotImplementedException();
+            m_session.Applications.DeleteContainer(m_session.ApplicationName);
         }
 
         public override void FillReferences(object instance)
