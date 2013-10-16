@@ -137,8 +137,21 @@ namespace OpenNETCF.ORM.DreamFactory.Integration.Test
         }
 
         [TestMethod]
-        public void RecordCountTest()
+        public void ApplicationsTest()
         {
+            var session = GetSession();
+            session.Initialize();
+
+            var apps = session.Applications.GetContainers();
+
+            var name = apps[0].Name;
+
+            var c = session.Applications.GetContainer(name);
+
+
+            var c2 = session.Applications.CreateContainer("NewApp");
+            session.Applications.DeleteContainer(c2.Name);
+            var c3 = session.Applications.GetContainer("NewApp");
         }
 
         [TestMethod]
