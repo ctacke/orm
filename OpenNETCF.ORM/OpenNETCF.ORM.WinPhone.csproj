@@ -92,6 +92,9 @@
     <Compile Include="Interfaces\ITableEntity.cs" />
     <Compile Include="KeyScheme.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Replication\ReplicationBehavior.cs" />
+    <Compile Include="Replication\Replicator.cs" />
+    <Compile Include="Replication\ReplicatorCollection.cs" />
     <Compile Include="SQL Store Base\ConnectionBehavior.cs" />
     <Compile Include="SQL Store Base\SqlEntityInfo.cs" />
     <Compile Include="SQL Store Base\SqlFilterCondition.cs" />

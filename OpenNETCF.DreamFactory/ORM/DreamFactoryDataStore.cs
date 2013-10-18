@@ -640,9 +640,10 @@ namespace OpenNETCF.ORM
             return DynamicEntityFromEntityValueDictionary(entityName, record);
         }
 
-        public override void DiscoverDynamicEntity(string entityName)
+        public override DynamicEntityDefinition DiscoverDynamicEntity(string entityName)
         {
             // TODO:
+            return null;
         }
 
         public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)

@@ -11,15 +11,22 @@ namespace OpenNETCF.DreamFactory
 {
     public sealed class Data
     {
+        private Dictionary<string, Table> m_tableCache;
         private Session Session { get; set; }
 
         internal Data(Session session)
         {
             Session = session;
+            m_tableCache = new Dictionary<string, Table>(StringComparer.InvariantCultureIgnoreCase);
         }
 
         public Table GetTable(string tableName)
         {
+            if(m_tableCache.ContainsKey(tableName) )
+            {
+                return m_tableCache[tableName];
+            }
+
             // TODO: enable caching of this info
 
             var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.GET);
@@ -29,7 +36,12 @@ namespace OpenNETCF.DreamFactory
             switch(response.StatusCode)
             {
                 case HttpStatusCode.OK:
-                    return new Table(Session, response.Data);
+                    var table = new Table(Session, response.Data);
+                    if (!m_tableCache.ContainsKey(tableName))
+                    {
+                        m_tableCache.Add(tableName, table);
+                    }
+                    return table;
                 default:
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
                     if (error.error.Count > 0)
@@ -55,6 +67,10 @@ namespace OpenNETCF.DreamFactory
                     foreach (var resource in response.Data.resource)
                     {
                         var t = new Table(Session, resource);
+                        if (!m_tableCache.ContainsKey(t.Name))
+                        {
+                            m_tableCache.Add(t.Name, t);
+                        }
                         list.Add(t);
                     }
 

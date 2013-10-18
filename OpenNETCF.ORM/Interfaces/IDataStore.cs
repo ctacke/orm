@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
 using System.Data;
+using OpenNETCF.ORM.Replication;
 
 namespace OpenNETCF.ORM
 {
@@ -17,6 +18,7 @@ namespace OpenNETCF.ORM
 
         string Name { get; }
         EntityInfoCollection Entities { get; }
+        ReplicatorCollection Replicators { get; }
 
         void AddType<T>();
         void AddType<T>(bool ensureCompatibility);
@@ -25,7 +27,7 @@ namespace OpenNETCF.ORM
 
         void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition);
         void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition, bool ensureCompatibility);
-        void DiscoverDynamicEntity(string entityName);
+        DynamicEntityDefinition DiscoverDynamicEntity(string entityName);
 
         void DiscoverTypes(Assembly containingAssembly);
 

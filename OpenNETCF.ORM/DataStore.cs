@@ -5,6 +5,7 @@ using System.Text;
 using System.Reflection;
 using System.Diagnostics;
 using System.Data;
+using OpenNETCF.ORM.Replication;
 
 namespace OpenNETCF.ORM
 {
@@ -14,6 +15,8 @@ namespace OpenNETCF.ORM
         protected EntityInfoCollection m_entities = new EntityInfoCollection();
 
         public event EventHandler<EntityTypeAddedArgs> EntityTypeAdded;
+
+        public ReplicatorCollection Replicators { get; private set; }
 
         // TODO: maybe move these to another object since they're more "admin" related?
         public abstract void CreateStore();
@@ -47,7 +50,7 @@ namespace OpenNETCF.ORM
         public abstract void OnDelete(object item);
 
         protected abstract void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility);
-        public abstract void DiscoverDynamicEntity(string entityName);
+        public abstract DynamicEntityDefinition DiscoverDynamicEntity(string entityName);
 
         /// <summary>
         /// 
@@ -80,6 +83,7 @@ namespace OpenNETCF.ORM
 
         public DataStore()
         {
+            Replicators = new ReplicatorCollection(this);
         }
 
         /// <summary>

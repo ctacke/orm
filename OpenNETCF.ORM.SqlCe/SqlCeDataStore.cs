@@ -512,7 +512,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public override void DiscoverDynamicEntity(string entityName)
+        public override DynamicEntityDefinition DiscoverDynamicEntity(string entityName)
         {
             if (!TableExists(entityName))
             {
@@ -589,13 +589,13 @@ namespace OpenNETCF.ORM
 
                     var entityDefinition = new DynamicEntityDefinition(entityName, fields);
                     RegisterEntityInfo(entityDefinition);
+                    return entityDefinition;
                 }
             }
             finally
             {
                 DoneWithConnection(connection, true);
             }
-
         }
 
         protected override void ValidateTable(IDbConnection connection, IEntityInfo entity)
