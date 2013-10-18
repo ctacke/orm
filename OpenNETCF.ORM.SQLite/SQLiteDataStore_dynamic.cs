@@ -185,7 +185,7 @@ namespace OpenNETCF.ORM
             return (DynamicEntity)Select(entityName, typeof(DynamicEntity), new FilterCondition[] { filter }, -1, -1, false).FirstOrDefault();
         }
 
-        public override void DiscoverDynamicEntity(string entityName)
+        public override DynamicEntityDefinition DiscoverDynamicEntity(string entityName)
         {
             if (!TableExists(entityName))
             {
@@ -237,6 +237,7 @@ namespace OpenNETCF.ORM
 
                     var entityDefinition = new DynamicEntityDefinition(entityName, fields);
                     RegisterEntityInfo(entityDefinition);
+                    return entityDefinition;
                 }
             }
             finally

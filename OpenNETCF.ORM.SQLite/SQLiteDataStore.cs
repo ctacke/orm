@@ -468,8 +468,11 @@ namespace OpenNETCF.ORM
                 // 3 = notnull
                 // 4 = dflt_value
                 // 5 = pk
-
+#if WINDOWS_PHONE
+                var existing = fieldData.FirstOrDefault(f => string.Compare(f[1].ToString(), field.FieldName, StringComparison.InvariantCultureIgnoreCase) == 0);
+#else
                 var existing = fieldData.FirstOrDefault(f => string.Compare(f[1].ToString(), field.FieldName, true) == 0);
+#endif
 
                 if (existing == null)
                 {

@@ -54,7 +54,6 @@ namespace OpenNETCF.DreamFactory
         public static string ToDreamFactoryTypeName(this Type t)
         {
             var tc = Type.GetTypeCode(t);
-            Debug.WriteLine(tc.ToString());
 
             // do a quick type check for supported types
             switch (tc)

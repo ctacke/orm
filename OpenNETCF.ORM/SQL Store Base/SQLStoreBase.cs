@@ -1454,7 +1454,7 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public abstract override void DiscoverDynamicEntity(string entityName);
+        public abstract override DynamicEntityDefinition DiscoverDynamicEntity(string entityName);
 
         /// <summary>
         /// Ensures that the underlying database tables contain all of the Fields to represent the known entities.
