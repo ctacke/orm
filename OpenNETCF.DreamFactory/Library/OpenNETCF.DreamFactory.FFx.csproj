@@ -50,6 +50,8 @@
   <ItemGroup>
     <Compile Include="Applications.cs" />
     <Compile Include="Container.cs" />
+    <Compile Include="Containers.cs" />
+    <Compile Include="Application.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Field.cs" />
     <Compile Include="Data.cs" />

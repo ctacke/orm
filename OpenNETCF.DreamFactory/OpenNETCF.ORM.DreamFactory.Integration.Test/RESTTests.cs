@@ -142,16 +142,18 @@ namespace OpenNETCF.ORM.DreamFactory.Integration.Test
             var session = GetSession();
             session.Initialize();
 
-            var apps = session.Applications.GetContainers();
+            var apps = session.Applications.Get();
 
-            var name = apps[0].Name;
+            var name = apps[0].APIName;
 
-            var c = session.Applications.GetContainer(name);
+            var c = session.Applications.Find(name);
 
 
-            var c2 = session.Applications.CreateContainer("NewApp");
-            session.Applications.DeleteContainer(c2.Name);
-            var c3 = session.Applications.GetContainer("NewApp");
+            var c2 = session.Applications.Create("NewApp");
+            c2.Description = "Test Description";
+            var c3 = session.Applications.Update(c2);
+            session.Applications.Delete(c2);
+            var c4 = session.Applications.Find("NewApp");
         }
 
         [TestMethod]

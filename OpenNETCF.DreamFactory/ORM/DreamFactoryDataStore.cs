@@ -754,21 +754,21 @@ namespace OpenNETCF.ORM
                 throw new StoreAlreadyExistsException();
             }
 
-            m_session.Applications.CreateContainer(m_session.ApplicationName);
+            m_session.Applications.Create(m_session.ApplicationName);
         }
 
         public override bool StoreExists
         {
             get 
             {
-                var existingContainer = m_session.Applications.GetContainer(m_session.ApplicationName);
+                var existingContainer = m_session.Applications.Find(m_session.ApplicationName);
                 return existingContainer != null; 
             }
         }
 
         public override void DeleteStore()
         {
-            m_session.Applications.DeleteContainer(m_session.ApplicationName);
+            m_session.Applications.Delete(m_session.ApplicationName);
         }
 
         public override void FillReferences(object instance)
