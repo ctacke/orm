@@ -15,29 +15,48 @@ namespace OpenNETCF.DreamFactory
             Session = session;
         }
 
-        public Container[] GetContainers()
+        public Application[] Get()
         {
-            // this is non-intuitive based on the published API.  Applications are in a sub-container of the apps folder
-            var request = Session.GetSessionRequest("/rest/app/applications", Method.GET);
+            return Get(null);
+        }
 
-            var response = Session.Client.Execute<ContainerDescriptor>(request);
+        public Application Find(string apiName)
+        {
+            return Get(string.Format("api_name = '{0}'", apiName)).FirstOrDefault();
+        }
+
+        public Application[] Get(string filter)
+        {
+            var request = Session.GetSessionRequest("/rest/system/app", Method.GET);
+
+            if (!filter.IsNullOrEmpty())
+            {
+                request.Parameters.Add(new Parameter()
+                {
+                    Name = "filter",
+                    Value = filter,
+                    Type = ParameterType.GetOrPost
+                });
+            }
+
+            var response = Session.Client.Execute<ApplicationDescriptorList>(request);
 
             switch (response.StatusCode)
             {
                 case System.Net.HttpStatusCode.OK:
-                    var containers = new List<Container>();
+                    var apps = new List<Application>();
 
-                    var container = response.Data;
+                    var data = response.Data;
 
-                    if (container != null)
+                    if (data != null)
                     {
-                        foreach (var app in container.folder)
+                        foreach (var app in data.record)
                         {
-                            containers.Add(new Container(app));
+                            apps.Add(new Application(app));
                         }
                     }
 
-                    return containers.ToArray();
+                    return apps.ToArray();
 
                 default:
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
@@ -46,45 +65,29 @@ namespace OpenNETCF.DreamFactory
             }
         }
 
-        public Container GetContainer(string containerName)
+        public Application Create(string name)
         {
-            // todo: add caching
-
-            // The trailing slash here is *required*. Without it we'll get back a NotFound
-            var request = Session.GetSessionRequest(string.Format("/rest/app/applications/{0}/", containerName), Method.GET);
-
-            var response = Session.Client.Execute<ContainerDescriptor>(request);
-
-            switch (response.StatusCode)
+            var descriptor = new ApplicationDescriptor()
             {
-                case System.Net.HttpStatusCode.OK:
-                    var container = response.Data;
+                name = name,
+                api_name = name
+            };
 
-                    if (container != null)
-                    {
-                        return new Container(container);
-                    }
+            var request = Session.GetSessionRequest("/rest/system/app", Method.POST);
 
-                    return null;
-                case System.Net.HttpStatusCode.NotFound:
-                    return null;
-                default:
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    // TODO: make a library-specific Exception class
-                    throw new Exception(error.error[0].message);
-            }
-        }
-
-        public Container CreateContainer(string containerName)
-        {
-            var request = Session.GetSessionRequest(string.Format("/rest/app/applications/{0}/", containerName), Method.POST);
+            request.JsonSerializer.ContentType = "application/json; charset=utf-8";
+            request.JsonSerializer.Options = new SerializerOptions()
+            {
+                SkipNullProperties = true
+            };
+            request.AddBody(descriptor);
 
             var response = Session.Client.Execute(request);
 
             switch (response.StatusCode)
             {
                 case System.Net.HttpStatusCode.Created:
-                    return GetContainer(containerName);
+                    return Find(name);
                 default:
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
                     // TODO: make a library-specific Exception class
@@ -92,9 +95,38 @@ namespace OpenNETCF.DreamFactory
             }
         }
 
-        public void DeleteContainer(string containerName)
+        public Application Update(Application application)
         {
-            var request = Session.GetSessionRequest(string.Format("/rest/app/applications/{0}/", containerName), Method.DELETE);
+            var request = Session.GetSessionRequest("/rest/system/app", Method.PUT);
+
+            request.JsonSerializer.ContentType = "application/json; charset=utf-8";
+            request.JsonSerializer.Options = new SerializerOptions()
+            {
+                SkipNullProperties = true
+            };
+            request.AddBody(application.AsApplicationDescriptor());
+
+            var response = Session.Client.Execute(request);
+
+            switch (response.StatusCode)
+            {
+                case System.Net.HttpStatusCode.OK:
+                    return Find(application.APIName);
+                default:
+                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
+                    // TODO: make a library-specific Exception class
+                    throw new Exception(error.error[0].message);
+            }
+        }
+
+        public void Delete(Application application)
+        {
+            Delete(application.ID);
+        }
+
+        public void Delete(string applicationID)
+        {
+            var request = Session.GetSessionRequest(string.Format("/rest/system/app/{0}", applicationID), Method.DELETE);
 
             var response = Session.Client.Execute(request);
 
