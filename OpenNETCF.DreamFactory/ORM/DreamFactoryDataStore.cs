@@ -5,6 +5,7 @@ using System.Text;
 using OpenNETCF.DreamFactory;
 using System.Reflection;
 using System.Diagnostics;
+using System.Data;
 
 namespace OpenNETCF.ORM
 {
@@ -99,7 +100,7 @@ namespace OpenNETCF.ORM
 
         public bool TableExists(string tableName)
         {
-            return m_session.Data.GetTables().FirstOrDefault(t => string.Compare(t.Name, tableName, true) == 0) != null;
+            return m_session.Data.GetTable(tableName) != null;
         }
 
         public void TruncateTable(string tableName)
@@ -172,6 +173,11 @@ namespace OpenNETCF.ORM
             }
 
             var entityName = Entities.GetNameForType(entityType);
+
+            if (entityName == null)
+            {
+                throw new EntityNotFoundException(string.Format("Type '{0}' is not registered with this store.", entityType.Name));
+            }
 
             Table table;
             IEnumerable<object[]> records;
@@ -344,9 +350,9 @@ namespace OpenNETCF.ORM
 
             var key = table.InsertRecord(values);
 
-            // push the inserted key back into the item
-            if(idField != null)
+            if((key != null) && (idField != null))
             {
+                // push the inserted key back into the item
                 SetInstanceValue(idField, item, key);
             }
         }
@@ -407,7 +413,7 @@ namespace OpenNETCF.ORM
 
                 foreach (var field in Entities[entityName].Fields)
                 {
-                    if (field.IsPrimaryKey) identityField = field;
+                    if ((field.IsPrimaryKey) && (Entities[entityName].EntityAttribute.KeyScheme == KeyScheme.Identity)) identityField = field;
 
                     var value = de.Fields[field.FieldName];
 
@@ -520,21 +526,25 @@ namespace OpenNETCF.ORM
 
         private object RehydrateObjectFromEntityValueDictionary(Type type, string entityName, object[] record)
         {
-            if (string.IsNullOrEmpty(entityName))
+            try
             {
-                entityName = Entities.GetNameForType(type);
-            }
-
-            var instance = Activator.CreateInstance(type);
-            var f = 0;
-            foreach (var field in Entities[entityName].Fields)
-            {
-                // DreamFactory has a bug where some numerics are returnd in JSON as strings, so we need to handle that here
-                if(record[f] is string)
+                if (string.IsNullOrEmpty(entityName))
                 {
-                    var dbtype = PropertyTypeToDbType(field.PropertyInfo.PropertyType);
+                    entityName = Entities.GetNameForType(type);
+                }
 
-                    if (dbtype == null)
+                var instance = Activator.CreateInstance(type);
+                var f = 0;
+                foreach (var field in Entities[entityName].Fields)
+                {
+                    DbType? dbtype = null;
+                    // DreamFactory has a bug where some numerics are returnd in JSON as strings, so we need to handle that here
+                    if (record[f] is string)
+                    {
+                        dbtype = PropertyTypeToDbType(field.PropertyInfo.PropertyType);
+                    }
+
+                    if (dbtype == null) // this will catch non-string and string conversion failures
                     {
                         dbtype = field.PropertyInfo.PropertyType.ToDbType();
                     }
@@ -556,17 +566,17 @@ namespace OpenNETCF.ORM
                         case System.Data.DbType.Double:
                             field.PropertyInfo.SetValue(instance, Convert.ToDouble(record[f]), null);
                             break;
-                        case  System.Data.DbType.Single:
+                        case System.Data.DbType.Single:
                             field.PropertyInfo.SetValue(instance, Convert.ToSingle(record[f]), null);
                             break;
-                        case  System.Data.DbType.Decimal:
+                        case System.Data.DbType.Decimal:
                             field.PropertyInfo.SetValue(instance, Convert.ToDecimal(record[f]), null);
                             break;
-                        case  System.Data.DbType.Guid:
+                        case System.Data.DbType.Guid:
                             field.PropertyInfo.SetValue(instance, new Guid(record[f] as string), null);
                             break;
                         case System.Data.DbType.Time:
-                            field.PropertyInfo.SetValue(instance,TimeSpan.Parse(record[f] as string), null);
+                            field.PropertyInfo.SetValue(instance, TimeSpan.Parse(record[f] as string), null);
                             break;
                         case System.Data.DbType.Date:
                         case System.Data.DbType.DateTime:
@@ -576,16 +586,25 @@ namespace OpenNETCF.ORM
                             field.PropertyInfo.SetValue(instance, record[f], null);
                             break;
                     }
-                }
-                f++;
-            }
 
-            return instance;
+                    f++;
+                }
+
+                return instance;
+            }
+            catch (Exception ex)
+            {
+                if (Debugger.IsAttached) Debugger.Break();
+                throw ex;
+            }
         }
 
         public string[] GetTableNames()
         {
-            return m_session.Data.GetTables().Select(t => t.Name).ToArray();
+            var tables = m_session.Data.GetTables();
+            if (tables == null || tables.Length == 0) return null;
+
+            return tables.Select(t => t.Name).ToArray();
         }
 
         protected override void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility)
@@ -603,20 +622,23 @@ namespace OpenNETCF.ORM
                         throw new ReservedWordException(field.FieldName);
                     }
 
-                    fields.Add(FieldFactory.GetFieldForAttribute(field, KeyScheme.Identity));
+                    fields.Add(FieldFactory.GetFieldForAttribute(field, definition.EntityAttribute.KeyScheme));
                 }
 
                 m_session.Data.CreateTable(name, name, fields);
             }
             else
             {
-                // TODO: ValidateTable
+                ValidateTable(definition);
             }
         }
 
         public override IEnumerable<DynamicEntity> Select(string entityName)
         {
             var table = m_session.Data.GetTable(entityName);
+
+            if (table == null) return null;
+
             var records = table.GetRecords();
 
             var items = new List<DynamicEntity>();
@@ -642,8 +664,23 @@ namespace OpenNETCF.ORM
 
         public override DynamicEntityDefinition DiscoverDynamicEntity(string entityName)
         {
-            // TODO:
-            return null;
+            var table = m_session.Data.GetTable(entityName);
+            if (table == null) return null;
+
+            var fields = new List<FieldAttribute>();
+            foreach (var field in table.Fields)
+            {
+                fields.Add(new FieldAttribute()
+                {
+                    FieldName = field.Name,
+                    IsPrimaryKey = field.IsPrimaryKey.HasValue ? field.IsPrimaryKey.Value : false,
+                    DataType = field.TypeName.ParseToDbType()
+                });
+            }
+
+            var entityDefinition = new DynamicEntityDefinition(entityName, fields);
+            RegisterEntityInfo(entityDefinition);
+            return entityDefinition;
         }
 
         public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
@@ -691,6 +728,72 @@ namespace OpenNETCF.ORM
             return Fetch<T>(fetchCount, firstRowOffset, null, FieldSearchOrder.NotSearchable, null, false);
         }
 
+        public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount)
+        {
+            var table = m_session.Data.GetTable(entityName);
+            
+            if (table == null) return null;
+
+            var records = table.GetRecords(fetchCount);
+
+            var items = new List<DynamicEntity>();
+
+            foreach (var record in records)
+            {
+                var instance = DynamicEntityFromEntityValueDictionary(entityName, record);
+                items.Add(instance);
+            }
+
+            return items;
+        }
+
+        public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        {
+            if (fillReferences)
+            {
+                throw new NotSupportedException("References not currently supported in this DataStore implementation");
+            }
+
+            string filterString = null;
+            string orderString = null;
+
+            if (filter != null)
+            {
+                filterString = FilterToString(filter);
+            }
+
+            if (!string.IsNullOrEmpty(sortField))
+            {
+                switch (sortOrder)
+                {
+                    case FieldSearchOrder.Ascending:
+                        orderString = string.Format("{0} ASC", sortField);
+                        break;
+                    case FieldSearchOrder.Descending:
+                        orderString = string.Format("{0} DESC", sortField);
+                        break;
+                }
+            }
+
+            var table = m_session.Data.GetTable(entityName);
+
+            if (table == null) return null;
+
+            var records = table.GetRecords(fetchCount, firstRowOffset, filterString, orderString);
+
+            if (records == null) return null;
+
+            var items = new List<DynamicEntity>();
+
+            foreach (var record in records)
+            {
+                var instance = DynamicEntityFromEntityValueDictionary(entityName, record);
+                items.Add(instance);
+            }
+
+            return items;
+        }
+
         public override IEnumerable<T> Fetch<T>(int fetchCount)
         {
             var entityType = typeof(T);
@@ -728,23 +831,47 @@ namespace OpenNETCF.ORM
 
         public override void EnsureCompatibility()
         {
-            // TODO:
-            // foreach registered type
-            // { 
-            //        if (!TableExists(name))
-            //        {
-            //            CreateTable(entity);
-            //        }
-            //        else
-            //        {
-            //            ValidateTable(entity);
-            //        }
-            // }
+            if (!StoreExists)
+            {
+                CreateStore();
+                return;
+            }
+
+            foreach(var e in Entities)
+            {
+                try
+                {
+                    ValidateTable(e);
+                }
+                catch (Exception ex)
+                {
+                    if (Debugger.IsAttached) Debugger.Break();
+                    throw ex;
+                }
+            }
         }
 
         private void ValidateTable(IEntityInfo entity)
         {
-            // TODO:
+            if (!TableExists(entity.EntityAttribute.NameInStore))
+            {
+                CreateTable(entity);
+                return;
+            }
+
+            var fields = new List<Field>();
+
+            foreach (var field in entity.Fields)
+            {
+                if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
+                {
+                    throw new ReservedWordException(field.FieldName);
+                }
+
+                fields.Add(FieldFactory.GetFieldForAttribute(field, entity.EntityAttribute.KeyScheme));
+            }
+
+            m_session.Data.UpdateTable(entity.EntityName, fields);
         }
 
         public override void CreateStore()

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -16,6 +17,8 @@ namespace OpenNETCF.DreamFactory
         public string ApplicationName { get; set; }
         private string Password { get; set; }
 
+        public bool Disconnected { get; internal set; }
+
         private SessionDescriptor SessionDescriptor { get; set; }
 
         public Data Data { get; private set; }
@@ -27,6 +30,8 @@ namespace OpenNETCF.DreamFactory
             ApplicationName = application;
             Username = username;
             Password = password;
+
+            Disconnected = true;
         }
 
         internal string ID
@@ -51,16 +56,45 @@ namespace OpenNETCF.DreamFactory
 
             var response = Client.Execute<SessionDescriptor>(request);
 
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.Created:
+                    // successful session creation
+                    Disconnected = false;
+                    break;
+                default:
+                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
+                    if (error.error.Count > 0)
+                    {
+                        throw new Exception(error.error[0].message);
+                    }
+                    throw new Exception(response.StatusDescription);
+            }
+
             SessionDescriptor = response.Data;
 
             // TODO: set some properties that might be of interest
 
-            Data = new Data(this);
-            Applications = new Applications(this);
+            if (Data == null)
+            {
+                Data = new Data(this);
+            }
+            if (Applications == null)
+            {
+                Applications = new Applications(this);
+            }
         }
 
         internal IRestRequest GetSessionRequest(string path, Method method)
         {
+            if (Disconnected)
+            {
+                if (Debugger.IsAttached) Debugger.Break();
+
+                // attempt to-re-establish the session (timeouts will end up here)
+                Initialize();
+            }
+
             var request = new RestRequest(path, method)
                 .AddHeader("X-DreamFactory-Application-Name", this.ApplicationName)
                 .AddHeader("X-DreamFactory-Session-Token", this.ID);

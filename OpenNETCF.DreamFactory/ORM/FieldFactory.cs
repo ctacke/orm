@@ -22,10 +22,10 @@ namespace OpenNETCF.ORM
                     field = new Field<int>(attrib.FieldName);
                     if (attrib.IsPrimaryKey)
                     {
-                        field.IsPrimaryKey = true;
-
                         if (keyScheme == KeyScheme.Identity)
                         {
+                            // As of 10/28/2013, if a field is a PK, DreamFactory forces it to be an auto-incrementing number
+                            field.IsPrimaryKey = true;
                             field.AutoIncrement = true;
                         }
                     }
@@ -40,6 +40,7 @@ namespace OpenNETCF.ORM
                     field = new Field<short>(attrib.FieldName);
                     break;
                 case System.Data.DbType.String:
+                case System.Data.DbType.StringFixedLength:
                     field = new Field<string>(attrib.FieldName);
                     if (attrib.Length <= 0)
                     {
@@ -83,7 +84,8 @@ namespace OpenNETCF.ORM
                 case System.Data.DbType.Binary:
                     field = new Field<byte[]>(attrib.FieldName);
                     break;
-                default: 
+                default:
+                    if (Debugger.IsAttached) Debugger.Break();
                     throw new NotSupportedException(string.Format("Field type '{0}' is not supported.", attrib.DataType.ToString()));
             }
 

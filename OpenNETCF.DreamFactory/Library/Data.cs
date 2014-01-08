@@ -42,10 +42,33 @@ namespace OpenNETCF.DreamFactory
                         m_tableCache.Add(tableName, table);
                     }
                     return table;
+                case HttpStatusCode.NotFound:
+                    return null;
+                case HttpStatusCode.Forbidden:
+                    if (Debugger.IsAttached) Debugger.Break();
+                    
+                    Session.Disconnected = true;
+                    
+                    var ferror = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
+                    if (ferror.error.Count > 0)
+                    {
+                        throw new Exception(ferror.error[0].message);
+                    }
+
+                    throw new Exception("Not authorized");
                 default:
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
                     if (error.error.Count > 0)
                     {
+                        // As of 10/24/13 DreamFactory has a bug where it returns a 500 instead of a 404 for a not-found table
+                        // Oddly, the error code inside the error returned is a 404, so they know it's not found.  This is the workaround.
+                        if (error.error[0].code == 404)
+                        {
+                            return null;
+                        }
+
+                        if (Debugger.IsAttached) Debugger.Break();
+
                         throw new Exception(error.error[0].message);
                     }
 
@@ -64,19 +87,30 @@ namespace OpenNETCF.DreamFactory
                 case HttpStatusCode.OK:
                     var list = new List<Table>();
 
-                    foreach (var resource in response.Data.resource)
+                    lock (m_tableCache)
                     {
-                        var t = new Table(Session, resource);
-                        if (!m_tableCache.ContainsKey(t.Name))
+                        foreach (var resource in response.Data.resource)
                         {
-                            m_tableCache.Add(t.Name, t);
-                        }
-                        list.Add(t);
-                    }
+                            var t = new Table(Session, resource);
 
+                            list.Add(t);
+
+                            if (!m_tableCache.ContainsKey(t.Name))
+                            {
+                                m_tableCache.Add(t.Name, t);
+                            }
+                            else
+                            {
+                                m_tableCache[t.Name] = t;
+                            }
+                        }
+
+                    }
+            
                     return list.ToArray();
 
                 default:
+                    if (Debugger.IsAttached) Debugger.Break();
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
                     if (error.error.Count > 0)
                     {
@@ -84,6 +118,56 @@ namespace OpenNETCF.DreamFactory
                     }
 
                     throw new Exception();
+            }
+        }
+
+        public Table UpdateTable(string tableName, IEnumerable<Field> updatedFieldList)
+        {
+            var fieldDescriptors = new List<FieldDescriptor>();
+
+            foreach (var f in updatedFieldList)
+            {
+                fieldDescriptors.Add(f.AsFieldDescriptor());
+            }
+
+            var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.PUT);
+
+            request.JsonSerializer.ContentType = "application/json; charset=utf-8";
+            request.JsonSerializer.Options = new SerializerOptions()
+            {
+                SkipNullProperties = true
+            };
+            request.AddBody(fieldDescriptors);
+
+            // create the table
+            var response = Session.Client.Execute(request);
+
+            // check response
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.OK:
+                    // query the table schema back
+                    var actualTable = new Table(Session, tableName);
+
+                    lock (m_tableCache)
+                    {
+                        if (!m_tableCache.ContainsKey(actualTable.Name))
+                        {
+                            m_tableCache.Add(actualTable.Name, actualTable);
+                        }
+                        else
+                        {
+                            m_tableCache[actualTable.Name] = actualTable;
+                        }
+                    }
+
+                    // TODO: handle failure
+
+                    return actualTable;
+                default:
+                    if (Debugger.IsAttached) Debugger.Break();
+                    var error = SimpleJson.DeserializeObject<ErrorDescriptor>(response.Content);
+                    throw new Exception(error.message);
             }
         }
 
@@ -125,17 +209,23 @@ namespace OpenNETCF.DreamFactory
             // create the table
             var response = Session.Client.Execute(request);
 
-            // TODO: check response
+            // check response
             switch (response.StatusCode)
             {
                 case HttpStatusCode.Created:
                     // query the table schema back
                     var actualTable = new Table(Session, tableName);
 
+                    lock (m_tableCache)
+                    {
+                        m_tableCache.Add(actualTable.Name, actualTable);
+                    }
+
                     // TODO: handle failure
 
                     return actualTable;
                 default:
+                    if (Debugger.IsAttached) Debugger.Break();
                     var error = SimpleJson.DeserializeObject<ErrorDescriptor>(response.Content);
                     throw new Exception(error.message);
             }
@@ -148,40 +238,22 @@ namespace OpenNETCF.DreamFactory
             // delete the table
             var response = Session.Client.Execute(request);
 
-            // TODO: check response
-        }
-
-        public object GetRecords(string tableName)
-        {
-            var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", tableName), Method.GET);
-
-            var response = Session.Client.Execute(request);
-
-            switch (response.ResponseStatus)
+            switch (response.StatusCode)
             {
-                case ResponseStatus.Completed:
-                    JsonObject records = SimpleJson.DeserializeObject<JsonObject>(response.Content);
-                    foreach (var item in records)
+                case HttpStatusCode.OK:
+                    lock (m_tableCache)
                     {
-                        if (item.Key == "record")
+                        if (m_tableCache.ContainsKey(tableName))
                         {
-                            foreach (JsonObject fieldset in item.Value as JsonArray)
-                            {
-                                foreach (var field in fieldset.Keys)
-                                {
-                                }
-
-                                foreach (var field in fieldset.Values)
-                                {
-                                }
-                            }
+                            m_tableCache.Remove(tableName);
                         }
                     }
                     break;
+                default:
+                    if (Debugger.IsAttached) Debugger.Break();
+                    var error = SimpleJson.DeserializeObject<ErrorDescriptor>(response.Content);
+                    throw new Exception(error.message);
             }
-
-            // {"record":[{"ID":"1","Name":"Item #1","UUID":null,"ITest":23,"Address":"Foo","FTest":"2.4","DBTest":null,"DETest":null,"TS":0}]}
-            return null;
         }
     }
 }
