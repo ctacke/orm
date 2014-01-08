@@ -277,8 +277,6 @@ namespace OpenNETCF.ORM.Replication
 
                     try
                     {
-                        Debug.Write("Replicating...");
-
                         if (DoReplicationForPriority(ReplicationPriority.High))
                         {
                             RaiseDataReplicated();
@@ -294,8 +292,6 @@ namespace OpenNETCF.ORM.Replication
                         }
 
                         et = Environment.TickCount - et;
-
-                        Debug.WriteLine(string.Format("took {0}ms", et));
                     }
                     catch (Exception ex)
                     {
