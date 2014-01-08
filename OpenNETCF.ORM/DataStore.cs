@@ -621,5 +621,17 @@ namespace OpenNETCF.ORM
         {
             return Select(entityName).Take(fetchCount);
         }
+
+        public virtual IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        {
+            throw new NotSupportedException("This version of Fetch not supported by this provider");
+
+            // I could build a complex LINQ statement here, but I think it would end up being crazy inefficient and should be overridden and implemented with sanity instead
+
+            // this is *way* inefficient and should almost always be overridden
+            //var items = from Select(entityName)
+            //            where filter.FieldName
+
+        }
     }
 }

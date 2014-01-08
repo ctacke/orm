@@ -15,8 +15,8 @@ namespace OpenNETCF.ORM.Replication
         private int m_batchSize;
         private AutoResetEvent m_dataAvailable;
         private bool m_run = false;
-        private List<string> m_registeredNames = new List<string>();
-        private List<Type> m_registeredTypes = new List<Type>();
+
+        private Registrations m_registrations = new Registrations();
 
         public const int MinReplicationPeriod = 100;
         public const int DefaultReplicationPeriod = 5000;
@@ -37,6 +37,11 @@ namespace OpenNETCF.ORM.Replication
                 throw new NotSupportedException("Only ReplicateAndDelete is currently supported");
             }
 
+            if (destination == null)
+            {
+                throw new ArgumentNullException();
+            }
+
             Behavior = behavior;
             m_destination = destination;
 
@@ -47,6 +52,11 @@ namespace OpenNETCF.ORM.Replication
 
             m_typeCounts = new Dictionary<Type, int>();
             m_nameCounts = new Dictionary<string, int>();
+        }
+
+        public IDataStore Destination
+        {
+            get { return m_destination; }
         }
 
         public void ResetCounts()
@@ -126,25 +136,43 @@ namespace OpenNETCF.ORM.Replication
         void m_source_AfterInsert(object sender, EntityInsertArgs e)
         {
             // if we have an insert on a replicated entity, don't wait for the full period, let the replication proc know immediately
-            if (m_registeredNames.Contains(e.EntityName, StringComparer.InvariantCultureIgnoreCase))
+
+            // TODO: add preemption?
+
+            if (m_registrations.Contains(e.EntityName))
             {
                 m_dataAvailable.Set();
             }
-            else if (m_registeredTypes.Contains(e.Item.GetType()))
+            else if (m_registrations.Contains(e.Item.GetType()))
             {
                 m_dataAvailable.Set();
             }
         }
 
+        private object m_syncRoot = new object();
+
         public void Start()
         {
-            if (Running) return;
-            new Thread(new ThreadStart(ReplicationProc))
+            lock (m_syncRoot)
             {
-                IsBackground = true,
-                Name = "ReplicationProc"
+                if (Running) return;
+                Running = true;
+                try
+                {
+
+                    new Thread(new ThreadStart(ReplicationProc))
+                    {
+                        IsBackground = true,
+                        Name = "ReplicationProc",
+                    }
+                    .Start();
+                }
+                catch
+                {
+                    Running = false;
+
+                }
             }
-            .Start();
         }
 
         public void Stop()
@@ -152,17 +180,26 @@ namespace OpenNETCF.ORM.Replication
             m_run = false;
         }
 
+        public void RegisterEntity<T>(ReplicationPriority priority)
+        {
+            RegisterEntity(typeof(T), priority);
+        }
+
         public void RegisterEntity<T>()
         {
-            RegisterEntity(typeof(T));
+            RegisterEntity(typeof(T), ReplicationPriority.Normal);
         }
 
         public void RegisterEntity(Type entityType)
         {
-            lock (m_registeredTypes)
+            RegisterEntity(entityType, ReplicationPriority.Normal);
+        }
+
+        public void RegisterEntity(Type entityType, ReplicationPriority priority)
+        {
+            lock (m_registrations)
             {
-                if (m_registeredTypes.Contains(entityType)) return;
-                m_registeredTypes.Add(entityType);
+                m_registrations.AddType(entityType, priority);
 
                 lock (m_typeCounts)
                 {
@@ -179,10 +216,19 @@ namespace OpenNETCF.ORM.Replication
 
         public void RegisterEntity(string entityName)
         {
-            lock (m_registeredNames)
+            RegisterEntity(entityName, ReplicationPriority.Normal);
+        }
+
+        public void RegisterEntity(string entityName, ReplicationPriority priority)
+        {
+            RegisterEntity(entityName, null, priority);
+        }
+
+        public void RegisterEntity(string entityName, string replicatedName, ReplicationPriority priority)
+        {
+            lock (m_registrations)
             {
-                if (m_registeredNames.Contains(entityName, StringComparer.InvariantCultureIgnoreCase)) return;
-                m_registeredNames.Add(entityName);
+                m_registrations.AddName(entityName, replicatedName, priority);
 
                 lock (m_nameCounts)
                 {
@@ -194,7 +240,13 @@ namespace OpenNETCF.ORM.Replication
 
                 // TODO: look for failure and cache if it does (e.g. not connected scenarios)
                 var definition = m_source.DiscoverDynamicEntity(entityName);
-                m_destination.RegisterDynamicEntity(definition);
+
+                definition.EntityName = replicatedName;
+
+                // the replicated entity cannot be auto-increment or we'll end up with replication problems where local IDs don't match remote IDs
+                definition.EntityAttribute.KeyScheme = KeyScheme.None;
+
+                m_destination.RegisterDynamicEntity(definition, true);
             }
         }
 
@@ -210,7 +262,6 @@ namespace OpenNETCF.ORM.Replication
             {
                 m_run = true;
                 Running = true;
-                var dataSent = false;
                 var et = 0;
 
                 while (m_run)
@@ -224,78 +275,93 @@ namespace OpenNETCF.ORM.Replication
 
                     et = Environment.TickCount;
 
-                    dataSent = false;
-
-                    // loop through all registered entities
-                    foreach (var name in m_registeredNames)
+                    try
                     {
-                        var items = m_source.Select(name).Take(MaxReplicationBatchSize);
+                        Debug.Write("Replicating...");
 
-                        foreach (var item in items)
+                        if (DoReplicationForPriority(ReplicationPriority.High))
                         {
-                            try
-                            {
-                                m_destination.Insert(item);
-
-                                m_source.Delete(item);
-
-                                // increment the count
-                                m_nameCounts[name]++;
-
-                                dataSent = true;
-                            }
-                            catch (Exception ex)
-                            {
-                                OnReplicationError(ex);
-                                goto loop;
-                            }
-
-                            // yield so we're not chewing up processor time
-                            Thread.Sleep(0);
+                            RaiseDataReplicated();
                         }
-                    }
+                        // TODO: add preemption?
+                        if (DoReplicationForPriority(ReplicationPriority.Normal))
+                        {
+                            RaiseDataReplicated();
+                        }
+                        if (DoReplicationForPriority(ReplicationPriority.Low))
+                        {
+                            RaiseDataReplicated();
+                        }
 
-                    foreach (var type in m_registeredTypes)
+                        et = Environment.TickCount - et;
+
+                        Debug.WriteLine(string.Format("took {0}ms", et));
+                    }
+                    catch (Exception ex)
                     {
-                        var items = m_source.Select(type).Take(MaxReplicationBatchSize);
-
-                        foreach (var item in items)
+                        if (Debugger.IsAttached)
                         {
-                            try
-                            {
-                                m_destination.Insert(item);
-
-                                m_source.Delete(item);
-
-                                // increment the count
-                                m_typeCounts[type]++;
-
-                                dataSent = true;
-                            }
-                            catch (Exception ex)
-                            {
-                                OnReplicationError(ex);
-                                goto loop;
-                            }
-
-                            // yield so we're not chewing up processor time
-                            Thread.Sleep(0);
+                            Debugger.Break();
                         }
+
+                        OnReplicationError(ex);
                     }
-
-                // yes, I'm using a goto.  It's simpler than a flag variable and multiple continue calls.
-                loop: ;
-                    if (dataSent) RaiseDataReplicated();
-
-                    et = Environment.TickCount - et;
-
-                    Debug.WriteLine(string.Format("Replication took {0}ms", et));
                 }
             }
             finally
             {
                 Running = false;
             }
+        }
+
+        private bool DoReplicationForPriority(ReplicationPriority priority)
+        {
+            bool dataSent = false;
+
+            // loop through all registered entities
+            foreach (var registration in m_registrations.GetNameRegistrations(priority))
+            {
+                var items = m_source.Select(registration.LocalName).Take(MaxReplicationBatchSize);
+
+                foreach (var item in items)
+                {
+                    item.EntityName = registration.ReplicatedName;
+                    m_destination.Insert(item);
+
+                    item.EntityName = registration.LocalName;
+                    m_source.Delete(item);
+
+                    // increment the count
+                    m_nameCounts[registration.LocalName]++;
+
+                    dataSent = true;
+
+                    // yield so we're not chewing up processor time
+                    Thread.Sleep(0);
+                }
+            }
+
+            foreach (var registration in m_registrations.GetTypeRegistrations(priority))
+            {
+                var items = m_source.Select(registration.Type).Take(MaxReplicationBatchSize);
+
+                foreach (var item in items)
+                {
+                    m_destination.Insert(item);
+
+                    m_source.Delete(item);
+
+                    // increment the count
+                    m_typeCounts[registration.Type]++;
+
+                    dataSent = true;
+
+                    // yield so we're not chewing up processor time
+                    Thread.Sleep(0);
+                }
+            }
+
+            return dataSent;
         }
 
         private void RaiseDataReplicated()

@@ -61,5 +61,10 @@ namespace OpenNETCF.ORM
         {
             return m_entities.ContainsKey(entityName);
         }
+
+        public IEntityInfo[] ToArray()
+        {
+            return m_entities.Values.ToArray();
+        }
     }
 }

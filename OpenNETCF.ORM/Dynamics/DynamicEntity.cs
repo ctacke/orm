@@ -9,6 +9,7 @@ namespace OpenNETCF.ORM
     {
         public string EntityName { get; set; }
         public FieldCollection Fields { get; private set; }
+        public string KeyField { get; private set; }
 
         public DynamicEntity()
             : this(null, null)
@@ -30,6 +31,11 @@ namespace OpenNETCF.ORM
                 foreach (var f in fields)
                 {
                     this.Fields.Add(f.FieldName);
+
+                    if (f.IsPrimaryKey)
+                    {
+                        this.KeyField = f.FieldName;
+                    }
                 }
             }
         }

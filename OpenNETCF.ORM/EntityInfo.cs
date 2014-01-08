@@ -34,6 +34,10 @@ namespace OpenNETCF.ORM
             {
                 return EntityAttribute.NameInStore;
             }
+            internal set
+            {
+                EntityAttribute.NameInStore = value;
+            }
         }
 
         public override string ToString()

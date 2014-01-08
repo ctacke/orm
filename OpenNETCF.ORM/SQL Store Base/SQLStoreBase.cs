@@ -69,7 +69,7 @@ namespace OpenNETCF.ORM
 
         ~SQLStoreBase()
         {
-            Dispose();
+            Dispose(false);
         }
 
         public int OpenConnectionCount
@@ -111,18 +111,29 @@ namespace OpenNETCF.ORM
             get { return "@"; }
         }
 
-        public virtual void Dispose()
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
         {
             try
             {
-                if (m_connection != null)
+                if (disposing)
                 {
-                    if (m_connection.State == ConnectionState.Open)
+                    if (m_connection != null)
                     {
-                        m_connection.Close();
-                    }
+                        if (m_connection.State == ConnectionState.Open)
+                        {
+                            m_connection.Close();
+                        }
 
-                    m_connection.Dispose();
+                        m_connection.Dispose();
+
+                        m_connection = null;
+                    }
                 }
             }
             catch (Exception ex)
@@ -130,8 +141,6 @@ namespace OpenNETCF.ORM
                 Debug.WriteLine(ex.Message);
                 if (Debugger.IsAttached) Debugger.Break();
             }
-
-            GC.SuppressFinalize(this);
         }
 
         protected virtual string DefaultDateGenerator
@@ -1278,21 +1287,34 @@ namespace OpenNETCF.ORM
         /// </remarks>
         public override void OnDelete(object item)
         {
-            var type = item.GetType();
-            string entityName = m_entities.GetNameForType(type);
-
-            if (entityName == null)
+            if (item is DynamicEntity)
             {
-                throw new EntityNotFoundException(type);
-            }
+                var de = item as DynamicEntity;
 
-            if (Entities[entityName].Fields.KeyField == null)
+                if (string.IsNullOrEmpty(de.KeyField))
+                {
+                    throw new PrimaryKeyRequiredException("A primary key is required on an Entity in order to perform a Delete");
+                }
+
+                Delete(de.EntityName, de.KeyField, de.Fields[de.KeyField]);
+            }
+            else
             {
-                throw new PrimaryKeyRequiredException("A primary key is required on an Entity in order to perform a Delete");
-            }
-            var keyValue = Entities[entityName].Fields.KeyField.PropertyInfo.GetValue(item, null);
+                var type = item.GetType();
+                string entityName = m_entities.GetNameForType(type);
+                if (entityName == null)
+                {
+                    throw new EntityNotFoundException(type);
+                }
 
-            Delete(type, keyValue);
+                if (Entities[entityName].Fields.KeyField == null)
+                {
+                    throw new PrimaryKeyRequiredException("A primary key is required on an Entity in order to perform a Delete");
+                }
+                var keyValue = Entities[entityName].Fields.KeyField.PropertyInfo.GetValue(item, null);
+
+                Delete(type, keyValue);
+            }
         }
 
         protected virtual void Delete(Type t, object primaryKey)
@@ -1605,6 +1627,75 @@ namespace OpenNETCF.ORM
 
                 Debug.WriteLine("SQLStoreBase::ExecuteReader threw: " + ex.Message);
                 return null;
+            }
+            finally
+            {
+                DoneWithConnection(connection, false);
+            }
+        }
+
+        public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        {
+            if(fillReferences) throw new NotSupportedException("References not supported with this version of Fetch on this Provider");
+            if(filter != null) throw new NotSupportedException("Filter is not supported with this version of Fetch on this Provider.  Try post-filtering with LINQ or implement filtering in the derived DataStore.");
+
+            // This is SQL Server syntax
+            //var sql = new StringBuilder();
+            //
+            //if(fetchCount > 0)
+            //{
+            //    sql.AppendFormat("SELECT TOP ({0}) * FROM {1}", fetchCount, entityName);
+            //}
+            //else
+            //{
+            //    sql.AppendFormat("SELECT * FROM {0}", entityName);
+            //}
+            //
+            //if(!string.IsNullOrEmpty( sortField))
+            //{
+            //    sql.AppendFormat(" ORDER BY {0} {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+            //}
+
+            var sql = new StringBuilder();
+
+            sql.AppendFormat("SELECT * FROM {0}", entityName);
+
+            if (!string.IsNullOrEmpty(sortField))
+            {
+                sql.AppendFormat(" ORDER BY {0} {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+            }
+
+            if (fetchCount > 0)
+            {
+                sql.AppendFormat(" LIMIT {0}", fetchCount);
+            }
+
+
+            var connection = GetConnection(false);
+            try
+            {
+                using(var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+                    command.CommandText = sql.ToString();
+
+                    using(var reader = command.ExecuteReader())
+                    {
+                        while(reader.Read())
+                        {
+                            var entity = new DynamicEntity();
+                            entity.EntityName = entityName;
+
+                            // TODO: caching the ordinals would be faster
+                            for(int i = 0 ; i < reader.FieldCount; i++)
+                            {
+                                entity.Fields.Add(reader.GetName(i), reader.GetValue(i));
+                            }
+
+                            yield return entity;
+                        }
+                    }
+                }
             }
             finally
             {
