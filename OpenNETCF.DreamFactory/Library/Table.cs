@@ -199,7 +199,7 @@ namespace OpenNETCF.DreamFactory
             {
                 request.Parameters.Add(new Parameter() { Name = "filter", Value = filter, Type = ParameterType.GetOrPost });
             }
-            if (!filter.IsNullOrEmpty())
+            if (!order.IsNullOrEmpty())
             {
                 request.Parameters.Add(new Parameter() { Name = "order", Value = order, Type = ParameterType.GetOrPost });
             }
@@ -304,10 +304,12 @@ namespace OpenNETCF.DreamFactory
                 case HttpStatusCode.Created:
                     return;
                 case HttpStatusCode.BadRequest:
+                    if (Debugger.IsAttached) Debugger.Break();
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
                     // TODO: make a library-specific Exception class
                     throw new Exception(error.error[0].message);
                 default:
+                    if (Debugger.IsAttached) Debugger.Break();
                     break;
             }
         }
@@ -324,33 +326,51 @@ namespace OpenNETCF.DreamFactory
 
         private object SendRecord(Dictionary<string, object> fields, bool isUpdate)
         {
-            var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), isUpdate ? Method.PUT : Method.POST);
-
-            // "{\"record\":[{\"ID\":\"1\",\"Name\":\"Item #1\",\"UUID\":null,\"ITest\":23,\"Address\":\"Foo\",\"FTest\":\"2.4\",\"DBTest\":null,\"DETest\":null,\"TS\":0}]}"
-            var o = SimpleJson.SerializeObject(fields);
-
-            // we have to name the collection or the API will fail
-            o = string.Format("{{ \"record\": [{0}] }}", o);
-
-            // NOTE: We must use AddParameter here because we've already serialized the JSON.  AddBody attempts to serialize it again
-            // At some point I want to fix RestSharp to not do this, as it's stupid behavior
-            request.AddParameter("application/json", o, ParameterType.RequestBody);
-
-            var response = Session.Client.Execute(request);
-
-            switch (response.StatusCode)
+            try
             {
-                case HttpStatusCode.Created:
-                    var pkJson = SimpleJson.DeserializeObject(response.Content) as JsonObject;
-                    if (pkJson.Count == 0) return null;
-                    var key = (pkJson[0] as JsonArray)[0] as JsonObject;
-                    var name = key.Keys.First();
-                    var value = key[name];
-                    return value;
-                default:
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    // TODO: make a library-specific Exception class
-                    throw new Exception(error.error[0].message);
+                var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), isUpdate ? Method.PUT : Method.POST);
+
+                // "{\"record\":[{\"ID\":\"1\",\"Name\":\"Item #1\",\"UUID\":null,\"ITest\":23,\"Address\":\"Foo\",\"FTest\":\"2.4\",\"DBTest\":null,\"DETest\":null,\"TS\":0}]}"
+                var o = SimpleJson.SerializeObject(fields);
+
+                // we have to name the collection or the API will fail
+                o = string.Format("{{ \"record\": [{0}] }}", o);
+
+                // NOTE: We must use AddParameter here because we've already serialized the JSON.  AddBody attempts to serialize it again
+                // At some point I want to fix RestSharp to not do this, as it's stupid behavior
+                request.AddParameter("application/json", o, ParameterType.RequestBody);
+
+                var response = Session.Client.Execute(request);
+
+                switch (response.StatusCode)
+                {
+                    case HttpStatusCode.Created:
+                    case HttpStatusCode.OK:
+                        // the key for the inserted item gets returned (if there is one)
+                        var pkJson = SimpleJson.DeserializeObject(response.Content) as JsonObject;
+                        if (pkJson.Count == 0) return null;
+
+                        var key = (pkJson[0] as JsonArray)[0] as JsonObject;
+                        // no data sent back (i.e. there was no key field)
+                        if (key == null) return null;
+
+                        var name = key.Keys.First();
+                        // no data sent back (i.e. there was no key field)
+                        if (name.IsNullOrEmpty()) return null;
+
+                        var value = key[name];
+                        return value;
+                    default:
+                        if (Debugger.IsAttached) Debugger.Break();
+                        var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
+                        // TODO: make a library-specific Exception class
+                        throw new Exception(error.error[0].message);
+                }
+            }
+            catch(Exception ex)
+            {
+                if (Debugger.IsAttached) Debugger.Break();
+                throw ex;
             }
         }
     }
