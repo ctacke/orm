@@ -243,6 +243,7 @@ namespace OpenNETCF.ORM
                 case "bigint":
                 case "rowversion":
                     return DbType.Int64;
+                case "id":
                 case "int":
                 case "integer":
                     if (integerIs64bit)
@@ -261,15 +262,20 @@ namespace OpenNETCF.ORM
                 case "nchar":
                     return DbType.StringFixedLength;
                 case "bit":
+                case "bool":
+                case "boolean":
                     return DbType.Boolean;
                 case "tinyint":
                     return DbType.Byte;
                 case "numeric":
                 case "money":
+                case "decimal":
                     return DbType.Decimal;
                 case "real":
+                case "single":
                     return DbType.Single;
                 case "float":
+                case "double":
                     return DbType.Double;
                 case "uniqueidentifier":
                     return DbType.Guid;

@@ -4,7 +4,7 @@ using System.Data;
 using System.Linq;
 using System.Text;
 
-#if ANDROID
+#if ANDROID || MONO
 // note the case difference between the System.Data.SQLite and Mono's implementation
 using SQLiteCommand = Mono.Data.Sqlite.SqliteCommand;
 using SQLiteConnection = Mono.Data.Sqlite.SqliteConnection;
@@ -148,17 +148,30 @@ namespace OpenNETCF.ORM
 
                 foreach (var field in item.Fields)
                 {
-                    command.Parameters[ParameterPrefix + field.Name].Value = field.Value;
+                    // if it's an ID field, don't set it
+                    if(field.Name == item.KeyField) continue;
+
+                    if (field.Value is TimeSpan)
+                    {
+                        command.Parameters[ParameterPrefix + field.Name].Value = ((TimeSpan)field.Value).Ticks;
+                    }
+                    else
+                    {
+                        command.Parameters[ParameterPrefix + field.Name].Value = field.Value;
+                    }
                 }
 
                 command.ExecuteNonQuery();
 
-                // did we have an identity field?  If so, we need to update that value in the item
+                // did we have a PK field?  If so, we need to update that value in the item
                 var keyField = Entities[entityName].Fields.FirstOrDefault(f => f.IsPrimaryKey);
 
                 if (keyField != null)
                 {
-                    item.Fields[keyField.FieldName] = GetIdentity(connection);
+                    if (Entities[entityName].EntityAttribute.KeyScheme == KeyScheme.Identity)
+                    {
+                        item.Fields[keyField.FieldName] = GetIdentity(connection);
+                    }
                 }
             }
             finally
@@ -223,10 +236,14 @@ namespace OpenNETCF.ORM
                                 AllowsNulls = nullable,
                                 IsPrimaryKey = isPK
                             };
-
+                            
                             fields.Add(field);
                         }
                     }
+
+                    cmd.CommandText = string.Format("SELECT 1 FROM sqlite_master WHERE tbl_name='{0}' AND sql LIKE '%AUTOINCREMENT%'", entityName);
+
+                    var autoIncrement = cmd.ExecuteScalar();
 
                     // TODO: handle index metadata (ascending/descending, unique, etc)
                     // PRAGMA index_list(TABLENAME)
@@ -236,7 +253,21 @@ namespace OpenNETCF.ORM
 
 
                     var entityDefinition = new DynamicEntityDefinition(entityName, fields);
+
+                    try
+                    {
+                        if (Convert.ToInt64(autoIncrement) == 1L)
+                        {
+                            entityDefinition.EntityAttribute.KeyScheme = KeyScheme.Identity;
+                        }
+                    }
+                    catch
+                    {
+                        // not auto-increment
+                    }
+
                     RegisterEntityInfo(entityDefinition);
+
                     return entityDefinition;
                 }
             }

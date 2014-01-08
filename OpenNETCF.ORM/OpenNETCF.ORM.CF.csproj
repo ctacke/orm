@@ -80,7 +80,13 @@
     <Compile Include="DataStore.cs" />
     <Compile Include="Entity.cs" />
     <Compile Include="Interfaces\IEntityInfo.cs" />
+    <Compile Include="Interfaces\ISQLBasedStore.cs" />
     <Compile Include="Interfaces\ITableBasedStore.cs" />
+    <Compile Include="Replication\Registrations.cs" />
+    <Compile Include="Replication\ReplicationBehavior.cs" />
+    <Compile Include="Replication\ReplicationPriority.cs" />
+    <Compile Include="Replication\Replicator.cs" />
+    <Compile Include="Replication\ReplicatorCollection.cs" />
     <Compile Include="SQL Store Base\SqlFilterCondition.cs" />
     <None Include="SqlDateTimeDefault.cs" />
     <Compile Include="FilterCondition.cs" />

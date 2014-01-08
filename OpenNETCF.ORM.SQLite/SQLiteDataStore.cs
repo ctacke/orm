@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Reflection;
 
-#if ANDROID
+#if ANDROID || MONO
 // note the case difference between the System.Data.SQLite and Mono's implementation
 using SQLiteCommand = Mono.Data.Sqlite.SqliteCommand;
 using SQLiteConnection = Mono.Data.Sqlite.SqliteConnection;
@@ -50,6 +50,11 @@ namespace OpenNETCF.ORM
             }
 
             FileName = fileName;
+        }
+
+        public override string Name
+        {
+            get { return FileName; }
         }
 
         protected override string DefaultDateGenerator
@@ -149,11 +154,10 @@ namespace OpenNETCF.ORM
                 {
                     continue;
                 }
-                sbFields.Append("[" + field.FieldName + "],");
-                sbParams.Append("?,");
+                sbFields.Append(field.FieldName + ",");
+                sbParams.Append(ParameterPrefix + field.FieldName + ",");
 
-                // TODO; verify that the 2-parameter method work on non-Phone implementations
-                insertCommand.Parameters.Add(new SQLiteParameter(field.FieldName, field.DataType));
+                insertCommand.Parameters.Add(new SQLiteParameter(ParameterPrefix + field.FieldName, field.DataType));
             }
 
             // replace trailing commas
@@ -225,11 +229,11 @@ namespace OpenNETCF.ORM
                         var value = serializer.Invoke(item, new object[] { field.FieldName });
                         if (value == null)
                         {
-                            command.Parameters[field.FieldName].Value = DBNull.Value;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = DBNull.Value;
                         }
                         else
                         {
-                            command.Parameters[field.FieldName].Value = value;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = value;
                         }
                     }
                     else if (field.DataType == DbType.DateTime)
@@ -243,7 +247,7 @@ namespace OpenNETCF.ORM
                             // so we'll set it manually
                             dtValue = DateTime.Now;
                         }
-                        command.Parameters[field.FieldName].Value = dtValue;
+                        command.Parameters[ParameterPrefix + field.FieldName].Value = dtValue;
                     }
                     else if (field.IsRowVersion)
                     {
@@ -256,12 +260,12 @@ namespace OpenNETCF.ORM
 
                         if (value == null)
                         {
-                            command.Parameters[field.FieldName].Value = DBNull.Value;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = DBNull.Value;
                         }
                         else
                         {
                             var timespanTicks = ((TimeSpan)value).Ticks;
-                            command.Parameters[field.FieldName].Value = timespanTicks;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = timespanTicks;
                         }
                     }
                     else
@@ -269,11 +273,11 @@ namespace OpenNETCF.ORM
                         var value = field.PropertyInfo.GetValue(item, null);
                         if ((value == null) && (field.DefaultValue != null))
                         {
-                            command.Parameters[field.FieldName].Value = field.DefaultValue;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = field.DefaultValue;
                         }
                         else
                         {
-                            command.Parameters[field.FieldName].Value = value;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = value;
                         }
                     }
                 }
@@ -389,7 +393,10 @@ namespace OpenNETCF.ORM
             {
                 using (var command = GetNewCommandObject())
                 {
-                    command.Transaction = CurrentTransaction;
+					if(this.CurrentTransaction != null)
+					{
+						command.Transaction = this.CurrentTransaction;
+					}
                     command.Connection = connection;
                     var sql = "SELECT name FROM sqlite_master WHERE type = 'table'";
                     command.CommandText = sql;
@@ -468,11 +475,8 @@ namespace OpenNETCF.ORM
                 // 3 = notnull
                 // 4 = dflt_value
                 // 5 = pk
-#if WINDOWS_PHONE
-                var existing = fieldData.FirstOrDefault(f => string.Compare(f[1].ToString(), field.FieldName, StringComparison.InvariantCultureIgnoreCase) == 0);
-#else
+
                 var existing = fieldData.FirstOrDefault(f => string.Compare(f[1].ToString(), field.FieldName, true) == 0);
-#endif
 
                 if (existing == null)
                 {
