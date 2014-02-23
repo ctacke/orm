@@ -1,10 +1,18 @@
 ﻿using System;
+using System.Data;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 
 namespace OpenNETCF.ORM
 {
+    public enum TestEnum
+    {
+        ValueA,
+        ValueB,
+        ValueC
+    }
+
     [Entity(KeyScheme = KeyScheme.Identity)]
     public class TestItem : IEquatable<TestItem>
     {
@@ -49,6 +57,12 @@ namespace OpenNETCF.ORM
 
         [Field(DefaultType = DefaultType.CurrentDateTime)]
         public DateTime CreateDate { get; set; }
+
+        [Field]
+        public TestEnum EnumField { get; set; }
+
+        [Field(DataType = DbType.String)]
+        public TestEnum EnumFieldAsString { get; set; }
 
         public bool Equals(TestItem other)
         {

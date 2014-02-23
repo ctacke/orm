@@ -40,6 +40,8 @@ namespace OpenNETCF.ORM
                     FTest = 3.14F,
                     DBTest = 1.4D,
                     DETest = 2.678M,
+                    EnumField = TestEnum.ValueA,
+                    EnumFieldAsString = TestEnum.ValueB
                 },
                 new TestItem("ItemB"),
                 new TestItem("ItemC")
