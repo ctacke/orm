@@ -730,7 +730,11 @@ namespace OpenNETCF.ORM
                                         }
                                         else
                                         {
-                                            var t = value.GetType();
+                                            if (field.PropertyInfo.PropertyType.IsEnum && value is string)
+                                            {
+                                                value = Enum.Parse(field.PropertyInfo.PropertyType, value as String, false);
+                                            }
+
                                             field.PropertyInfo.SetValue(item, value, null);
                                         }
                                     }
@@ -870,6 +874,11 @@ namespace OpenNETCF.ORM
                                 }
                                 else
                                 {
+                                    if (field.PropertyInfo.PropertyType.IsEnum && field.DataType == DbType.String)
+                                    {
+                                        value = Enum.Parse(field.PropertyInfo.PropertyType, value as String, false);
+                                    }
+
                                     updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
                                     insertCommand.Parameters.Add(new SQLiteParameter(ParameterPrefix + field.FieldName, value));
                                 }
@@ -905,6 +914,8 @@ namespace OpenNETCF.ORM
                                     else
                                     {
                                         updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
+   
+                                        value = field.DataType == DbType.String ? value.ToString() : value;
                                         insertCommand.Parameters.Add(new SQLiteParameter(ParameterPrefix + field.FieldName, value));
                                     }
                                 }
