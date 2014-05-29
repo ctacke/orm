@@ -27,9 +27,21 @@ namespace OpenNETCF.DreamFactory
         internal Table(Session session, string tableName)
         {
             Session = session;
+
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.GET);
 
             var response = Session.Client.Execute<TableDescriptor>(request);
+
+            var check = DreamFactoryException.ValidateIRestResponse(response);
+            if (check != null)
+            {
+                throw new DeserializationException(string.Format("Failed to retrieve the schema for table '{0}': {1}", tableName, response.ErrorMessage), check);
+            }
 
             switch (response.StatusCode)
             {
@@ -54,11 +66,7 @@ namespace OpenNETCF.DreamFactory
                     Fields = fieldList.ToArray();
                     break;
                 default:
-                    if (Debugger.IsAttached) Debugger.Break();
-
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    // TODO: make a library-specific Exception class
-                    throw new Exception(error.error[0].message);
+                    throw DreamFactoryException.Parse(response);
             }
         }
 
@@ -74,6 +82,11 @@ namespace OpenNETCF.DreamFactory
 
         public IEnumerable<object[]> GetRecords(string filterStatement, params object[] resourceIDs)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.GET);
 
             if ((resourceIDs != null) && (resourceIDs.Length > 0))
@@ -96,6 +109,12 @@ namespace OpenNETCF.DreamFactory
             }
             
             var response = Session.Client.Execute<ResourceDescriptorList>(request);
+
+            var check = DreamFactoryException.ValidateIRestResponse(response);
+            if (check != null)
+            {
+                throw new DeserializationException(string.Format("Failed to retrieve a records from table '{0}': {1}", Name, response.ErrorMessage), check);
+            }
 
             switch (response.StatusCode)
             {
@@ -135,9 +154,7 @@ namespace OpenNETCF.DreamFactory
                     }
                     return records;
                 default:
-                    if (Debugger.IsAttached) Debugger.Break();
-
-                    throw new Exception();
+                    throw DreamFactoryException.Parse(response);
             }
         }
 
@@ -148,6 +165,11 @@ namespace OpenNETCF.DreamFactory
 
         public int GetRecordCount(string filter)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.GET);
             request.Parameters.Add(new Parameter() { Name = "limit", Value = 1, Type = ParameterType.GetOrPost });
             request.Parameters.Add(new Parameter() { Name = "include_count", Value = "true", Type = ParameterType.GetOrPost });
@@ -159,6 +181,12 @@ namespace OpenNETCF.DreamFactory
 
             var response = Session.Client.Execute<ResourceDescriptorList>(request);
 
+            var check = DreamFactoryException.ValidateIRestResponse(response);
+            if (check != null)
+            {
+                throw new DeserializationException(string.Format("Failed to retrieve a record count on table '{0}': {1}", Name, response.ErrorMessage), check);
+            }
+
             switch (response.StatusCode)
             {
                 case HttpStatusCode.OK:
@@ -166,11 +194,7 @@ namespace OpenNETCF.DreamFactory
                     return Convert.ToInt32(((SimpleJson.DeserializeObject(response.Content) as JsonObject)[1] as JsonObject)[0]);
 
                 default:
-                    if (Debugger.IsAttached) Debugger.Break();
-
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    // TODO: make a library-specific Exception class
-                    throw new Exception(error.error[0].message);
+                    throw DreamFactoryException.Parse(response);
             }
         }
 
@@ -186,6 +210,11 @@ namespace OpenNETCF.DreamFactory
 
         public IEnumerable<object[]> GetRecords(int limit, int offset, string filter, string order)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.GET);
             if (limit > 0)
             {
@@ -205,6 +234,12 @@ namespace OpenNETCF.DreamFactory
             }
 
             var response = Session.Client.Execute<ResourceDescriptorList>(request);
+
+            var check = DreamFactoryException.ValidateIRestResponse(response);
+            if (check != null)
+            {
+                throw new DeserializationException(string.Format("Failed to retrieve a records from table '{0}': {1}", Name, response.ErrorMessage), check);
+            }
 
             switch (response.StatusCode)
             {
@@ -228,17 +263,23 @@ namespace OpenNETCF.DreamFactory
                     }
 
                     return records;
-                default:
-                    if (Debugger.IsAttached) Debugger.Break();
+                case HttpStatusCode.NotFound:
+                    // table doesn't exist, make sure it's not in the cache (e.g. remote delete)
+                    Session.Data.RemoveTableFromCache(this.Name);
 
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    // TODO: make a library-specific Exception class
-                    throw new Exception(error.error[0].message);
+                    throw new TableNotFoundException(this.Name);
+                default:
+                    throw DreamFactoryException.Parse(response);
             }
         }
 
         public void DeleteFilteredRecords(string filter)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.DELETE);
 
             request.Parameters.Add(new Parameter()
@@ -253,16 +294,20 @@ namespace OpenNETCF.DreamFactory
             switch (response.StatusCode)
             {
                 case HttpStatusCode.Created:
+                case HttpStatusCode.OK:
                     return;
                 default:
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    // TODO: make a library-specific Exception class
-                    throw new Exception(error.error[0].message);
+                    throw DreamFactoryException.Parse(response);
             }
         }
 
         public void DeleteRecords(params object[] resourceIDs)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), Method.DELETE);
 
             if ((resourceIDs != null) && (resourceIDs.Length > 0))
@@ -302,15 +347,10 @@ namespace OpenNETCF.DreamFactory
             switch (response.StatusCode)
             {
                 case HttpStatusCode.Created:
+                case HttpStatusCode.OK:
                     return;
-                case HttpStatusCode.BadRequest:
-                    if (Debugger.IsAttached) Debugger.Break();
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    // TODO: make a library-specific Exception class
-                    throw new Exception(error.error[0].message);
                 default:
-                    if (Debugger.IsAttached) Debugger.Break();
-                    break;
+                    throw DreamFactoryException.Parse(response);
             }
         }
 
@@ -328,6 +368,11 @@ namespace OpenNETCF.DreamFactory
         {
             try
             {
+                if (Session.Disconnected)
+                {
+                    Session.Reconnect();
+                }
+
                 var request = Session.GetSessionRequest(string.Format("/rest/db/{0}", Name), isUpdate ? Method.PUT : Method.POST);
 
                 // "{\"record\":[{\"ID\":\"1\",\"Name\":\"Item #1\",\"UUID\":null,\"ITest\":23,\"Address\":\"Foo\",\"FTest\":\"2.4\",\"DBTest\":null,\"DETest\":null,\"TS\":0}]}"
@@ -361,15 +406,11 @@ namespace OpenNETCF.DreamFactory
                         var value = key[name];
                         return value;
                     default:
-                        if (Debugger.IsAttached) Debugger.Break();
-                        var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                        // TODO: make a library-specific Exception class
-                        throw new Exception(error.error[0].message);
+                        throw DreamFactoryException.Parse(response);
                 }
             }
             catch(Exception ex)
             {
-                if (Debugger.IsAttached) Debugger.Break();
                 throw ex;
             }
         }

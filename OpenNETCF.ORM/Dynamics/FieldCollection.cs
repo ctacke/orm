@@ -5,13 +5,21 @@ using System.Text;
 
 namespace OpenNETCF.ORM
 {
-    public class FieldCollection : IEnumerable<FieldValue>
+    public class FieldCollection : IEnumerable<FieldValue>, ICloneable
     {
         private Dictionary<string, FieldValue> m_fields;
 
         internal FieldCollection()
         {
             m_fields = new Dictionary<string, FieldValue>(StringComparer.InvariantCultureIgnoreCase);
+        }
+
+        public object Clone()
+        {
+            return new FieldCollection()
+            {
+                m_fields = this.m_fields.ToDictionary(e => e.Key, e => e.Value.Clone() as FieldValue, m_fields.Comparer)
+            };
         }
 
         public int Count
@@ -28,7 +36,6 @@ namespace OpenNETCF.ORM
                     if (!m_fields.ContainsKey(fieldName))
                     {
                         return null;
-                        throw new ArgumentException(string.Format("Field named '{0}' not present", fieldName));
                     }
                     return m_fields[fieldName].Value;
                 }
@@ -47,6 +54,11 @@ namespace OpenNETCF.ORM
                     }
                 }
             }
+        }
+
+        public bool ContainsField(string fieldName)
+        {
+            return m_fields.ContainsKey(fieldName);
         }
 
         public void Add(string fieldName)

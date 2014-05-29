@@ -12,8 +12,6 @@ namespace OpenNETCF.DreamFactory
     [SerializeAs(Name = "field")]
     internal class FieldDescriptor
     {
-        private string m_type;
-
         public string name { get; set; }
         public string label { get; set; }
         public string type { get; set; }
@@ -22,8 +20,6 @@ namespace OpenNETCF.DreamFactory
         public int? length { get; set; }
         public int? precision { get; set; }
         public int? scale { get; set; }
-
-//        public int default { get; set; }
 
         public bool? required { get; set; }
         public bool? allow_null { get; set; }

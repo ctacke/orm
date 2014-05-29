@@ -164,13 +164,16 @@ namespace OpenNETCF.ORM
                 command.ExecuteNonQuery();
 
                 // did we have a PK field?  If so, we need to update that value in the item
-                var keyField = Entities[entityName].Fields.FirstOrDefault(f => f.IsPrimaryKey);
-
-                if (keyField != null)
+                if (Entities[entityName].EntityAttribute.KeyScheme == KeyScheme.Identity)
                 {
-                    if (Entities[entityName].EntityAttribute.KeyScheme == KeyScheme.Identity)
+                    var keyField = Entities[entityName].Fields.FirstOrDefault(f => f.IsPrimaryKey);
+
+                    if (keyField != null)
                     {
-                        item.Fields[keyField.FieldName] = GetIdentity(connection);
+                        if (Entities[entityName].EntityAttribute.KeyScheme == KeyScheme.Identity)
+                        {
+                            item.Fields[keyField.FieldName] = GetIdentity(connection);
+                        }
                     }
                 }
             }
@@ -202,7 +205,7 @@ namespace OpenNETCF.ORM
         {
             if (!TableExists(entityName))
             {
-                throw new EntityNotFoundException(entityName);
+                return null;
             }
 
             var connection = GetConnection(true);
@@ -277,15 +280,19 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
             // yes, this is very limited in scope capability, but it's purpose-built for a specific use-case (and better than no functionality at all)
 
-            if (firstRowOffset > 0) throw new NotSupportedException("non-zero rowOffset not currently supported with this version of Fetch");
             if (fillReferences) throw new NotSupportedException("References not currently supported with this version of Fetch.");
             if (filter != null) throw new NotSupportedException("Filters not currently supported with this version of Fetch.  Try post-filtering with LINQ");
 
-            var sql = string.Format("SELECT TOP {0} * FROM {1} ", fetchCount, entityName);
+            var sql = string.Format("SELECT * FROM {0} LIMIT {1}", entityName, fetchCount);
+
+            if (firstRowOffset > 0)
+            {
+                sql += string.Format(" OFFSET {0}", firstRowOffset);
+            }
 
             if (!string.IsNullOrEmpty(sortField))
             {
@@ -327,7 +334,7 @@ namespace OpenNETCF.ORM
 
         public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount)
         {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
+            return Fetch(entityName, fetchCount, 0, null, FieldSearchOrder.NotSearchable, null, false);
         }
     }
 }

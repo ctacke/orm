@@ -6,6 +6,8 @@ using OpenNETCF.DreamFactory;
 using System.Reflection;
 using System.Diagnostics;
 using System.Data;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 
 namespace OpenNETCF.ORM
 {
@@ -13,9 +15,9 @@ namespace OpenNETCF.ORM
     {
         private Session m_session;
 
-        public DreamFactoryDataStore(string dspRootAddress, string application, string username, string password)
+        public DreamFactoryDataStore(string dspRootAddress, string application, string username, string password, RemoteCertificateValidationCallback certificateCallback, bool useCompression)
         {
-            m_session = new Session(dspRootAddress, application, username, password);
+            m_session = new Session(dspRootAddress, application, username, password, certificateCallback, useCompression);
 
             m_session.Initialize();
         }
@@ -51,7 +53,7 @@ namespace OpenNETCF.ORM
             // this will exist because the caller inserted it
             var entity = Entities[name];
 
-            if (!TableExists(name))
+            if (!TableExists(entity.EntityAttribute.NameInStore))
             {
                 CreateTable(entity);
             }
@@ -174,11 +176,18 @@ namespace OpenNETCF.ORM
 
             var entityName = Entities.GetNameForType(entityType);
 
+            // see if the underlying schema exists
+            if (entityName == null)
+            {
+                AddType(entityType);
+            }
+
+            // if it's still null, it's not there
+            entityName = Entities.GetNameForType(entityType);
             if (entityName == null)
             {
                 throw new EntityNotFoundException(string.Format("Type '{0}' is not registered with this store.", entityType.Name));
             }
-
             Table table;
             IEnumerable<object[]> records;
 
@@ -186,7 +195,7 @@ namespace OpenNETCF.ORM
             {
                 table = m_session.Data.GetTable(entityName);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 throw;
             }
@@ -195,7 +204,7 @@ namespace OpenNETCF.ORM
             {
                 records = table.GetRecords();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 throw;
             }
@@ -342,6 +351,18 @@ namespace OpenNETCF.ORM
 
             var entityName = GetEntityNameForInstance(item);
 
+            if (entityName == null)
+            {
+                AddType(item.GetType());
+            }
+
+            entityName = GetEntityNameForInstance(item);
+
+            if (entityName == null)
+            {
+                throw new Exception("Unknown and unregistered Entity type: " + item.GetType().Name);
+            }
+
             var table = m_session.Data.GetTable(entityName);
 
             FieldAttribute idField;
@@ -417,21 +438,27 @@ namespace OpenNETCF.ORM
 
                     var value = de.Fields[field.FieldName];
 
-                    switch (field.DataType)
+                    if ((field.AllowsNulls) && (value == null))
                     {
-                        case System.Data.DbType.Time:
-                            values.Add(field.FieldName, ((TimeSpan)value).ToString());
-                            break;
-                        case System.Data.DbType.Date:
-                        case System.Data.DbType.DateTime:
-                        case System.Data.DbType.DateTime2:
-                            values.Add(field.FieldName, Convert.ToDateTime(value).ToString("s"));
-                            break;
-                        default:
-                            values.Add(field.FieldName, value);
-                            break;
+                        values.Add(field.FieldName, null);
                     }
-
+                    else
+                    {
+                        switch (field.DataType)
+                        {
+                            case System.Data.DbType.Time:
+                                values.Add(field.FieldName, ((TimeSpan)value).ToString());
+                                break;
+                            case System.Data.DbType.Date:
+                            case System.Data.DbType.DateTime:
+                            case System.Data.DbType.DateTime2:
+                                values.Add(field.FieldName, Convert.ToDateTime(value).ToString("s"));
+                                break;
+                            default:
+                                values.Add(field.FieldName, value);
+                                break;
+                        }
+                    }
                 }
             }
             else
@@ -442,19 +469,26 @@ namespace OpenNETCF.ORM
 
                     var value = field.PropertyInfo.GetValue(item, null);
 
-                    switch (field.DataType)
+                    if ((field.AllowsNulls) && (value == null))
                     {
-                        case System.Data.DbType.Time:
-                            values.Add(field.FieldName, ((TimeSpan)value).ToString());
-                            break;
-                        case System.Data.DbType.Date:
-                        case System.Data.DbType.DateTime:
-                        case System.Data.DbType.DateTime2:
-                            values.Add(field.FieldName, Convert.ToDateTime(value).ToString("s"));
-                            break;
-                        default:
-                            values.Add(field.FieldName, value);
-                            break;
+                        values.Add(field.FieldName, null);
+                    }
+                    else
+                    {
+                        switch (field.DataType)
+                        {
+                            case System.Data.DbType.Time:
+                                values.Add(field.FieldName, ((TimeSpan)value).ToString());
+                                break;
+                            case System.Data.DbType.Date:
+                            case System.Data.DbType.DateTime:
+                            case System.Data.DbType.DateTime2:
+                                values.Add(field.FieldName, Convert.ToDateTime(value).ToString("s"));
+                                break;
+                            default:
+                                values.Add(field.FieldName, value);
+                                break;
+                        }
                     }
                 }
             }
@@ -470,6 +504,11 @@ namespace OpenNETCF.ORM
         private DynamicEntity DynamicEntityFromEntityValueDictionary(string entityName, object[] record)
         {
             var instance = new DynamicEntity(entityName);
+
+            if (!Entities.Contains(entityName))
+            {
+                DiscoverDynamicEntity(entityName);
+            }
 
             var f = 0;
             foreach (var field in Entities[entityName].Fields)
@@ -601,10 +640,24 @@ namespace OpenNETCF.ORM
 
         public string[] GetTableNames()
         {
-            var tables = m_session.Data.GetTables();
-            if (tables == null || tables.Length == 0) return null;
+            try
+            {
+                var tables = m_session.Data.GetTables();
 
-            return tables.Select(t => t.Name).ToArray();
+                if (tables == null || tables.Length == 0) return null;
+
+                return tables.Select(t => t.Name).ToArray();
+
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public override void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition)
+        {
+            base.RegisterDynamicEntity(entityDefinition, true);
         }
 
         protected override void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility)
@@ -779,19 +832,26 @@ namespace OpenNETCF.ORM
 
             if (table == null) return null;
 
-            var records = table.GetRecords(fetchCount, firstRowOffset, filterString, orderString);
-
-            if (records == null) return null;
-
-            var items = new List<DynamicEntity>();
-
-            foreach (var record in records)
+            try
             {
-                var instance = DynamicEntityFromEntityValueDictionary(entityName, record);
-                items.Add(instance);
-            }
+                var records = table.GetRecords(fetchCount, firstRowOffset, filterString, orderString);
 
-            return items;
+                if (records == null) return null;
+
+                var items = new List<DynamicEntity>();
+
+                foreach (var record in records)
+                {
+                    var instance = DynamicEntityFromEntityValueDictionary(entityName, record);
+                    items.Add(instance);
+                }
+
+                return items;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public override IEnumerable<T> Fetch<T>(int fetchCount)

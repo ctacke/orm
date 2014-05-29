@@ -1,14 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{4D8FFD95-87BD-4873-83CE-01BA4A5CD5F1}</ProjectGuid>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{08063EDA-3FDF-4FD2-A640-07FBCC6AD480}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>OpenNETCF.DreamFactory</RootNamespace>
-    <AssemblyName>OpenNETCF.DreamFactory</AssemblyName>
+    <RootNamespace>OpenNETCF.ORM</RootNamespace>
+    <AssemblyName>OpenNETCF.ORM.Azure</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>
@@ -28,7 +29,7 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\bin\Release\FFx\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
@@ -45,30 +46,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Applications.cs" />
-    <Compile Include="Container.cs" />
-    <Compile Include="Containers.cs" />
-    <Compile Include="Application.cs" />
-    <Compile Include="Exceptions.cs" />
+    <Compile Include="AzureDataStore.cs" />
     <Compile Include="Extensions.cs" />
-    <Compile Include="Field.cs" />
-    <Compile Include="Data.cs" />
-    <Compile Include="JSON Classes\ContainerDescriptor.cs" />
-    <Compile Include="JSON Classes\ErrorDescriptor.cs" />
-    <Compile Include="JSON Classes\TableDescriptor.cs" />
-    <Compile Include="JSON Classes\FieldDescriptor.cs" />
-    <Compile Include="JSON Classes\SessionDescriptor.cs" />
-    <Compile Include="JSON Classes\ApplicationDescriptor.cs" />
-    <Compile Include="JSON Classes\ResourceDescriptor.cs" />
-    <Compile Include="Table.cs" />
-    <Compile Include="Session.cs" />
-    <Compile Include="JSON Classes\CredentialDescriptor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\RestSharp\RestSharp.FFx.csproj">
-      <Project>{2ececfbf-5f3e-40ee-a963-72336dc7abe2}</Project>
-      <Name>RestSharp.FFx</Name>
+    <ProjectReference Include="..\..\OpenNETCF.ORM\OpenNETCF.ORM.FFx.csproj">
+      <Project>{6E9C7DA3-AD60-4E44-9D3A-7BBD3A20D79F}</Project>
+      <Name>OpenNETCF.ORM.FFx</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Library\OpenNETCF.Azure.FFx.csproj">
+      <Project>{b96281bb-11c8-4d0b-ae28-690608b590be}</Project>
+      <Name>OpenNETCF.Azure.FFx</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

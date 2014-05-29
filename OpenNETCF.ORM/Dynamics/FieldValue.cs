@@ -5,12 +5,17 @@ using System.Text;
 
 namespace OpenNETCF.ORM
 {
-    public class FieldValue
+    public class FieldValue : ICloneable
     {
         internal FieldValue(string name, object value)
         {
             Name = name;
             Value = value;
+        }
+
+        public object Clone()
+        {
+            return new FieldValue(Name, Value);
         }
 
         public string Name { get; private set; }

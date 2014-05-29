@@ -5,11 +5,11 @@ using System.Text;
 
 namespace OpenNETCF.ORM
 {
-    public class DynamicEntity
+    public class DynamicEntity : ICloneable
     {
         public string EntityName { get; set; }
         public FieldCollection Fields { get; private set; }
-        public string KeyField { get; private set; }
+        public string KeyField { get; set; }
 
         public DynamicEntity()
             : this(null, null)
@@ -40,5 +40,12 @@ namespace OpenNETCF.ORM
             }
         }
 
+        public object Clone()
+        {
+            return new DynamicEntity(EntityName)
+            {
+                Fields = this.Fields.Clone() as FieldCollection
+            };
+        }
     }
 }

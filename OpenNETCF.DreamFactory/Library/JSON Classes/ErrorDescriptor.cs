@@ -9,7 +9,7 @@ namespace OpenNETCF.DreamFactory
 {
     [SerializeAs(Name = "error")]
 //    [DeserializeAs(Name = "error")]
-    internal class ErrorDescriptor
+    public class ErrorDescriptor
     {
         public ErrorDescriptor()
         {

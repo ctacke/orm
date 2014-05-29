@@ -11,6 +11,8 @@ namespace OpenNETCF.ORM
     {
         private const int DefaultStringLength = 256;
         private const int MaxStringLength = 8000;
+        private const int DefaultDoubleScale = 4;
+        private const int DefaultDoublePrecision = 10;
 
         public static Field GetFieldForAttribute(FieldAttribute attrib, KeyScheme keyScheme)
         {
@@ -61,13 +63,13 @@ namespace OpenNETCF.ORM
                     break;
                 case System.Data.DbType.Single:
                     field = new Field<float>(attrib.FieldName);
-                    field.Scale = attrib.Scale;
-                    field.Precision = attrib.Precision;
+                    field.Scale = attrib.Scale <= 0 ? DefaultDoubleScale : attrib.Scale;
+                    field.Precision = attrib.Precision <= 0 ? DefaultDoublePrecision : attrib.Precision;
                     break;
                 case System.Data.DbType.Double:
                     field = new Field<double>(attrib.FieldName);
-                    field.Scale = attrib.Scale;
-                    field.Precision = attrib.Precision;
+                    field.Scale = attrib.Scale <= 0 ? DefaultDoubleScale : attrib.Scale;
+                    field.Precision = attrib.Precision <= 0 ? DefaultDoublePrecision : attrib.Precision;
                     break;
                 case System.Data.DbType.Decimal:
                     field = new Field<decimal>(attrib.FieldName);

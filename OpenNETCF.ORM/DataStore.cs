@@ -291,13 +291,13 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition)
+        public virtual void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition)
         {
             foreach (var f in entityDefinition.Fields)
             {
                 if (entityDefinition.EntityAttribute.KeyScheme == KeyScheme.Identity)
                 {
-                    throw new NotSupportedException("Oracle provider does not currently support Identity dynamic entities");
+                    throw new NotSupportedException("The current provider does not currently support Identity dynamic entities");
                 }
             }
 
@@ -338,6 +338,10 @@ namespace OpenNETCF.ORM
             OnDynamicEntityRegistration(entityDefinition, ensureCompatibility);
         }
 
+        private void ValidateProperties()
+        {
+        }
+
         private void AddType(Type entityType, bool verifyInterface, bool ensureCompatibility)
         {
             var attr = (from a in entityType.GetCustomAttributes(true)
@@ -364,8 +368,6 @@ namespace OpenNETCF.ORM
             //TODO: validate NameInStore
 
             map.Initialize(attr, entityType);
-
-            if (m_entities.Contains(map.EntityName)) return;
 
             // see if we have any entity 
             // get all field definitions
@@ -403,7 +405,15 @@ namespace OpenNETCF.ORM
                         }
                     }
 
-                    map.Fields.Add(attribute);
+                    if (!map.Fields.ContainsField(attribute.FieldName))
+                    {
+                        map.Fields.Add(attribute);
+                    }
+
+                    if ((m_entities.Contains(map.EntityName)) && (m_entities[map.EntityName].Fields[attribute.FieldName].PropertyInfo == null))
+                    {
+                        m_entities[map.EntityName].Fields[attribute.FieldName].PropertyInfo = prop;
+                    }
                 }
                 else
                 {
@@ -415,6 +425,13 @@ namespace OpenNETCF.ORM
                         map.References.Add(reference);
                     }
                 }
+            }
+
+            if (m_entities.Contains(map.EntityName))
+            {
+                // this will ensure that the m_entities type to name map is properly filled out
+                m_entities.Add(map);
+                return;
             }
 
             if (map.Fields.Count == 0)

@@ -6,6 +6,8 @@ using System.Net;
 using System.Text;
 using OpenNETCF.Web;
 using RestSharp;
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
 
 namespace OpenNETCF.DreamFactory
 {
@@ -17,6 +19,8 @@ namespace OpenNETCF.DreamFactory
         public string ApplicationName { get; set; }
         private string Password { get; set; }
 
+        public bool EnableCompressedResponseData { get; set; }
+
         public bool Disconnected { get; internal set; }
 
         private SessionDescriptor SessionDescriptor { get; set; }
@@ -25,13 +29,37 @@ namespace OpenNETCF.DreamFactory
         public Applications Applications { get; private set; }
 
         public Session(string dspRootAddress, string application, string username, string password)
+            : this(dspRootAddress, application, username, password, null, true)
+        {
+        }
+
+        public Session(
+            string dspRootAddress, 
+            string application, 
+            string username, 
+            string password, 
+            RemoteCertificateValidationCallback certificateCallback,
+            bool enableCompressedResponseData)
         {
             DSPRootAddress = dspRootAddress;
             ApplicationName = application;
             Username = username;
             Password = password;
+            EnableCompressedResponseData = enableCompressedResponseData;
 
             Disconnected = true;
+
+            if (certificateCallback != null)
+            {
+                ServicePointManager.ServerCertificateValidationCallback = certificateCallback;
+            }
+        }
+
+        public void Reconnect()
+        {
+            if (!this.Disconnected) return;
+
+            Initialize();
         }
 
         internal string ID
@@ -44,8 +72,8 @@ namespace OpenNETCF.DreamFactory
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3;
 
             Client = new RestClient(DSPRootAddress);
-            RestRequest request = new RestRequest("/rest/user/session", Method.POST);
-            request.AddHeader("X-DreamFactory-Application-Name", "ORM");
+            var request = new RestRequest("/rest/user/session", Method.POST);
+            request.AddHeader("X-DreamFactory-Application-Name", ApplicationName);
             request.RequestFormat = DataFormat.Json;
             var creds = new CredentialDescriptor
             {
@@ -54,21 +82,32 @@ namespace OpenNETCF.DreamFactory
             };
             request.AddBody(creds);
 
+            if (EnableCompressedResponseData)
+            {
+                request.AcceptDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip | DecompressionMethods.None;
+            }
+            else
+            {
+                request.AcceptDecompression = DecompressionMethods.None;
+            }
+
             var response = Client.Execute<SessionDescriptor>(request);
+
+            var check = DreamFactoryException.ValidateIRestResponse(response);
+            if (check != null)
+            {
+                throw new DeserializationException(string.Format("Failed to deserialize the Session descriptor: {0}", response.ErrorMessage), check);
+            }
 
             switch (response.StatusCode)
             {
                 case HttpStatusCode.Created:
-                    // successful session creation
+                case HttpStatusCode.OK:
+                    // successful session opened
                     Disconnected = false;
                     break;
                 default:
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    if (error.error.Count > 0)
-                    {
-                        throw new Exception(error.error[0].message);
-                    }
-                    throw new Exception(response.StatusDescription);
+                    throw DreamFactoryException.Parse(response);
             }
 
             SessionDescriptor = response.Data;
@@ -100,6 +139,15 @@ namespace OpenNETCF.DreamFactory
                 .AddHeader("X-DreamFactory-Session-Token", this.ID);
 
             request.RequestFormat = DataFormat.Json;
+
+            if (EnableCompressedResponseData)
+            {
+                request.AcceptDecompression = DecompressionMethods.Deflate | DecompressionMethods.GZip | DecompressionMethods.None;
+            }
+            else
+            {
+                request.AcceptDecompression = DecompressionMethods.None;
+            }
 
             return request;
         }

@@ -6,9 +6,11 @@ using System.Diagnostics;
 
 namespace OpenNETCF.ORM
 {
-    public class FieldAttributeCollection : IEnumerable<FieldAttribute>
+    public class FieldAttributeCollection : IEnumerable<FieldAttribute>, ICloneable
     {
         private Dictionary<string, FieldAttribute> m_fields = new Dictionary<string, FieldAttribute>(StringComparer.InvariantCultureIgnoreCase);
+
+        private object m_syncRoot = new object();
 
         public bool OrdinalsAreValid { get; set; }
         public FieldAttribute KeyField { get; private set; }
@@ -17,6 +19,16 @@ namespace OpenNETCF.ORM
         {
             OrdinalsAreValid = false;
             KeyField = null;
+        }
+
+        public object SyncRoot
+        {
+            get { return m_syncRoot; }
+        }
+
+        public object Clone()
+        {
+            return new FieldAttributeCollection(m_fields.ToDictionary(e=>e.Key, e=>(FieldAttribute)e.Value.Clone()).Values);
         }
 
         internal FieldAttributeCollection(IEnumerable<FieldAttribute> fields)
@@ -29,7 +41,7 @@ namespace OpenNETCF.ORM
 
         internal void AddRange(IEnumerable<FieldAttribute> fields)
         {
-            lock (m_fields)
+            lock (m_syncRoot)
             {
                 foreach (var f in fields)
                 {
@@ -40,11 +52,16 @@ namespace OpenNETCF.ORM
 
         internal void Add(FieldAttribute attribute)
         {
-            lock (m_fields)
+            Add(attribute, false);
+        }
+
+        internal void Add(FieldAttribute attribute, bool replaceKeyField)
+        {
+            lock (m_syncRoot)
             {
                 if (attribute.IsPrimaryKey)
                 {
-                    if (KeyField == null)
+                    if ((KeyField == null) || (replaceKeyField))
                     {
                         KeyField = attribute;
                     }
@@ -60,22 +77,40 @@ namespace OpenNETCF.ORM
 
         public int Count
         {
-            get { return m_fields.Count; }
+            get
+            {
+                lock (m_syncRoot)
+                {
+                    return m_fields.Count;
+                }
+            }
         }
 
         public FieldAttribute this[string fieldName]
         {
-            get { return m_fields[fieldName.ToLower()]; }
+            get
+            {
+                lock (m_syncRoot)
+                {
+                    return m_fields[fieldName.ToLower()];
+                }
+            }
         }
 
         public bool ContainsField(string fieldName)
         {
-            return m_fields.ContainsKey(fieldName);
+            lock (m_syncRoot)
+            {
+                return m_fields.ContainsKey(fieldName);
+            }
         }
 
         public IEnumerator<FieldAttribute> GetEnumerator()
         {
-            return m_fields.Values.GetEnumerator();
+            lock (m_syncRoot)
+            {
+                return m_fields.Values.GetEnumerator();
+            }
         }
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
