@@ -476,7 +476,7 @@ namespace OpenNETCF.ORM
                 // 4 = dflt_value
                 // 5 = pk
 
-                var existing = fieldData.FirstOrDefault(f => string.Compare(f[1].ToString(), field.FieldName, StringComparison.InvariantCultureIgnoreCase) == 0);
+				var existing = fieldData.FirstOrDefault(f => string.Compare(f[1].ToString(), field.FieldName, true) == 0);
 
                 if (existing == null)
                 {

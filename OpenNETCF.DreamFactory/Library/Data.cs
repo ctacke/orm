@@ -20,6 +20,14 @@ namespace OpenNETCF.DreamFactory
             m_tableCache = new Dictionary<string, Table>(StringComparer.InvariantCultureIgnoreCase);
         }
 
+        internal void RemoveTableFromCache(string tableName)
+        {
+            if(m_tableCache.ContainsKey(tableName))
+            {
+                m_tableCache.Remove(tableName);
+            }
+        }
+
         public Table GetTable(string tableName)
         {
             if(m_tableCache.ContainsKey(tableName) )
@@ -29,9 +37,21 @@ namespace OpenNETCF.DreamFactory
 
             // TODO: enable caching of this info
 
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.GET);
 
             var response = Session.Client.Execute<ResourceDescriptor>(request);
+
+            var check = DreamFactoryException.ValidateIRestResponse(response);
+            if (check != null)
+            {
+                // we've seen problems in Mono (3.2.3 on the windows desktop) with GZip decompression failure
+                throw new DeserializationException(string.Format("Failed to deserialize schema response for table '{0}': {1}", tableName, response.ErrorMessage), check);
+            }
 
             switch(response.StatusCode)
             {
@@ -45,17 +65,14 @@ namespace OpenNETCF.DreamFactory
                 case HttpStatusCode.NotFound:
                     return null;
                 case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
                     if (Debugger.IsAttached) Debugger.Break();
                     
                     Session.Disconnected = true;
-                    
-                    var ferror = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    if (ferror.error.Count > 0)
-                    {
-                        throw new Exception(ferror.error[0].message);
-                    }
 
-                    throw new Exception("Not authorized");
+                    // TODO: attempt to-reconnect?
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
                     if (error.error.Count > 0)
@@ -67,20 +84,34 @@ namespace OpenNETCF.DreamFactory
                             return null;
                         }
 
-                        if (Debugger.IsAttached) Debugger.Break();
-
-                        throw new Exception(error.error[0].message);
+                        throw DreamFactoryException.Parse(response);
                     }
 
-                    throw new Exception();
+                    throw DreamFactoryException.Parse(response);
             }
         }
 
         public Table[] GetTables()
         {
+            return GetTables(true);
+        }
+
+        public Table[] GetTables(bool useCache)
+        {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest("/rest/db", Method.GET);
 
             var response = Session.Client.Execute<ResourceDescriptorList>(request);
+
+            var check = DreamFactoryException.ValidateIRestResponse(response);
+            if (check != null)
+            {
+                throw new DeserializationException(string.Format("Failed to deserialize the list of tables: {0}", response.ErrorMessage), check);
+            }
 
             switch (response.StatusCode)
             {
@@ -91,17 +122,41 @@ namespace OpenNETCF.DreamFactory
                     {
                         foreach (var resource in response.Data.resource)
                         {
-                            var t = new Table(Session, resource);
+                            Table t = null;
 
-                            list.Add(t);
-
-                            if (!m_tableCache.ContainsKey(t.Name))
+                            if (useCache)
                             {
-                                m_tableCache.Add(t.Name, t);
+                                if (m_tableCache.ContainsKey(resource.name))
+                                {
+                                    t = m_tableCache[resource.name];
+                                    list.Add(t);
+                                }
                             }
-                            else
+
+                            if (t == null)
                             {
-                                m_tableCache[t.Name] = t;
+                                try
+                                {
+                                    t = new Table(Session, resource);
+
+                                    list.Add(t);
+
+                                    if (!m_tableCache.ContainsKey(t.Name))
+                                    {
+                                        m_tableCache.Add(t.Name, t);
+                                    }
+                                    else
+                                    {
+                                        m_tableCache[t.Name] = t;
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    // TODO: log this?
+                                    if (Debugger.IsAttached) Debugger.Break();
+                                    Debug.WriteLine(ex.Message);
+                                    throw;
+                                }
                             }
                         }
 
@@ -110,19 +165,17 @@ namespace OpenNETCF.DreamFactory
                     return list.ToArray();
 
                 default:
-                    if (Debugger.IsAttached) Debugger.Break();
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    if (error.error.Count > 0)
-                    {
-                        throw new Exception(error.error[0].message);
-                    }
-
-                    throw new Exception();
+                    throw DreamFactoryException.Parse(response);
             }
         }
 
         public Table UpdateTable(string tableName, IEnumerable<Field> updatedFieldList)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var fieldDescriptors = new List<FieldDescriptor>();
 
             foreach (var f in updatedFieldList)
@@ -165,9 +218,7 @@ namespace OpenNETCF.DreamFactory
 
                     return actualTable;
                 default:
-                    if (Debugger.IsAttached) Debugger.Break();
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptor>(response.Content);
-                    throw new Exception(error.message);
+                    throw DreamFactoryException.Parse(response);
             }
         }
 
@@ -180,6 +231,11 @@ namespace OpenNETCF.DreamFactory
 
         public Table CreateTable(string tableName, string label, IEnumerable<Field> fields)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var tableDescriptor = new TableDescriptor()
             {
                 name = tableName,
@@ -213,6 +269,7 @@ namespace OpenNETCF.DreamFactory
             switch (response.StatusCode)
             {
                 case HttpStatusCode.Created:
+                case HttpStatusCode.OK:
                     // query the table schema back
                     var actualTable = new Table(Session, tableName);
 
@@ -225,14 +282,17 @@ namespace OpenNETCF.DreamFactory
 
                     return actualTable;
                 default:
-                    if (Debugger.IsAttached) Debugger.Break();
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptor>(response.Content);
-                    throw new Exception(error.message);
+                    throw DreamFactoryException.Parse(response);
             }
         }
 
         public void DeleteTable(string tableName)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.DELETE);
 
             // delete the table
@@ -250,9 +310,7 @@ namespace OpenNETCF.DreamFactory
                     }
                     break;
                 default:
-                    if (Debugger.IsAttached) Debugger.Break();
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptor>(response.Content);
-                    throw new Exception(error.message);
+                    throw DreamFactoryException.Parse(response);
             }
         }
     }

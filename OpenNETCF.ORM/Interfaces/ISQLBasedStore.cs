@@ -10,6 +10,8 @@ namespace OpenNETCF.ORM
     {
         ConnectionBehavior ConnectionBehavior { get; set; }
 
+        string[] GetTableNames();
+
         int ExecuteNonQuery(string sql, bool throwExceptions);
         int ExecuteNonQuery(string sql);
         object ExecuteScalar(string sql);

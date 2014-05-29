@@ -317,7 +317,7 @@ namespace OpenNETCF.ORM
                 command.CommandText = sql.ToString();
                 command.Connection = connection;
                 command.Transaction = CurrentTransaction;
-                int i = command.ExecuteNonQuery();
+                command.ExecuteNonQuery();
             }
 
             // create indexes
@@ -1494,9 +1494,12 @@ namespace OpenNETCF.ORM
             var connection = GetConnection(true);
             try
             {
-                foreach (var entity in this.Entities)
+                lock (Entities.SyncRoot)
                 {
-                    ValidateTable(connection, entity);
+                    foreach (var entity in this.Entities)
+                    {
+                        ValidateTable(connection, entity);
+                    }
                 }
             }
             finally

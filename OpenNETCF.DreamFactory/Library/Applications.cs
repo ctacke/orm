@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using RestSharp;
+using System.Net;
 
 namespace OpenNETCF.DreamFactory
 {
@@ -41,6 +42,12 @@ namespace OpenNETCF.DreamFactory
 
             var response = Session.Client.Execute<ApplicationDescriptorList>(request);
 
+            var check = DreamFactoryException.ValidateIRestResponse(response);
+            if (check != null)
+            {
+                throw new DeserializationException(string.Format("Failed to retrieve Application descriptors: {0}", response.ErrorMessage), check);
+            }
+
             switch (response.StatusCode)
             {
                 case System.Net.HttpStatusCode.OK:
@@ -59,9 +66,7 @@ namespace OpenNETCF.DreamFactory
                     return apps.ToArray();
 
                 default:
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    // TODO: make a library-specific Exception class
-                    throw new Exception(error.error[0].message);
+                    throw DreamFactoryException.Parse(response);
             }
         }
 
@@ -86,12 +91,11 @@ namespace OpenNETCF.DreamFactory
 
             switch (response.StatusCode)
             {
-                case System.Net.HttpStatusCode.Created:
+                case HttpStatusCode.Created:
+                case HttpStatusCode.OK:
                     return Find(name);
                 default:
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    // TODO: make a library-specific Exception class
-                    throw new Exception(error.error[0].message);
+                    throw DreamFactoryException.Parse(response);
             }
         }
 
@@ -113,9 +117,7 @@ namespace OpenNETCF.DreamFactory
                 case System.Net.HttpStatusCode.OK:
                     return Find(application.APIName);
                 default:
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    // TODO: make a library-specific Exception class
-                    throw new Exception(error.error[0].message);
+                    throw DreamFactoryException.Parse(response);
             }
         }
 
@@ -135,9 +137,7 @@ namespace OpenNETCF.DreamFactory
                 case System.Net.HttpStatusCode.OK:
                     return;
                 default:
-                    var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
-                    // TODO: make a library-specific Exception class
-                    throw new Exception(error.error[0].message);
+                    throw DreamFactoryException.Parse(response);
             }
         }
     }

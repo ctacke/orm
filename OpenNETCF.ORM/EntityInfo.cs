@@ -45,7 +45,7 @@ namespace OpenNETCF.ORM
             return EntityName;
         }
 
-        protected void AddField(FieldAttribute field)
+        public void AddField(FieldAttribute field)
         {
             Fields.Add(field);
         }

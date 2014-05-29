@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using RestSharp;
+using System.Net;
 
 namespace OpenNETCF.DreamFactory
 {
@@ -21,6 +22,12 @@ namespace OpenNETCF.DreamFactory
             var request = Session.GetSessionRequest("/rest/app", Method.GET);
 
             var response = Session.Client.Execute<ContainerDescriptor>(request);
+
+            var check = DreamFactoryException.ValidateIRestResponse(response);
+            if (check != null)
+            {
+                throw new DeserializationException(string.Format("Failed to retrieve Container descriptors: {0}", response.ErrorMessage), check);
+            }
 
             switch (response.StatusCode)
             {
@@ -55,6 +62,12 @@ namespace OpenNETCF.DreamFactory
 
             var response = Session.Client.Execute<ContainerDescriptor>(request);
 
+            var check = DreamFactoryException.ValidateIRestResponse(response);
+            if (check != null)
+            {
+                throw new DeserializationException(string.Format("Failed to container descriptor for '{0}': {1}", containerName, response.ErrorMessage), check);
+            }
+
             switch (response.StatusCode)
             {
                 case System.Net.HttpStatusCode.OK:
@@ -83,7 +96,8 @@ namespace OpenNETCF.DreamFactory
 
             switch (response.StatusCode)
             {
-                case System.Net.HttpStatusCode.Created:
+                case HttpStatusCode.Created:
+                case HttpStatusCode.OK:
                     return GetContainer(containerName);
                 default:
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);

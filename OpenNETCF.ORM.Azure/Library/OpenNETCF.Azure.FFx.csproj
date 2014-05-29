@@ -1,14 +1,15 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{4D8FFD95-87BD-4873-83CE-01BA4A5CD5F1}</ProjectGuid>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{B96281BB-11C8-4D0B-AE28-690608B590BE}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>OpenNETCF.DreamFactory</RootNamespace>
-    <AssemblyName>OpenNETCF.DreamFactory</AssemblyName>
+    <RootNamespace>OpenNETCF.Azure</RootNamespace>
+    <AssemblyName>OpenNETCF.Azure</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>
@@ -28,13 +29,14 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>..\bin\Release\FFx\</OutputPath>
+    <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="OpenNETCF.Extensions">
+    <Reference Include="OpenNETCF.Extensions, Version=1.0.11237.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\References\FFx\OpenNETCF.Extensions.dll</HintPath>
     </Reference>
     <Reference Include="System" />
@@ -45,31 +47,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Applications.cs" />
-    <Compile Include="Container.cs" />
-    <Compile Include="Containers.cs" />
-    <Compile Include="Application.cs" />
+    <Compile Include="AzureFieldCollection.cs" />
+    <Compile Include="AzureEntity.cs" />
+    <Compile Include="AzureField.cs" />
+    <Compile Include="ServiceProxy.cs" />
     <Compile Include="Exceptions.cs" />
-    <Compile Include="Extensions.cs" />
-    <Compile Include="Field.cs" />
-    <Compile Include="Data.cs" />
-    <Compile Include="JSON Classes\ContainerDescriptor.cs" />
-    <Compile Include="JSON Classes\ErrorDescriptor.cs" />
-    <Compile Include="JSON Classes\TableDescriptor.cs" />
-    <Compile Include="JSON Classes\FieldDescriptor.cs" />
-    <Compile Include="JSON Classes\SessionDescriptor.cs" />
-    <Compile Include="JSON Classes\ApplicationDescriptor.cs" />
-    <Compile Include="JSON Classes\ResourceDescriptor.cs" />
-    <Compile Include="Table.cs" />
-    <Compile Include="Session.cs" />
-    <Compile Include="JSON Classes\CredentialDescriptor.cs" />
+    <Compile Include="Namespaces.cs" />
+    <Compile Include="AzureTable.cs" />
+    <Compile Include="AzureTableCollection.cs" />
+    <Compile Include="StorageCredentials.cs" />
+    <Compile Include="TableService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\RestSharp\RestSharp.FFx.csproj">
-      <Project>{2ececfbf-5f3e-40ee-a963-72336dc7abe2}</Project>
-      <Name>RestSharp.FFx</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

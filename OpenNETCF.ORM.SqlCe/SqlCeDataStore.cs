@@ -516,7 +516,7 @@ namespace OpenNETCF.ORM
         {
             if (!TableExists(entityName))
             {
-                throw new EntityNotFoundException(entityName);
+                return null;
             }
 
             var connection = GetConnection(true);

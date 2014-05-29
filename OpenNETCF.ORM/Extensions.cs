@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Data;
 using System.Security.Cryptography;
+using System.Diagnostics;
 
 namespace OpenNETCF.ORM
 {
@@ -143,6 +144,8 @@ namespace OpenNETCF.ORM
                     return isNullable ? typeof(int?) : typeof(int);
                 case DbType.UInt32:
                     return isNullable ? typeof(uint?) : typeof(uint);
+                case DbType.Time:
+                    return isNullable ? typeof(TimeSpan?) : typeof(TimeSpan);
                 case DbType.DateTime:
                     return isNullable ? typeof(DateTime?) : typeof(DateTime);
                 case DbType.Decimal:
@@ -162,6 +165,7 @@ namespace OpenNETCF.ORM
                 case DbType.Binary:
                     return typeof(byte[]);
                 default:
+                    if (Debugger.IsAttached) Debugger.Break();
                     throw new NotSupportedException();
             }
         }
@@ -192,7 +196,7 @@ namespace OpenNETCF.ORM
                 case "System.DateTime":
                     return DbType.DateTime;
                 case "System.TimeSpan":
-                    return DbType.Int64;
+                    return DbType.Time;
 
                 case "System.Single":
                     return DbType.Single;
@@ -238,6 +242,8 @@ namespace OpenNETCF.ORM
 
             switch (test)
             {
+                case "time":
+                    return DbType.Time;
                 case "datetime":
                     return DbType.DateTime;
                 case "bigint":
@@ -303,6 +309,7 @@ namespace OpenNETCF.ORM
                 case DbType.DateTime:
                     return "datetime";
                 case DbType.Time:
+                    return "time";
                 case DbType.Int64:
                 case DbType.UInt64:
                     return "bigint";

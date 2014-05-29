@@ -199,7 +199,12 @@ namespace OpenNETCF.DreamFactory
                 case "time":
                     field = new Field<TimeSpan>(f.name, f.label);
                     break;
+                case "reference":
+                    field = new Field<int>(f.name, f.label);
+                    // TODO: handle reference field
+                    break;
                 default:
+                    if (Debugger.IsAttached) Debugger.Break();
                     throw new NotSupportedException();
             }
 

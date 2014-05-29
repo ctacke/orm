@@ -8,7 +8,7 @@ using System.Reflection;
 namespace OpenNETCF.ORM
 {
     [AttributeUsage(AttributeTargets.Property)]
-    public class FieldAttribute : Attribute
+    public class FieldAttribute : Attribute, ICloneable
     {
         private DbType m_type;
         
@@ -21,6 +21,37 @@ namespace OpenNETCF.ORM
             RequireUniqueValue = false;
             Ordinal = -1;
             IsRowVersion = false;
+        }
+
+        public FieldAttribute(string name, DbType type)
+            : this(name, type, false)
+        {
+        }
+
+        public FieldAttribute(string name, DbType type, bool isPrimaryKey)
+            : this()
+        {
+            this.FieldName = name;
+            this.DataType = type;
+            this.IsPrimaryKey = isPrimaryKey;
+        }
+
+        public object Clone()
+        {
+            return new FieldAttribute(FieldName, DataType, IsPrimaryKey)
+            {
+                Length = this.Length,
+                Precision = this.Precision,
+                Scale = this.Scale,
+                AllowsNulls = this.AllowsNulls,
+                RequireUniqueValue = this.RequireUniqueValue,
+                Ordinal = this.Ordinal,
+                SearchOrder = this.SearchOrder,
+                DefaultType = this.DefaultType,
+                IsRowVersion = this.IsRowVersion,
+                PropertyInfo = this.PropertyInfo, // this might not be valid
+                DataTypeIsValid = this.DataTypeIsValid
+            };
         }
 
         public string FieldName { get; set; }
