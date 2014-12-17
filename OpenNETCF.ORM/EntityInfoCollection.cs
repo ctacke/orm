@@ -43,6 +43,24 @@ namespace OpenNETCF.ORM
             }
         }
 
+        public void Remove(string entityName)
+        {
+            lock (m_sycRoot)
+            {
+                if (m_entities.ContainsKey(entityName))
+                {
+                    m_entities.Remove(entityName);
+                }
+                foreach(var t in m_typeToNameMap.ToArray())
+                {
+                    if(t.Value == entityName)
+                    {
+                        m_typeToNameMap.Remove(t.Key);
+                    }
+                }
+            }
+        }
+
         public string GetNameForType(Type type)
         {
             lock (m_sycRoot)
@@ -75,6 +93,8 @@ namespace OpenNETCF.ORM
             {
                 lock (m_sycRoot)
                 {
+                    if (!m_entities.ContainsKey(entityName)) return null;
+
                     return m_entities[entityName.ToLower()];
                 }
             }

@@ -17,6 +17,7 @@ namespace OpenNETCF.DreamFactory
         public string Name { get; private set; }
         public string Label { get; private set; }
 
+        private UriFactory m_uris;
         private Session Session { get; set; }
         
         internal Table(Session session, ResourceDescriptor resource)
@@ -27,13 +28,14 @@ namespace OpenNETCF.DreamFactory
         internal Table(Session session, string tableName)
         {
             Session = session;
+            m_uris = new UriFactory(Session.ServerVersion);
 
             if (Session.Disconnected)
             {
                 Session.Reconnect();
             }
 
-            var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.GET);
+            var request = Session.GetSessionRequest(string.Format("{0}/{1}", m_uris.SchemaRoot, tableName), Method.GET);
 
             var response = Session.Client.Execute<TableDescriptor>(request);
 
@@ -65,6 +67,13 @@ namespace OpenNETCF.DreamFactory
 
                     Fields = fieldList.ToArray();
                     break;
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }
@@ -153,6 +162,13 @@ namespace OpenNETCF.DreamFactory
                         }
                     }
                     return records;
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }
@@ -193,6 +209,13 @@ namespace OpenNETCF.DreamFactory
                     // TODO: this feels fragile - we should look at improving it
                     return Convert.ToInt32(((SimpleJson.DeserializeObject(response.Content) as JsonObject)[1] as JsonObject)[0]);
 
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }
@@ -268,6 +291,13 @@ namespace OpenNETCF.DreamFactory
                     Session.Data.RemoveTableFromCache(this.Name);
 
                     throw new TableNotFoundException(this.Name);
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }
@@ -296,6 +326,13 @@ namespace OpenNETCF.DreamFactory
                 case HttpStatusCode.Created:
                 case HttpStatusCode.OK:
                     return;
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }
@@ -349,6 +386,13 @@ namespace OpenNETCF.DreamFactory
                 case HttpStatusCode.Created:
                 case HttpStatusCode.OK:
                     return;
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }
@@ -405,6 +449,13 @@ namespace OpenNETCF.DreamFactory
 
                         var value = key[name];
                         return value;
+                    case HttpStatusCode.Forbidden:
+                    case HttpStatusCode.Unauthorized:
+                        if (Debugger.IsAttached) Debugger.Break();
+
+                        Session.Disconnected = true;
+
+                        throw DreamFactoryException.Parse(response);
                     default:
                         throw DreamFactoryException.Parse(response);
                 }

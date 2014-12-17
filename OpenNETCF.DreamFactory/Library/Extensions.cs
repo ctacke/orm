@@ -109,6 +109,7 @@ namespace OpenNETCF.DreamFactory
                 case DbType.Decimal:
                     return "float";
                 case DbType.Double:
+                case DbType.Single:
                     return "decimal";
                 case DbType.DateTime:
                     return "datetime";
@@ -192,11 +193,15 @@ namespace OpenNETCF.DreamFactory
                 case "decimal":
                     field = new Field<decimal>(f.name, f.label);
                     break;
+                case "double":
+                    field = new Field<double>(f.name, f.label);
+                    break;
                 case "datetime":
                 case "date":
                     field = new Field<DateTime>(f.name, f.label);
                     break;
                 case "time":
+                case "timestamp":
                     field = new Field<TimeSpan>(f.name, f.label);
                     break;
                 case "reference":

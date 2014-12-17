@@ -45,16 +45,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Application.cs" />
     <Compile Include="Applications.cs" />
     <Compile Include="Container.cs" />
     <Compile Include="Containers.cs" />
-    <Compile Include="Application.cs" />
     <Compile Include="Exceptions.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Field.cs" />
     <Compile Include="Data.cs" />
     <Compile Include="JSON Classes\ContainerDescriptor.cs" />
     <Compile Include="JSON Classes\ErrorDescriptor.cs" />
+    <Compile Include="JSON Classes\SystemConfigDescriptor.cs" />
     <Compile Include="JSON Classes\TableDescriptor.cs" />
     <Compile Include="JSON Classes\FieldDescriptor.cs" />
     <Compile Include="JSON Classes\SessionDescriptor.cs" />
@@ -64,6 +65,7 @@
     <Compile Include="Session.cs" />
     <Compile Include="JSON Classes\CredentialDescriptor.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="UriFactory.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\RestSharp\RestSharp.FFx.csproj">

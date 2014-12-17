@@ -39,6 +39,7 @@ namespace OpenNETCF.ORM
         public abstract IEnumerable<object> Select(Type entityType);
         public abstract IEnumerable<object> Select(Type entityType, bool fillReferences);
         public abstract IEnumerable<DynamicEntity> Select(string entityName);
+        public abstract IEnumerable<DynamicEntity> Select(string entityName, IEnumerable<FilterCondition> filters);
         public abstract DynamicEntity Select(string entityName, object primaryKey);
 
         public event EventHandler<EntityUpdateArgs> BeforeUpdate;
@@ -216,6 +217,8 @@ namespace OpenNETCF.ORM
         {
             string name;
 
+            if (item == null) throw new ArgumentNullException("item");
+
             if (item is DynamicEntity)
             {
                 name = (item as DynamicEntity).EntityName;
@@ -255,6 +258,11 @@ namespace OpenNETCF.ORM
 
         public IEntityInfo GetEntityInfo(string entityName)
         {
+            if (!Entities.Contains(entityName))
+            {
+                DiscoverDynamicEntity(entityName);
+            }
+
             return Entities[entityName];
         }
 
@@ -371,7 +379,7 @@ namespace OpenNETCF.ORM
 
             // see if we have any entity 
             // get all field definitions
-            foreach (var prop in entityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance))
+            foreach (var prop in entityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy))
             {
                 var attribute = prop.GetCustomAttributes(true)
                     .Where(a => 
@@ -410,9 +418,27 @@ namespace OpenNETCF.ORM
                         map.Fields.Add(attribute);
                     }
 
-                    if ((m_entities.Contains(map.EntityName)) && (m_entities[map.EntityName].Fields[attribute.FieldName].PropertyInfo == null))
+                    if (m_entities.Contains(map.EntityName))
                     {
-                        m_entities[map.EntityName].Fields[attribute.FieldName].PropertyInfo = prop;
+                        if (m_entities[map.EntityName].Fields.ContainsField(attribute.FieldName))
+                        { // make sure the PropertyInfo is set (dynamic discovery can leave this null)
+                            if (m_entities[map.EntityName].Fields[attribute.FieldName].PropertyInfo == null)
+                            {
+                                m_entities[map.EntityName].Fields[attribute.FieldName].PropertyInfo = prop;
+                            }
+                        }
+                        else
+                        { // the entity doesn't contain this named field, but should.
+                            if (ensureCompatibility)
+                            {
+                                m_entities[map.EntityName].Fields.Add(attribute);
+                            }
+                            else
+                            {
+                                throw new FieldNotFoundException(string.Format("Field '{0}' not found in destination Entity '{1}'. Consider calling with ensureCompatibility parameter set to 'true'.",
+                                    attribute.FieldName, map.EntityName));
+                            }
+                        }
                     }
                 }
                 else
@@ -427,12 +453,12 @@ namespace OpenNETCF.ORM
                 }
             }
 
-            if (m_entities.Contains(map.EntityName))
-            {
-                // this will ensure that the m_entities type to name map is properly filled out
-                m_entities.Add(map);
-                return;
-            }
+//            if (m_entities.Contains(map.EntityName))
+//            {
+//                // this will ensure that the m_entities type to name map is properly filled out
+//                m_entities.Add(map);
+//                return;
+//            }
 
             if (map.Fields.Count == 0)
             {
@@ -440,7 +466,7 @@ namespace OpenNETCF.ORM
             }
 
             // store a creator proxy delegate if the entity supports it (*way* faster for Selects)
-            var methodInfo = entityType.GetMethod("ORM_CreateProxy", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance);
+            var methodInfo = entityType.GetMethod("ORM_CreateProxy", BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
             if (methodInfo != null)
             {
                 map.CreateProxy = (EntityCreatorDelegate)Delegate.CreateDelegate(typeof(EntityCreatorDelegate), null, methodInfo);

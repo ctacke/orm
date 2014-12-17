@@ -24,9 +24,12 @@ namespace OpenNETCF.DreamFactory
         public bool Disconnected { get; internal set; }
 
         private SessionDescriptor SessionDescriptor { get; set; }
+        private SystemConfigDescriptor ConfigDescriptor { get; set; }
 
         public Data Data { get; private set; }
         public Applications Applications { get; private set; }
+
+        public Version ServerVersion { get; private set; }
 
         public Session(string dspRootAddress, string application, string username, string password)
             : this(dspRootAddress, application, username, password, null, true)
@@ -96,7 +99,7 @@ namespace OpenNETCF.DreamFactory
             var check = DreamFactoryException.ValidateIRestResponse(response);
             if (check != null)
             {
-                throw new DeserializationException(string.Format("Failed to deserialize the Session descriptor: {0}", response.ErrorMessage), check);
+                throw new DeserializationException(string.Format("Failed to deserialize the Session descriptor: {0}", check.Message), check);
             }
 
             switch (response.StatusCode)
@@ -114,6 +117,10 @@ namespace OpenNETCF.DreamFactory
 
             // TODO: set some properties that might be of interest
 
+            // get the server version
+            ConfigDescriptor = GetSystemConfig();
+            ServerVersion = new Version(ConfigDescriptor.dsp_version);
+
             if (Data == null)
             {
                 Data = new Data(this);
@@ -121,6 +128,27 @@ namespace OpenNETCF.DreamFactory
             if (Applications == null)
             {
                 Applications = new Applications(this);
+            }
+        }
+
+        private SystemConfigDescriptor GetSystemConfig()
+        {
+            var request = GetSessionRequest("/rest/system/config", Method.GET);
+            var response = Client.Execute<SystemConfigDescriptor>(request);
+
+            var check = DreamFactoryException.ValidateIRestResponse(response);
+            if (check != null)
+            {
+                throw new DeserializationException(string.Format("Failed to deserialize the Session descriptor: {0}", response.ErrorMessage), check);
+            }
+
+            switch (response.StatusCode)
+            {
+                case HttpStatusCode.Created:
+                case HttpStatusCode.OK:
+                    return response.Data;
+                default:
+                    throw DreamFactoryException.Parse(response);
             }
         }
 

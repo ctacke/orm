@@ -54,8 +54,8 @@ namespace OpenNETCF.DreamFactory
             {
                 switch (response.StatusCode)
                 {
-                    case HttpStatusCode.BadRequest:
-                        return new InvalidCredentialsException(errorList.error[0]);
+//                    case HttpStatusCode.BadRequest:
+//                        return new InvalidCredentialsException(errorList.error[0]);
                     default:
                         return new DreamFactoryException(errorList.error[0]);
                 }
@@ -68,7 +68,15 @@ namespace OpenNETCF.DreamFactory
             switch (response.ResponseStatus)
             {
                 case ResponseStatus.Error:
-                    return new DreamFactoryException("Response Error: " + response.ErrorMessage, response.ErrorException);
+                    switch (response.StatusCode)
+                    {
+                        case HttpStatusCode.GatewayTimeout:
+                            return new DreamFactoryException("Error 504: Gateway Timeout", response.ErrorException);
+                        default:
+                            return new DreamFactoryException("Response Error: " + response.ErrorMessage, response.ErrorException);
+                    }
+                case ResponseStatus.TimedOut:
+                    return new DreamFactoryException("Timeout", response.ErrorException);
                 default:
                     return null;
             }
