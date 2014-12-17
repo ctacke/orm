@@ -12,11 +12,13 @@ namespace OpenNETCF.DreamFactory
     public sealed class Data
     {
         private Dictionary<string, Table> m_tableCache;
+        private UriFactory m_uris;
         private Session Session { get; set; }
 
         internal Data(Session session)
         {
             Session = session;
+            m_uris = new UriFactory(Session.ServerVersion);
             m_tableCache = new Dictionary<string, Table>(StringComparer.InvariantCultureIgnoreCase);
         }
 
@@ -42,7 +44,8 @@ namespace OpenNETCF.DreamFactory
                 Session.Reconnect();
             }
 
-            var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.GET);
+//            var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.GET);
+            var request = Session.GetSessionRequest(m_uris.GetTableSchema(tableName), Method.GET);
 
             var response = Session.Client.Execute<ResourceDescriptor>(request);
 
@@ -163,7 +166,13 @@ namespace OpenNETCF.DreamFactory
                     }
             
                     return list.ToArray();
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
 
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }
@@ -176,21 +185,23 @@ namespace OpenNETCF.DreamFactory
                 Session.Reconnect();
             }
 
-            var fieldDescriptors = new List<FieldDescriptor>();
-
+            var tableDescriptor = new TableDescriptor();
+            tableDescriptor.name = tableName;
+            tableDescriptor.field = new List<FieldDescriptor>();
             foreach (var f in updatedFieldList)
             {
-                fieldDescriptors.Add(f.AsFieldDescriptor());
+                tableDescriptor.field.Add(f.AsFieldDescriptor());
             }
 
-            var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.PUT);
+//            var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.PATCH);
+            var request = Session.GetSessionRequest(m_uris.GetTableSchema(tableName), Method.PATCH);
 
             request.JsonSerializer.ContentType = "application/json; charset=utf-8";
             request.JsonSerializer.Options = new SerializerOptions()
             {
                 SkipNullProperties = true
             };
-            request.AddBody(fieldDescriptors);
+            request.AddBody(tableDescriptor);
 
             // create the table
             var response = Session.Client.Execute(request);
@@ -217,6 +228,13 @@ namespace OpenNETCF.DreamFactory
                     // TODO: handle failure
 
                     return actualTable;
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }
@@ -253,7 +271,7 @@ namespace OpenNETCF.DreamFactory
             tableDescriptor.field = fieldDescriptors;
 
             // build up a request to create the table
-            var request = Session.GetSessionRequest("/rest/schema", Method.POST);
+            var request = Session.GetSessionRequest(m_uris.SchemaRoot, Method.POST);
 
             request.JsonSerializer.ContentType = "application/json; charset=utf-8";
             request.JsonSerializer.Options = new SerializerOptions()
@@ -281,6 +299,13 @@ namespace OpenNETCF.DreamFactory
                     // TODO: handle failure
 
                     return actualTable;
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }
@@ -293,7 +318,7 @@ namespace OpenNETCF.DreamFactory
                 Session.Reconnect();
             }
 
-            var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.DELETE);
+            var request = Session.GetSessionRequest(string.Format("{0}/{1}", m_uris.SchemaRoot, tableName), Method.DELETE);
 
             // delete the table
             var response = Session.Client.Execute(request);
@@ -309,6 +334,13 @@ namespace OpenNETCF.DreamFactory
                         }
                     }
                     break;
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }

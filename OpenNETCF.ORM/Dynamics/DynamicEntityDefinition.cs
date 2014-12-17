@@ -25,6 +25,12 @@ namespace OpenNETCF.ORM
             this.EntityType = typeof(DynamicEntityDefinition);
             this.Initialize(entityAttribute, this.EntityType);
             this.Fields.AddRange(fields);
+
+            var k = this.Fields.FirstOrDefault(c => c.IsPrimaryKey);
+            if (k != null)
+            {
+                this.PrimaryKeyColumnName = k.FieldName;
+            }
         }
 
         private DynamicEntityDefinition(DynamicEntityDefinition source)
@@ -37,6 +43,12 @@ namespace OpenNETCF.ORM
 
             // TODO make a copy of these?
             this.Fields.AddRange(source.Fields);
+
+            var k = this.Fields.FirstOrDefault(c => c.IsPrimaryKey);
+            if (k != null)
+            {
+                this.PrimaryKeyColumnName = k.FieldName;
+            }
         }
 
         object ICloneable.Clone()

@@ -492,5 +492,10 @@ namespace OpenNETCF.ORM
         {
             throw new NotImplementedException();
         }
+
+        public override IEnumerable<DynamicEntity> Select(string entityName, IEnumerable<FilterCondition> filters)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

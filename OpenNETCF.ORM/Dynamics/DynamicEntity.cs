@@ -44,7 +44,8 @@ namespace OpenNETCF.ORM
         {
             return new DynamicEntity(EntityName)
             {
-                Fields = this.Fields.Clone() as FieldCollection
+                Fields = this.Fields.Clone() as FieldCollection,
+                KeyField = this.KeyField
             };
         }
     }

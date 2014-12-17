@@ -20,5 +20,7 @@ namespace OpenNETCF.ORM
         IDataReader ExecuteReader(string sql, IEnumerable<IDataParameter> parameters);
         IDataReader ExecuteReader(string sql, IEnumerable<IDataParameter> parameters, bool throwExceptions);
         IDataReader ExecuteReader(string sql, IEnumerable<IDataParameter> parameters, CommandBehavior behavior, bool throwExceptions);
+
+        void CompactDatabase();
     }
 }

@@ -307,19 +307,39 @@ namespace OpenNETCF.ORM
         {
             var filter = new StringBuilder(f.FieldName);
 
+            // These assume a SQLite-backed DSP
+            // SQLite has some specific date and time requirements becasue it doesn't actually have a DateTime data type
+            string formattedValue;
+
+            if (f.Value is DateTime)
+            {
+                // YYYY-MM-DD HH:MM:SS
+                formattedValue = string.Format("{0:yyyy-MM-dd HH:mm:ss}", f.Value);
+            }
+            else if (f.Value is TimeSpan)
+            {
+                // HH:MM:SS
+                formattedValue = string.Format("{0:HH:mm:ss}", f.Value);
+            }
+            else
+            {
+                formattedValue = f.Value.ToString();
+            }
+
+
             switch(f.Operator)
             {
                 case FilterCondition.FilterOperator.Equals:
-                    filter.AppendFormat(" = '{0}'", f.Value);
+                    filter.AppendFormat(" = '{0}'", formattedValue);
                     break;
                 case FilterCondition.FilterOperator.GreaterThan:
-                    filter.AppendFormat(" > '{0}'", f.Value);
+                    filter.AppendFormat(" > '{0}'", formattedValue);
                     break;
                 case FilterCondition.FilterOperator.LessThan:
-                    filter.AppendFormat(" < '{0}'", f.Value);
+                    filter.AppendFormat(" < '{0}'", formattedValue);
                     break;
                 case FilterCondition.FilterOperator.Like:
-                    filter.AppendFormat(" LIKE '{0}'", f.Value);
+                    filter.AppendFormat(" LIKE '{0}'", formattedValue);
                     break;
             }
 
@@ -713,6 +733,34 @@ namespace OpenNETCF.ORM
             if (record == null) return null;
 
             return DynamicEntityFromEntityValueDictionary(entityName, record);
+        }
+
+        public override IEnumerable<DynamicEntity> Select(string entityName, IEnumerable<FilterCondition> filters)
+        {
+            var table = m_session.Data.GetTable(entityName);
+            IEnumerable<object[]> records;
+
+            if ((filters != null) && (filters.Count() > 0))
+            {
+                var filter = string.Join(" AND ", (from f in filters
+                                                   select FilterToString(f)).ToArray());
+
+                records = table.GetRecords(filter);
+            }
+            else
+            {
+                records = table.GetRecords();
+            }
+
+            var items = new List<DynamicEntity>();
+
+            foreach (var record in records)
+            {
+                var instance = DynamicEntityFromEntityValueDictionary(entityName, record);
+                items.Add(instance);
+            }
+
+            return items;
         }
 
         public override DynamicEntityDefinition DiscoverDynamicEntity(string entityName)

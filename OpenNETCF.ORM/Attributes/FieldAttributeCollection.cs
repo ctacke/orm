@@ -45,7 +45,7 @@ namespace OpenNETCF.ORM
             {
                 foreach (var f in fields)
                 {
-                    Add(f);
+                    Add(f, true);
                 }
             }
         }

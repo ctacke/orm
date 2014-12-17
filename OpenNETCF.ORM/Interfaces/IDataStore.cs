@@ -54,6 +54,7 @@ namespace OpenNETCF.ORM
         IEnumerable<object> Select(Type entityType, bool fillReferences);
         IEnumerable<T> Select<T>(Func<T, bool> selector) where T : new();
         IEnumerable<DynamicEntity> Select(string entityName);
+        IEnumerable<DynamicEntity> Select(string entityName, IEnumerable<FilterCondition> filters);
         DynamicEntity Select(string entityName, object primaryKey);
 
         void Update(object item);

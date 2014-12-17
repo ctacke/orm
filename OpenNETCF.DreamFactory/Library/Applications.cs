@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using RestSharp;
 using System.Net;
+using System.Diagnostics;
 
 namespace OpenNETCF.DreamFactory
 {
@@ -28,6 +29,11 @@ namespace OpenNETCF.DreamFactory
 
         public Application[] Get(string filter)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest("/rest/system/app", Method.GET);
 
             if (!filter.IsNullOrEmpty())
@@ -65,6 +71,13 @@ namespace OpenNETCF.DreamFactory
 
                     return apps.ToArray();
 
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }
@@ -72,6 +85,11 @@ namespace OpenNETCF.DreamFactory
 
         public Application Create(string name)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var descriptor = new ApplicationDescriptor()
             {
                 name = name,
@@ -94,6 +112,13 @@ namespace OpenNETCF.DreamFactory
                 case HttpStatusCode.Created:
                 case HttpStatusCode.OK:
                     return Find(name);
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }
@@ -101,6 +126,11 @@ namespace OpenNETCF.DreamFactory
 
         public Application Update(Application application)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest("/rest/system/app", Method.PUT);
 
             request.JsonSerializer.ContentType = "application/json; charset=utf-8";
@@ -116,6 +146,13 @@ namespace OpenNETCF.DreamFactory
             {
                 case System.Net.HttpStatusCode.OK:
                     return Find(application.APIName);
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }
@@ -128,6 +165,11 @@ namespace OpenNETCF.DreamFactory
 
         public void Delete(string applicationID)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest(string.Format("/rest/system/app/{0}", applicationID), Method.DELETE);
 
             var response = Session.Client.Execute(request);
@@ -136,6 +178,13 @@ namespace OpenNETCF.DreamFactory
             {
                 case System.Net.HttpStatusCode.OK:
                     return;
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     throw DreamFactoryException.Parse(response);
             }

@@ -72,6 +72,13 @@ namespace OpenNETCF.ORM
             Dispose(false);
         }
 
+        /// <summary>
+        /// Derived classes should override this if the underlying engine supports compaction
+        /// </summary>
+        public virtual void CompactDatabase()
+        {
+        }
+
         public int OpenConnectionCount
         {
             get { return m_connectionCount; }
@@ -150,13 +157,16 @@ namespace OpenNETCF.ORM
 
         protected virtual IDbConnection GetConnection(bool maintenance)
         {
+            IDbConnection result;
+
             switch (ConnectionBehavior)
             {
                 case ConnectionBehavior.AlwaysNew:
                     var connection = GetNewConnectionObject();
                     connection.Open();
                     Interlocked.Increment(ref m_connectionCount);
-                    return connection;
+                    result = connection;
+                    break;
                 case ConnectionBehavior.HoldMaintenance:
                     if (m_connection == null)
                     {
@@ -168,7 +178,8 @@ namespace OpenNETCF.ORM
                     var connection2 = GetNewConnectionObject();
                     connection2.Open();
                     Interlocked.Increment(ref m_connectionCount);
-                    return connection2;
+                    result = connection2;
+                    break;
                 case ConnectionBehavior.Persistent:
                     if (m_connection == null)
                     {
@@ -176,10 +187,19 @@ namespace OpenNETCF.ORM
                         m_connection.Open();
                         Interlocked.Increment(ref m_connectionCount);
                     }
-                    return m_connection;
+                    result = m_connection;
+                    break;
                 default:
                     throw new NotSupportedException();
             }
+
+            // make sure the connection is open (in the event we has some network condition that closed it, etc.
+            if (result.State != ConnectionState.Open)
+            {
+                result.Open();
+            }
+
+            return result;
         }
 
         protected virtual void DoneWithConnection(IDbConnection connection, bool maintenance)
@@ -237,6 +257,17 @@ namespace OpenNETCF.ORM
 
         public object ExecuteScalar(string sql)
         {
+            switch (Environment.OSVersion.Platform)
+            {
+                case PlatformID.Unix:
+                    return ExecuteScalarSimulated(sql);
+                default:
+                    return ExecuteScalarActual(sql);
+            }
+        }
+
+        private object ExecuteScalarActual(string sql)
+        {
             var connection = GetConnection(false);
             try
             {
@@ -247,6 +278,43 @@ namespace OpenNETCF.ORM
                     command.Transaction = CurrentTransaction;
                     return command.ExecuteScalar();
                 }
+            }
+            finally
+            {
+                DoneWithConnection(connection, false);
+            }
+        }
+
+        /// <summary>
+        /// This is a "simulation" of ExecuteScalar, which is necessary because an actual ExecuteScaler in Mono will fail
+        /// </summary>
+        /// <param name="sql"></param>
+        /// <returns></returns>
+        private object ExecuteScalarSimulated(string sql)
+        {
+            var connection = GetConnection(false);
+            try
+            {
+                object result = null;
+
+                using (var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+                    command.CommandText = sql;
+                    command.Transaction = CurrentTransaction;
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            if (reader.FieldCount > 0)
+                            {
+                                return reader[0];
+                            }
+                        }
+                    }
+                }
+
+                return result;
             }
             finally
             {
@@ -748,7 +816,7 @@ namespace OpenNETCF.ORM
         }
 
         private const int CommandCacheMaxLength = 10;
-        protected Dictionary<string, DbCommand> CommandCache = new Dictionary<string, DbCommand>();
+        protected Dictionary<string, IDbCommand> CommandCache = new Dictionary<string, IDbCommand>();
 
         /// <summary>
         /// Determines if the ORM engine should be allowed to cache commands of not.  If you frequently use the same FilterConditions on a Select call to a single entity, 
@@ -766,6 +834,24 @@ namespace OpenNETCF.ORM
                 }
                 CommandCache.Clear();
             }
+        }
+        
+        public override IEnumerable<DynamicEntity> Select(string entityName, IEnumerable<FilterCondition> filters)
+        {
+            throw new NotSupportedException();
+            //var connection = GetConnection(true);
+            //try
+            //{
+            //    using (var command = BuildFilterCommand(entityName, filters, false))
+            //    {
+            //        command.Connection = connection;
+            //        var reader = command.ExecuteReader();
+            //    }
+            //}
+            //finally
+            //{
+            //    DoneWithConnection(connection, true);
+            //}
         }
 
         protected virtual TCommand GetSelectCommand<TCommand, TParameter>(string entityName, IEnumerable<FilterCondition> filters, out bool tableDirect)
@@ -876,6 +962,115 @@ namespace OpenNETCF.ORM
                         for (int p = 0; p < command.Parameters.Count; p++)
                         {
                             command.Parameters[p].Value = @params[p].Value;
+                        }
+                    }
+                    else
+                    {
+                        CommandCache.Add(sql, command);
+
+                        // trim the cache so it doesn't grow infinitely
+                        if (CommandCache.Count > CommandCacheMaxLength)
+                        {
+                            CommandCache.Remove(CommandCache.First().Key);
+                        }
+                    }
+                }
+            }
+
+            return command;
+        }
+
+
+        protected IDbCommand BuildFilterCommand(string entityName, IEnumerable<FilterCondition> filters, bool isCount)
+        {
+            var command = GetNewCommandObject();
+            command.CommandType = CommandType.Text;
+
+            var @params = new List<IDataParameter>();
+
+            StringBuilder sb;
+
+            if (isCount)
+            {
+                sb = new StringBuilder(string.Format("SELECT COUNT(*) FROM {0}", entityName));
+            }
+            else
+            {
+                //                sb = new StringBuilder(string.Format("SELECT * FROM {0}", entityName));
+                sb = new StringBuilder("SELECT ");
+
+                var count = Entities[entityName].Fields.Count;
+                var ordinal = 0;
+                foreach (var field in Entities[entityName].Fields)
+                {
+                    field.Ordinal = ordinal;
+                    ordinal++;
+                    sb.Append(field.FieldName);
+                    if (--count > 0) sb.Append(", ");
+                }
+                sb.Append(string.Format(" FROM {0}", entityName));
+            }
+
+            if (filters != null)
+            {
+                for (int i = 0; i < filters.Count(); i++)
+                {
+                    sb.Append(i == 0 ? " WHERE " : " AND ");
+
+                    var filter = filters.ElementAt(i);
+                    sb.Append(filter.FieldName);
+
+                    switch (filters.ElementAt(i).Operator)
+                    {
+                        case FilterCondition.FilterOperator.Equals:
+                            if ((filter.Value == null) || (filter.Value == DBNull.Value))
+                            {
+                                sb.Append(" IS NULL ");
+                                continue;
+                            }
+                            sb.Append(" = ");
+                            break;
+                        case FilterCondition.FilterOperator.Like:
+                            sb.Append(" LIKE ");
+                            break;
+                        case FilterCondition.FilterOperator.LessThan:
+                            sb.Append(" < ");
+                            break;
+                        case FilterCondition.FilterOperator.GreaterThan:
+                            sb.Append(" > ");
+                            break;
+                        default:
+                            throw new NotSupportedException();
+                    }
+
+                    string paramName = string.Format("{0}p{1}", ParameterPrefix, i);
+                    sb.Append(paramName);
+
+                    var param = command.CreateParameter();
+
+                    param.ParameterName = paramName;
+                    param.Value = filter.Value ?? DBNull.Value;
+
+                    command.Parameters.Add(param);
+                }
+            }
+            var sql = sb.ToString();
+            command.CommandText = sql;
+
+            if ((UseCommandCache) && (!isCount))
+            {
+                lock (CommandCache)
+                {
+                    if (CommandCache.ContainsKey(sql))
+                    {
+                        command.Dispose();
+                        command = (DbCommand)CommandCache[sb.ToString()];
+
+                        // use the cached command object, but we must copy over the new command parameter values
+                        // or it will use the old ones
+                        for (int p = 0; p < command.Parameters.Count; p++)
+                        {
+                            (command.Parameters[p] as IDbDataParameter).Value = @params[p].Value;
                         }
                     }
                     else
@@ -1195,6 +1390,8 @@ namespace OpenNETCF.ORM
                     command.CommandText = string.Format("DROP TABLE {0}", tableName);
                     command.ExecuteNonQuery();
                 }
+
+                Entities.Remove(tableName);
             }
             finally
             {
@@ -1659,7 +1856,7 @@ namespace OpenNETCF.ORM
             //    sql.AppendFormat(" ORDER BY {0} {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
             //}
 
-            var sql = new StringBuilder();
+            var sql = new StringBuilder(1024);
 
             sql.AppendFormat("SELECT * FROM {0}", entityName);
 
@@ -1670,10 +1867,10 @@ namespace OpenNETCF.ORM
 
             if (fetchCount > 0)
             {
-                sql.AppendFormat(" LIMIT {0}", fetchCount);
+                sql.AppendFormat(" LIMIT {0}", fetchCount); // this is a SQLite thing
             }
 
-
+            Select<object>(o => true).OrderBy(c => c.ToString());
             var connection = GetConnection(false);
             try
             {

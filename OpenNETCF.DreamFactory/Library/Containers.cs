@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using RestSharp;
 using System.Net;
+using System.Diagnostics;
 
 namespace OpenNETCF.DreamFactory
 {
@@ -18,6 +19,11 @@ namespace OpenNETCF.DreamFactory
 
         public Container[] GetContainers()
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             // this is non-intuitive based on the published API.
             var request = Session.GetSessionRequest("/rest/app", Method.GET);
 
@@ -46,6 +52,13 @@ namespace OpenNETCF.DreamFactory
 
                     return containers.ToArray();
 
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
                     // TODO: make a library-specific Exception class
@@ -55,6 +68,11 @@ namespace OpenNETCF.DreamFactory
 
         public Container GetContainer(string containerName)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             // todo: add caching
 
             // The trailing slash here is *required*. Without it we'll get back a NotFound
@@ -81,6 +99,13 @@ namespace OpenNETCF.DreamFactory
                     return null;
                 case System.Net.HttpStatusCode.NotFound:
                     return null;
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
                     // TODO: make a library-specific Exception class
@@ -90,6 +115,11 @@ namespace OpenNETCF.DreamFactory
 
         public Container CreateContainer(string containerName)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest(string.Format("/rest/app/{0}/", containerName), Method.POST);
 
             var response = Session.Client.Execute(request);
@@ -99,6 +129,13 @@ namespace OpenNETCF.DreamFactory
                 case HttpStatusCode.Created:
                 case HttpStatusCode.OK:
                     return GetContainer(containerName);
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
                     // TODO: make a library-specific Exception class
@@ -108,6 +145,11 @@ namespace OpenNETCF.DreamFactory
 
         public void DeleteContainer(string containerName)
         {
+            if (Session.Disconnected)
+            {
+                Session.Reconnect();
+            }
+
             var request = Session.GetSessionRequest(string.Format("/rest/app/{0}/", containerName), Method.DELETE);
 
             var response = Session.Client.Execute(request);
@@ -116,6 +158,13 @@ namespace OpenNETCF.DreamFactory
             {
                 case System.Net.HttpStatusCode.OK:
                     return;
+                case HttpStatusCode.Forbidden:
+                case HttpStatusCode.Unauthorized:
+                    if (Debugger.IsAttached) Debugger.Break();
+
+                    Session.Disconnected = true;
+
+                    throw DreamFactoryException.Parse(response);
                 default:
                     var error = SimpleJson.DeserializeObject<ErrorDescriptorList>(response.Content);
                     // TODO: make a library-specific Exception class

@@ -150,14 +150,32 @@ namespace OpenNETCF.ORM
                 {
                     // if it's an ID field, don't set it
                     if(field.Name == item.KeyField) continue;
+                    var paramName = ParameterPrefix + field.Name;
+
+                    if (!command.Parameters.Contains(paramName))
+                    {
+                        // is this a key field that got missed?  This is unlikely (it's actually a bug) but
+                        // this check is defensive coding
+                        continue;
+                    }
+
+                    var @param = command.Parameters[paramName];
 
                     if (field.Value is TimeSpan)
                     {
-                        command.Parameters[ParameterPrefix + field.Name].Value = ((TimeSpan)field.Value).Ticks;
+                        @param.Value = ((TimeSpan)field.Value).Ticks;
                     }
                     else
                     {
-                        command.Parameters[ParameterPrefix + field.Name].Value = field.Value;
+                        switch (@param.DbType)
+                        {
+                            case DbType.DateTime:
+                                @param.Value = Convert.ToDateTime(field.Value);
+                                break;
+                            default:
+                                @param.Value = field.Value;
+                                break;
+                        }
                     }
                 }
 
@@ -287,22 +305,33 @@ namespace OpenNETCF.ORM
             if (fillReferences) throw new NotSupportedException("References not currently supported with this version of Fetch.");
             if (filter != null) throw new NotSupportedException("Filters not currently supported with this version of Fetch.  Try post-filtering with LINQ");
 
-            var sql = string.Format("SELECT * FROM {0} LIMIT {1}", entityName, fetchCount);
+            if (!TableExists(entityName)) return null;
+
+            var sql = string.Format("SELECT * FROM {0}", entityName);
+
+            if (!string.IsNullOrEmpty(sortField))
+            {
+                sql += string.Format(" ORDER BY {0} {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+            }
+
+            sql += string.Format(" LIMIT {0}", fetchCount);
 
             if (firstRowOffset > 0)
             {
                 sql += string.Format(" OFFSET {0}", firstRowOffset);
             }
 
-            if (!string.IsNullOrEmpty(sortField))
-            {
-                sql += string.Format("ORDER BY {0} {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
-            }
-
             var connection = GetConnection(false);
             try
             {
                 var entities = new List<DynamicEntity>();
+
+                string keyName = null;
+
+                if((m_entities.Contains(entityName)) && (m_entities[entityName].Fields.KeyField != null))
+                {
+                    keyName = m_entities[entityName].Fields.KeyField.FieldName;
+                }
 
                 using (var command = GetNewCommandObject())
                 {
@@ -315,10 +344,18 @@ namespace OpenNETCF.ORM
                         while (reader.Read())
                         {
                             var e = new DynamicEntity(entityName);
+                            
+
                             for (int i = 0; i < reader.FieldCount; i++)
                             {
                                 e.Fields.Add(reader.GetName(i), reader.GetValue(i));
                             }
+
+                            if(keyName != null)
+                            {
+                                e.KeyField = keyName;
+                            }
+
                             entities.Add(e);
                         }
                     }
