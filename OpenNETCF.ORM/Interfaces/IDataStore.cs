@@ -88,5 +88,7 @@ namespace OpenNETCF.ORM
         void BeginTransaction();
         void Commit();
         void Rollback();
+
+        void Drop(string entityName);
     }
 }

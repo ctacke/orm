@@ -95,6 +95,11 @@ namespace OpenNETCF.ORM
             m_session.Data.CreateTable(name, name, fields); 
         }
 
+        public override void Drop(string entityName)
+        {
+            DropTable(entityName);
+        }
+
         public void DropTable(string tableName)
         {
             m_session.Data.DeleteTable(tableName);
@@ -389,7 +394,17 @@ namespace OpenNETCF.ORM
 
             var values = GetEntityValueDictionary(item, out idField);
 
-            var key = table.InsertRecord(values);
+            object key;
+
+            try
+            {
+                key = table.InsertRecord(values);
+            }
+            catch (InvalidSessionException)
+            {
+                m_session.Reconnect();
+                key = table.InsertRecord(values);
+            }
 
             if((key != null) && (idField != null))
             {
@@ -407,7 +422,15 @@ namespace OpenNETCF.ORM
             FieldAttribute idField;
             var values = GetEntityValueDictionary(item, out idField);
 
-            table.UpdateRecord(values);
+            try
+            {
+                table.UpdateRecord(values);
+            }
+            catch (InvalidSessionException)
+            {
+                m_session.Reconnect();
+                table.UpdateRecord(values);
+            }
         }
 
         public override bool Contains(object item)

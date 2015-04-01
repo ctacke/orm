@@ -1,24 +1,21 @@
-﻿#if WINDOWS_PHONE
+﻿using System;
+using System.Net;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Ink;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using System.Windows.Shapes;
 
 namespace System.Data.Common
 {
-    public interface IDataParameter
-    {
-        //DbType DbType { get; set; }
-        //ParameterDirection Direction { get; set; }
-        //bool IsNullable { get; }
-        string ParameterName { get; set; }
-        //string SourceColumn { get; set; }
-        //DataRowVersion SourceVersion { get; set; }
-        object Value { get; set; }
-    }
-
+#if WINDOWS_PHONE
     public interface DbDataReader : IDisposable
     {
         bool Read();
         object this[int ordinal] { get; }
-        int GetOrdinal(string fieldname);
     }
-}
-
 #endif
+}

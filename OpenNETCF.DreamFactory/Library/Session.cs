@@ -72,7 +72,7 @@ namespace OpenNETCF.DreamFactory
 
         public void Initialize()
         {
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3;
+//            ServicePointManager.SecurityProtocol = SecurityProtocolType.Ssl3;
 
             Client = new RestClient(DSPRootAddress);
             var request = new RestRequest("/rest/user/session", Method.POST);
@@ -133,7 +133,7 @@ namespace OpenNETCF.DreamFactory
 
         private SystemConfigDescriptor GetSystemConfig()
         {
-            var request = GetSessionRequest("/rest/system/config", Method.GET);
+            var request = GetSessionRequest("/rest/system/config", Method.GET, false);
             var response = Client.Execute<SystemConfigDescriptor>(request);
 
             var check = DreamFactoryException.ValidateIRestResponse(response);
@@ -152,7 +152,14 @@ namespace OpenNETCF.DreamFactory
             }
         }
 
+        private DateTime? m_lastRequest;
+
         internal IRestRequest GetSessionRequest(string path, Method method)
+        {
+            return GetSessionRequest(path, method, true);
+        }
+
+        internal IRestRequest GetSessionRequest(string path, Method method, bool checkConnection)
         {
             if (Disconnected)
             {
@@ -160,6 +167,24 @@ namespace OpenNETCF.DreamFactory
 
                 // attempt to-re-establish the session (timeouts will end up here)
                 Initialize();
+            }
+
+            if (checkConnection)
+            {
+                // how long has it been since our last request?  If it's been a long time, verify we're still connected before returning
+                var now = DateTime.Now;
+                if (m_lastRequest.HasValue)
+                {
+                    if ((now < m_lastRequest.Value) // host time changed
+                        || ((now - m_lastRequest.Value).TotalSeconds) > 60)
+                    {
+                        if (!TestConnection())
+                        {
+                            Reconnect();
+                        }
+                    }
+                }
+                m_lastRequest = now;
             }
 
             var request = new RestRequest(path, method)
@@ -178,6 +203,21 @@ namespace OpenNETCF.DreamFactory
             }
 
             return request;
+        }
+
+        public bool TestConnection()
+        {
+            try
+            {
+                var cfg = GetSystemConfig();
+                Disconnected = false;
+            }
+            catch (DreamFactoryException)
+            {
+                Disconnected = true;
+            }
+
+            return !Disconnected;
         }
     }
 }

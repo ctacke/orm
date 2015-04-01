@@ -15,11 +15,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests and Samples", "Tests 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SQLite.CF", "OpenNETCF.ORM.SQLite\OpenNETCF.ORM.SQLite.CF.csproj", "{902690F8-0D24-40A4-B0B8-AD69859081BB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.Validation", "Tests\OpenNETCF.ORM.Validation\OpenNETCF.ORM.Validation.csproj", "{EB1F8E25-FDDF-48CC-86C3-0D46F5724A76}"
-EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 6
+		SccNumberOfProjects = 5
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://tfs.codeplex.com/tfs/tfs01
 		SccLocalPath0 = .
@@ -39,10 +37,6 @@ Global
 		SccProjectTopLevelParentUniqueName4 = OpenNETCF.ORM.CF.sln
 		SccProjectName4 = Tests/OpenNETCF.ORM.Test
 		SccLocalPath4 = Tests\\OpenNETCF.ORM.Test
-		SccProjectUniqueName5 = Tests\\OpenNETCF.ORM.Validation\\OpenNETCF.ORM.Validation.csproj
-		SccProjectTopLevelParentUniqueName5 = OpenNETCF.ORM.CF.sln
-		SccProjectName5 = Tests/OpenNETCF.ORM.Validation
-		SccLocalPath5 = Tests\\OpenNETCF.ORM.Validation
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -67,12 +61,6 @@ Global
 		{902690F8-0D24-40A4-B0B8-AD69859081BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{902690F8-0D24-40A4-B0B8-AD69859081BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{902690F8-0D24-40A4-B0B8-AD69859081BB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EB1F8E25-FDDF-48CC-86C3-0D46F5724A76}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EB1F8E25-FDDF-48CC-86C3-0D46F5724A76}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EB1F8E25-FDDF-48CC-86C3-0D46F5724A76}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
-		{EB1F8E25-FDDF-48CC-86C3-0D46F5724A76}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EB1F8E25-FDDF-48CC-86C3-0D46F5724A76}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EB1F8E25-FDDF-48CC-86C3-0D46F5724A76}.Release|Any CPU.Deploy.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -82,6 +70,5 @@ Global
 		{C0AFC215-58D2-4C3E-A8BC-5671A8E01EC7} = {4EDC816A-1CE8-460D-B1BA-555B2189B753}
 		{902690F8-0D24-40A4-B0B8-AD69859081BB} = {4EDC816A-1CE8-460D-B1BA-555B2189B753}
 		{E40B4449-F45C-48BB-8141-330AFDA0AABB} = {1E20BBD4-8142-4BE7-B5F9-5061B88CB61F}
-		{EB1F8E25-FDDF-48CC-86C3-0D46F5724A76} = {1E20BBD4-8142-4BE7-B5F9-5061B88CB61F}
 	EndGlobalSection
 EndGlobal

@@ -7,20 +7,20 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using OpenNETCF.ORM.SqlServer;
 
 namespace OpenNETCF.ORM
 {
     public partial class SqlServerDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
     {
-        private string m_lastEntity;
         private string m_connectionString;
         private SqlConnectionInfo m_info;
+        private Version m_version;
 
         public SqlServerDataStore(SqlConnectionInfo info)
             : base()
         {
             // TODO: validate info members
-
             m_info = info;
         }
 
@@ -75,6 +75,26 @@ namespace OpenNETCF.ORM
 
                 }
                 return m_connectionString;
+            }
+        }
+
+        public Version ServerVersion 
+        {
+            get
+            {
+                // Mono doesn't like selecting SERVERPROPERTY, at least not from SQL 2012
+                if (Environment.OSVersion.Platform == PlatformID.Unix)
+                {
+                    return new Version(1, 0);
+                }
+
+                if (m_version == null)
+                {
+                    var v = this.ExecuteScalar("SELECT  SERVERPROPERTY('productversion')");
+                    m_version = new Version(v.ToString());
+                }
+
+                return m_version;
             }
         }
 
@@ -167,7 +187,7 @@ namespace OpenNETCF.ORM
                 sbParams.Append(ParameterPrefix + field.FieldName + ",");
 
                 // TODO; verify that the 2-parameter method work on non-Phone implementations
-                insertCommand.Parameters.Add(new SqlParameter(ParameterPrefix + field.FieldName, field.DataType));
+                insertCommand.Parameters.Add(new SqlParameter(ParameterPrefix + field.FieldName, field.DataType.ToSqlDbType()));
             }
 
             // replace trailing commas
@@ -504,9 +524,6 @@ namespace OpenNETCF.ORM
 
         protected override void ValidateTable(IDbConnection connection, IEntityInfo entity)
         {
-            // prevent cached reads of entitiy fields
-            m_lastEntity = null;
-
             // first make sure the table exists
             if (!TableExists(entity.EntityAttribute.NameInStore))
             {
@@ -639,7 +656,7 @@ namespace OpenNETCF.ORM
 
         private IEnumerable<object> Select(string entityName, Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
         {
-            if (entityName == null)
+            if ((entityName == null) || (!Entities.Contains(entityName)))
             {
                 throw new EntityNotFoundException(objectType);
             }

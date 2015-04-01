@@ -36,6 +36,14 @@ namespace OpenNETCF.ORM
             this.IsPrimaryKey = isPrimaryKey;
         }
 
+        public FieldAttribute(PropertyInfo property, bool isPrimaryKey)
+            : this()
+        {
+            this.FieldName = property.Name;
+            this.DataType = property.PropertyType.ToDbType();
+            this.IsPrimaryKey = isPrimaryKey;
+        }
+
         public object Clone()
         {
             return new FieldAttribute(FieldName, DataType, IsPrimaryKey)

@@ -373,8 +373,17 @@ namespace OpenNETCF.ORM
 
         private void UpdateIndexCacheForType(string entityName)
         {
-            // have we already cached this?
-            if (((SqlEntityInfo)Entities[entityName]).IndexNames != null) return;
+            if (!TableExists(entityName)) return;
+
+            if (Entities.Contains(entityName))
+            {
+                // have we already cached this?
+                if (((SqlEntityInfo)Entities[entityName]).IndexNames != null) return;
+            }
+            else
+            {
+                return;
+            }
 
             // get all iindex names for the type
             var connection = GetConnection(true);
