@@ -41,6 +41,7 @@ namespace OpenNETCF.ORM
         public abstract IEnumerable<DynamicEntity> Select(string entityName);
         public abstract IEnumerable<DynamicEntity> Select(string entityName, IEnumerable<FilterCondition> filters);
         public abstract DynamicEntity Select(string entityName, object primaryKey);
+        public abstract void Drop(string entityName);
 
         public event EventHandler<EntityUpdateArgs> BeforeUpdate;
         public event EventHandler<EntityUpdateArgs> AfterUpdate;

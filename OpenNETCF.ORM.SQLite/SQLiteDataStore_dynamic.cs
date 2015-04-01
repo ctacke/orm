@@ -26,6 +26,11 @@ namespace OpenNETCF.ORM
 {
     partial class SQLiteDataStore
     {
+        public override void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition)
+        {
+            base.RegisterDynamicEntity(entityDefinition, false);
+        }
+
         private void OnUpdateDynamicEntity(DynamicEntity item)
         {
             bool changeDetected = false;

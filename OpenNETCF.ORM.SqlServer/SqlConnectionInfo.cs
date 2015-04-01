@@ -7,13 +7,12 @@ namespace OpenNETCF.ORM
 {
     public class SqlConnectionInfo : ICloneable
     {
-        public SqlConnectionInfo(string serverName, string databaseName)
+        public SqlConnectionInfo()
         {
-            ServerName = serverName;
-            DatabaseName = databaseName;
         }
 
         public string ServerName { get; set; }
+        public int ServerPort { get; set; }
         public string InstanceName { get; set; }
         public string DatabaseName { get; set; }
         public string UserDomain { get; set; }
@@ -22,8 +21,11 @@ namespace OpenNETCF.ORM
 
         public object Clone()
         {
-            return new SqlConnectionInfo(this.ServerName, this.DatabaseName)
+            return new SqlConnectionInfo()
             {
+                ServerName = this.ServerName,
+                ServerPort = this.ServerPort,
+                DatabaseName = this.DatabaseName,
                 InstanceName = this.InstanceName,
                 UserDomain = this.UserDomain,
                 UserName = this.UserName,

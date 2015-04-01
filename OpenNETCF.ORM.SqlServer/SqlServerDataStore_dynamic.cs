@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading;
+using OpenNETCF.ORM.SqlServer;
 
 namespace OpenNETCF.ORM
 {
@@ -114,24 +115,77 @@ namespace OpenNETCF.ORM
                 command.Connection = connection as SqlConnection;
                 command.Transaction = CurrentTransaction as SqlTransaction;
 
+                string keyFieldName = null;
+
+                if (Entities[entityName].EntityAttribute.KeyScheme == KeyScheme.Identity)
+                {
+                    var keyField = Entities[entityName].Fields.FirstOrDefault(f => f.IsPrimaryKey);
+
+                    if (keyField != null)
+                    {
+                        keyFieldName = keyField.FieldName;
+                    }
+                }
+
                 foreach (var field in item.Fields)
                 {
-                    command.Parameters[ParameterPrefix + field.Name].Value = field.Value;
+                    if (field.Name == keyFieldName) continue;
+                    var p = command.Parameters[ParameterPrefix + field.Name] as SqlParameter;
+                    
+                    var value = ParseToSqlDbType(field.Value, p.SqlDbType);
+                    var length = Entities[entityName].Fields[field.Name].Length;
+
+                    if (value is string && length > 0)
+                    {
+                        value = (value as string).Truncate(length);
+                    }
+
+                    p.Value = value;
+
                 }
 
                 command.ExecuteNonQuery();
 
                 // did we have an identity field?  If so, we need to update that value in the item
-                var keyField = Entities[entityName].Fields.FirstOrDefault(f => f.IsPrimaryKey);
-
-                if (keyField != null)
+                if (Entities[entityName].EntityAttribute.KeyScheme == KeyScheme.Identity)
                 {
-                    item.Fields[keyField.FieldName] = GetIdentity(connection);
+                    if (keyFieldName != null)
+                    {
+                        item.Fields[keyFieldName] = GetIdentity(connection);
+                    }
                 }
             }
             finally
             {
                 DoneWithConnection(connection, false);
+            }
+        }
+
+        private object ParseToSqlDbType(object o, SqlDbType t)
+        {
+            if (o.Equals(DBNull.Value)) return DBNull.Value;
+            if (o == null) return DBNull.Value;
+
+            switch (t)
+            {
+                case SqlDbType.Int:
+                    return Convert.ToInt32(o);
+                case SqlDbType.BigInt:
+                    return Convert.ToInt64(o);
+                case SqlDbType.SmallInt:
+                    return Convert.ToInt16(o);
+                case SqlDbType.Bit:
+                    return Convert.ToBoolean(o);
+                case SqlDbType.NVarChar:
+                    return o.ToString();
+                case SqlDbType.Decimal:
+                    return Convert.ToDecimal(o);
+                case SqlDbType.Float:
+                    return Convert.ToDouble(o);
+                case SqlDbType.DateTime:
+                    return Convert.ToDateTime(o);
+                default:
+                    throw new NotSupportedException();
             }
         }
 
@@ -157,7 +211,7 @@ namespace OpenNETCF.ORM
         {
             if (!TableExists(entityName))
             {
-                throw new EntityNotFoundException(entityName);
+                return null;
             }
 
             var connection = GetConnection(true);
@@ -168,7 +222,8 @@ namespace OpenNETCF.ORM
                     cmd.Connection = connection;
                     cmd.Transaction = CurrentTransaction;
 
-                    cmd.CommandText = string.Format("SELECT COLUMN_NAME, ORDINAL_POSITION, IS_NULLABLE, DATA_TYPE, NUMERIC_PRECISION, NUMERIC_SCALE FROM information_schema.columns WHERE TABLE_NAME = '{0}' ORDER BY ORDINAL_POSITION", entityName);
+                    cmd.CommandText = string.Format("SELECT COLUMN_NAME, ORDINAL_POSITION, IS_NULLABLE, DATA_TYPE, NUMERIC_PRECISION, NUMERIC_SCALE, CHARACTER_MAXIMUM_LENGTH "
+                                                    + "FROM information_schema.columns WHERE TABLE_NAME = '{0}' ORDER BY ORDINAL_POSITION", entityName);
 
                     var fields = new List<FieldAttribute>();
 
@@ -196,12 +251,17 @@ namespace OpenNETCF.ORM
                                 field.Scale = Convert.ToInt32(reader.GetValue(5));
                             }
 
+                            if (!reader.IsDBNull(6))
+                            {
+                                field.Length = Convert.ToInt32(reader.GetValue(6));
+                            }
+
                             fields.Add(field);
                         }
                     }
 
                     cmd.CommandText = string.Format(
-                        "SELECT ac.name, ind.is_primary_key, ind.is_unique, ic.is_descending_key, col.collation_name " +
+                        "SELECT ac.name, ind.is_primary_key, ind.is_unique, ic.is_descending_key, col.collation_name, idc.name " +
                         "FROM sys.indexes ind " +
                         "INNER JOIN sys.index_columns ic " +
                         "  ON  ind.object_id = ic.object_id and ind.index_id = ic.index_id " +
@@ -209,9 +269,13 @@ namespace OpenNETCF.ORM
                         "  ON ic.object_id = col.object_id and ic.column_id = col.column_id  " +
                         "INNER JOIN sys.tables t  " +
                         "  ON ind.object_id = t.object_id " +
+                        "INNER JOIN sys.identity_columns idc " +
+                        "  ON col.object_id = idc.object_id and col.column_id = idc.column_id " +
                         "INNER JOIN sys.columns ac " +
                         "  ON ac.object_id = col.object_id and ac.column_id = col.column_id " +
                         "WHERE t.name = '{0}'", entityName);
+
+                    string identiyColumn = null;
 
                     using (var reader = cmd.ExecuteReader())
                     {
@@ -235,12 +299,19 @@ namespace OpenNETCF.ORM
                             {
                                 field.RequireUniqueValue = true;
                             }
+
+                            identiyColumn = reader.GetString(5);
                         }
                     }
 
 
-                    var entityDefinition = new DynamicEntityDefinition(entityName, fields);
+                    var entityDefinition = new DynamicEntityDefinition(
+                        entityName, 
+                        fields,
+                        string.IsNullOrEmpty(identiyColumn) ? KeyScheme.None : KeyScheme.Identity);
+
                     RegisterEntityInfo(entityDefinition);
+
                     return entityDefinition;
                 }
             }
@@ -250,19 +321,147 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
-            // yes, this is very limited in scope capability, but it's purpose-built for a specific use-case (and better than no functionality at all)
-
-            if (firstRowOffset > 0) throw new NotSupportedException("non-zero rowOffset not currently supported with this version of Fetch");
             if (fillReferences) throw new NotSupportedException("References not currently supported with this version of Fetch.");
             if (filter != null) throw new NotSupportedException("Filters not currently supported with this version of Fetch.  Try post-filtering with LINQ");
 
-            var sql = string.Format("SELECT TOP {0} * FROM {1} ", fetchCount, entityName);
+            var v = ServerVersion;
 
-            if (!string.IsNullOrEmpty(sortField))
+            string sql;
+
+            // TODO: get this working then revert the version number to 11 in the "if" startement below
+            //       For now, all paths lead through the else condition
+            if (v.Major >= 99) // sql server 2012 or later support OFFSET and FETCH
             {
-                sql += string.Format("ORDER BY {0} {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                if (firstRowOffset <= 0)
+                {
+                    sql = string.Format("SELECT * FROM {0} ", entityName);
+
+                    if (!string.IsNullOrEmpty(sortField))
+                    {
+                        sql += string.Format("ORDER BY {0} {1} ", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                    }
+
+                    if (fetchCount > 0)
+                    {
+                        sql = sql.Replace("*", string.Format("TOP ({0}) *", fetchCount));
+                    }
+                }
+                else
+                {
+                    if (string.IsNullOrEmpty(sortField))
+                    {
+                        sql = string.Format("DECLARE @orderrow varchar(500); "
+                            + "SELECT @orderrow = column_name "
+                            + "FROM information_schema.columns "
+                            + "WHERE table_name = '{0}' "
+                            + " AND ordinal_position = 1; "
+                            + "SELECT * FROM {0} "
+                            + "ORDER BY @orderrow "
+                            + "OFFSET {1} ROWS "
+                            , entityName
+                            , firstRowOffset);
+
+                        if (fetchCount > 0)
+                        {
+                            sql += string.Format("FETCH FIRST {0} ROWS ONLY", fetchCount);
+                        }
+                    }
+                    else
+                    {
+                        sql = string.Format("SELECT * FROM {0} ", entityName);
+                        sql += string.Format("ORDER BY {0} {1} ", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                        sql += string.Format("OFFSET {0} ROWS ", firstRowOffset);
+
+                        if (fetchCount > 0)
+                        {
+                            sql += string.Format("FETCH FIRST {0} ROWS ONLY", fetchCount);
+                        }
+                    }
+                }
+            }
+            else // pre-2012
+            {
+                if (firstRowOffset <= 0)
+                {
+                    sql = string.Format("SELECT * FROM {0} ", entityName);
+
+                    if (!string.IsNullOrEmpty(sortField))
+                    {
+                        sql += string.Format("ORDER BY {0} {1} ", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                    }
+
+                    if (fetchCount > 0)
+                    {
+                        sql = sql.Replace("*", string.Format("TOP ({0}) *", fetchCount));
+                    }
+                }
+                else
+                {
+                    if(string.IsNullOrEmpty(sortField))
+                    {
+                        //DECLARE @orderrow varchar(500);
+
+                        //SELECT @orderrow = column_name
+                        //FROM information_schema.columns
+                        //WHERE table_name = 'C00261854A503_Collector017'
+                        //AND ordinal_position = 1
+
+
+                        //;WITH results AS
+                        //(
+                        //    SELECT
+                        //        *,
+                        //        ROW_NUMBER() OVER (
+                        //        ORDER BY 
+
+                        //        @orderrow
+
+                        //        ) AS orm_row_num
+                        //    FROM C00261854A503_Collector017
+                        //)
+                        //SELECT TOP (100) *
+                        //FROM results
+                        //WHERE orm_row_num >= 100
+
+                        sql = string.Format("DECLARE @orderrow varchar(500); "
+                            + "SELECT @orderrow = column_name "
+                            + "FROM information_schema.columns "
+                            + "WHERE table_name = '{0}' "
+                            + " AND ordinal_position = 1 "
+
+                            + ";WITH results AS ("
+                            + "SELECT *, "
+                            + "ROW_NUMBER() OVER (ORDER BY @orderrow) AS orm_row_num "
+                            + "FROM {0} ) "
+
+                            + "{1} * "
+                            + "FROM results "
+                            + "WHERE orm_row_num >= {2}",
+
+                            entityName,
+                            fetchCount > 0 ? string.Format("SELECT TOP ({0}) ", fetchCount) : string.Empty,
+                            firstRowOffset);
+                    }
+                    else
+                    {
+                        sql = string.Format(";WITH results AS ("
+                            + "SELECT *, "
+                            + "ROW_NUMBER() OVER (ORDER BY {0} {1}) AS orm_row_num "
+                            + "FROM {2} ) "
+
+                            + "{3} * "
+                            + "FROM results "
+                            + "WHERE orm_row_num >= {4}",
+
+                            sortField,
+                            sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC",
+                            entityName,
+                            fetchCount > 0 ? string.Format("SELECT TOP ({0}) ", fetchCount) : string.Empty,
+                            firstRowOffset);
+                    }                    
+                }
             }
 
             var connection = GetConnection(false);
@@ -281,9 +480,15 @@ namespace OpenNETCF.ORM
                         while (reader.Read())
                         {
                             var e = new DynamicEntity(entityName);
+
+                            // TODO: cache ordinals to improve perf
                             for (int i = 0; i < reader.FieldCount; i++)
                             {
-                                e.Fields.Add(reader.GetName(i), reader.GetValue(i));
+                                var name = reader.GetName(i);
+
+                                // this is a temp column variable - don't return it
+                                if (name == "orm_row_num") continue;
+                                e.Fields.Add(name, reader.GetValue(i));
                             }
                             entities.Add(e);
                         }
@@ -296,11 +501,6 @@ namespace OpenNETCF.ORM
             {
                 DoneWithConnection(connection, false);
             }
-        }
-
-        public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount)
-        {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
         }
     }
 }

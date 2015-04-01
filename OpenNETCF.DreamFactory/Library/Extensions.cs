@@ -202,6 +202,7 @@ namespace OpenNETCF.DreamFactory
                     break;
                 case "time":
                 case "timestamp":
+                case "timestamp_on_update":
                     field = new Field<TimeSpan>(f.name, f.label);
                     break;
                 case "reference":

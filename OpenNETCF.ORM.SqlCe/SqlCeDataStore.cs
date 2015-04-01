@@ -128,6 +128,14 @@ namespace OpenNETCF.ORM
             }
         }
 
+        public override void CompactDatabase()
+        {
+            using (SqlCeEngine engine = new SqlCeEngine())
+            {
+                engine.Compact(ConnectionString);
+            }
+        }
+
         public override int Count<T>(IEnumerable<FilterCondition> filters)
         {
             var t = typeof(T);

@@ -7,7 +7,7 @@ using System.Diagnostics;
 
 namespace OpenNETCF.ORM.Replication
 {
-    internal class Registrations
+    public class Registrations
     {
         private List<ReplicationNameRegistration> m_nameRegistrations;
         private List<ReplicationTypeRegistration> m_typeRegistrations;
@@ -18,12 +18,12 @@ namespace OpenNETCF.ORM.Replication
             m_typeRegistrations = new List<ReplicationTypeRegistration>();
         }
 
-        public void AddName(string localName, ReplicationPriority priority)
+        internal void AddName(string localName, ReplicationPriority priority)
         {
             AddName(localName, null, priority);
         }
-        
-        public void AddName(string localName, string replicatedName, ReplicationPriority priority)
+
+        internal void AddName(string localName, string replicatedName, ReplicationPriority priority)
         {
             lock (m_nameRegistrations)
             {
@@ -129,7 +129,7 @@ namespace OpenNETCF.ORM.Replication
         }
     }
 
-    internal class ReplicationNameRegistration
+    public class ReplicationNameRegistration
     {
         public ReplicationNameRegistration(string localName, ReplicationPriority priority)
             : this(localName, localName, priority)
@@ -149,7 +149,7 @@ namespace OpenNETCF.ORM.Replication
 
     }
 
-    internal class ReplicationTypeRegistration
+    public class ReplicationTypeRegistration
     {
         public ReplicationTypeRegistration(Type type, ReplicationPriority priority)
         {

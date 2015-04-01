@@ -1902,5 +1902,13 @@ namespace OpenNETCF.ORM
                 DoneWithConnection(connection, false);
             }
         }
+
+        public override void Drop(string entityName)
+        {
+            var command = string.Format("DROP TABLE '{0}'", entityName);
+            ExecuteNonQuery(command);
+
+            Entities.Remove(entityName);
+        }
     }
 }

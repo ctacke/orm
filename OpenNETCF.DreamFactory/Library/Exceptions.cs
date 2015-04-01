@@ -54,8 +54,15 @@ namespace OpenNETCF.DreamFactory
             {
                 switch (response.StatusCode)
                 {
-//                    case HttpStatusCode.BadRequest:
-//                        return new InvalidCredentialsException(errorList.error[0]);
+                    case HttpStatusCode.Unauthorized:
+                        if (errorList.error[0].message == "There is no valid session for the current request.")
+                        {
+                            return new InvalidSessionException(new DreamFactoryException(errorList.error[0]));
+                        }
+                        else
+                        {
+                            return new DreamFactoryException(errorList.error[0]);
+                        }
                     default:
                         return new DreamFactoryException(errorList.error[0]);
                 }
@@ -80,6 +87,14 @@ namespace OpenNETCF.DreamFactory
                 default:
                     return null;
             }
+        }
+    }
+
+    public class InvalidSessionException : DreamFactoryException
+    {
+        public InvalidSessionException(Exception innerException)
+            : base("The current Session is invalid", innerException)
+        {
         }
     }
 

@@ -17,8 +17,6 @@ namespace OpenNETCF.ORM.Replication
         private bool m_run = false;
         private object m_syncRoot = new object();
 
-        private Registrations m_registrations = new Registrations();
-
         public const int MinReplicationPeriod = 100;
         public const int DefaultReplicationPeriod = 5000;
         public const int DefaultBatchSize = 50;
@@ -26,6 +24,7 @@ namespace OpenNETCF.ORM.Replication
         public bool Running { get; private set; }
         public ReplicationBehavior Behavior { get; private set; }
         public bool CreateIdentityFieldInReplicatedTable { get; private set; }
+        public Registrations Registrations { get; private set; }
 
         public Dictionary<Type, int> m_typeCounts;
         public Dictionary<string, int> m_nameCounts;
@@ -48,6 +47,8 @@ namespace OpenNETCF.ORM.Replication
             {
                 throw new ArgumentNullException();
             }
+
+            Registrations = new Registrations();
 
             CreateIdentityFieldInReplicatedTable = addIdentityToDestination;
 
@@ -148,13 +149,13 @@ namespace OpenNETCF.ORM.Replication
 
             // TODO: add preemption?
 
-            lock (m_registrations)
+            lock (Registrations)
             {
-                if (m_registrations.Contains(e.EntityName))
+                if (Registrations.Contains(e.EntityName))
                 {
                     m_dataAvailable.Set();
                 }
-                else if (m_registrations.Contains(e.Item.GetType()))
+                else if (Registrations.Contains(e.Item.GetType()))
                 {
                     m_dataAvailable.Set();
                 }
@@ -207,9 +208,9 @@ namespace OpenNETCF.ORM.Replication
 
         public void RegisterEntity(Type entityType, ReplicationPriority priority)
         {
-            lock (m_registrations)
+            lock (Registrations)
             {
-                m_registrations.AddType(entityType, priority);
+                Registrations.AddType(entityType, priority);
 
                 lock (m_typeCounts)
                 {
@@ -236,9 +237,9 @@ namespace OpenNETCF.ORM.Replication
 
         public void RegisterEntity(string entityName, string replicatedName, ReplicationPriority priority)
         {
-            lock (m_registrations)
+            lock (Registrations)
             {
-                m_registrations.AddName(entityName, replicatedName, priority);
+                Registrations.AddName(entityName, replicatedName, priority);
 
                 lock (m_nameCounts)
                 {
@@ -338,9 +339,9 @@ namespace OpenNETCF.ORM.Replication
             bool dataSent = false;
 
             // loop through all registered entities
-            lock (m_registrations)
+            lock (Registrations)
             {
-                foreach (var registration in m_registrations.GetNameRegistrations(priority))
+                foreach (var registration in Registrations.GetNameRegistrations(priority))
                 {
                     var items = m_source.Select(registration.LocalName).Take(MaxReplicationBatchSize);
 
@@ -362,7 +363,7 @@ namespace OpenNETCF.ORM.Replication
                     }
                 }
 
-                foreach (var registration in m_registrations.GetTypeRegistrations(priority))
+                foreach (var registration in Registrations.GetTypeRegistrations(priority))
                 {
                     var items = m_source.Select(registration.Type).Take(MaxReplicationBatchSize);
 
