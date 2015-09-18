@@ -366,6 +366,10 @@ namespace OpenNETCF.ORM
 
 
 
+        public override void Drop(string entityName)
+        {
+            throw new NotImplementedException();
+        }
 
         public override bool Contains(object item)
         {

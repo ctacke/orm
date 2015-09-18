@@ -34,9 +34,8 @@ namespace OpenNETCF.ORM
         private void OnUpdateDynamicEntity(DynamicEntity item)
         {
             bool changeDetected = false;
-            var updateCommand = GetNewCommandObject();
-            var connection = GetConnection(false);
 
+            var connection = GetConnection(false);
             var entityName = item.EntityName;
 
             try
@@ -58,62 +57,64 @@ namespace OpenNETCF.ORM
 
                     var updateSQL = new StringBuilder(string.Format("UPDATE {0} SET ", entityName));
 
-                    using (var reader = command.ExecuteReader() as SQLiteDataReader)
+                    using (var updateCommand = GetNewCommandObject())
                     {
-
-                        if (!reader.HasRows)
+                        using (var reader = command.ExecuteReader() as SQLiteDataReader)
                         {
-                            // TODO: the PK value has changed - we need to store the original value in the entity or diallow this kind of change
-                            throw new RecordNotFoundException("Cannot locate a record with the provided primary key.  You cannot update a primary key value through the Update method");
-                        }
 
-                        reader.Read();
-
-                        // update the values
-                        foreach (var field in item.Fields)
-                        {
-                            // do not update PK fields
-                            if ((keyField != null) && (field.Name == keyField))
+                            if (!reader.HasRows)
                             {
-                                continue;
+                                // TODO: the PK value has changed - we need to store the original value in the entity or diallow this kind of change
+                                throw new RecordNotFoundException("Cannot locate a record with the provided primary key.  You cannot update a primary key value through the Update method");
                             }
 
-                            var value = field.Value;
+                            reader.Read();
 
-                            if (reader[field.Name] != value)
+                            // update the values
+                            foreach (var field in item.Fields)
                             {
-                                changeDetected = true;
-
-                                if (value == null)
+                                // do not update PK fields
+                                if ((keyField != null) && (field.Name == keyField))
                                 {
-                                    updateSQL.AppendFormat("{0}=NULL, ", field.Name);
+                                    continue;
                                 }
-                                else
+
+                                var value = field.Value;
+
+                                if (reader[field.Name] != value)
                                 {
-                                    updateSQL.AppendFormat("{0}=?, ", field.Name);
-                                    updateCommand.Parameters.Add(CreateParameterObject(field.Name, value));
+                                    changeDetected = true;
+
+                                    if (value == null)
+                                    {
+                                        updateSQL.AppendFormat("{0}=NULL, ", field.Name);
+                                    }
+                                    else
+                                    {
+                                        updateSQL.AppendFormat("{0}=?, ", field.Name);
+                                        updateCommand.Parameters.Add(CreateParameterObject(field.Name, value));
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    // only execute if a change occurred
-                    if (changeDetected)
-                    {
-                        // remove the trailing comma and append the filter
-                        updateSQL.Length -= 2;
-                        updateSQL.AppendFormat(" WHERE {0} = ?", keyField);
-                        updateCommand.Parameters.Add(CreateParameterObject("keyparam", keyValue));
-                        updateCommand.CommandText = updateSQL.ToString();
-                        updateCommand.Connection = connection;
-                        updateCommand.Transaction = CurrentTransaction;
-                        updateCommand.ExecuteNonQuery();
+                        // only execute if a change occurred
+                        if (changeDetected)
+                        {
+                            // remove the trailing comma and append the filter
+                            updateSQL.Length -= 2;
+                            updateSQL.AppendFormat(" WHERE {0} = ?", keyField);
+                            updateCommand.Parameters.Add(CreateParameterObject("keyparam", keyValue));
+                            updateCommand.CommandText = updateSQL.ToString();
+                            updateCommand.Connection = connection;
+                            updateCommand.Transaction = CurrentTransaction;
+                            updateCommand.ExecuteNonQuery();
+                        }
                     }
                 }
             }
             finally
             {
-                updateCommand.Dispose();
                 DoneWithConnection(connection, false);
             }
         }
@@ -310,13 +311,30 @@ namespace OpenNETCF.ORM
             if (fillReferences) throw new NotSupportedException("References not currently supported with this version of Fetch.");
             if (filter != null) throw new NotSupportedException("Filters not currently supported with this version of Fetch.  Try post-filtering with LINQ");
 
-            if (!TableExists(entityName)) return null;
+            var entities = new List<DynamicEntity>();
+
+            if (!Entities.Contains(entityName))
+            {
+                // check to see if the underlying table exists
+                // if it does, add to the Entities and continue the query
+                if (DiscoverDynamicEntity(entityName) == null)
+                {
+                    return entities;
+                }
+            }
 
             var sql = string.Format("SELECT * FROM {0}", entityName);
 
             if (!string.IsNullOrEmpty(sortField))
             {
                 sql += string.Format(" ORDER BY {0} {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+            }
+            else if (sortOrder != FieldSearchOrder.NotSearchable)
+            {
+                if (Entities[entityName].Fields.KeyField != null)
+                {
+                    sql+= string.Format(" ORDER BY {0} {1}", Entities[entityName].Fields.KeyField.FieldName, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                }
             }
 
             sql += string.Format(" LIMIT {0}", fetchCount);
@@ -329,8 +347,6 @@ namespace OpenNETCF.ORM
             var connection = GetConnection(false);
             try
             {
-                var entities = new List<DynamicEntity>();
-
                 string keyName = null;
 
                 if((m_entities.Contains(entityName)) && (m_entities[entityName].Fields.KeyField != null))

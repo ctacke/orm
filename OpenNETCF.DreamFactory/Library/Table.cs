@@ -449,6 +449,14 @@ namespace OpenNETCF.DreamFactory
 
                         var value = key[name];
                         return value;
+                    case HttpStatusCode.InternalServerError:
+                        var ex = DreamFactoryException.Parse(response);
+                        if ((Session.ServerVersion == new Version("1.9.2")) && (ex.Message == "array (\n)"))
+                        {
+                            // this is an edge-case in DF 1.9.2 where a successful insert sometime will still return a 500 *even though* the record did insert.  WTF??
+                            return null;
+                        }
+                        throw ex;
                     case HttpStatusCode.Forbidden:
                     case HttpStatusCode.Unauthorized:
                         if (Debugger.IsAttached) Debugger.Break();

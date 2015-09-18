@@ -10,8 +10,11 @@ namespace OpenNETCF.ORM.SqlServer.Integration.Test
     {
         private SqlConnectionInfo GetInfo()
         {
-            return new SqlConnectionInfo("192.168.10.47,1433", "TestDB")
+            return new SqlConnectionInfo()
             {
+                ServerName = "192.168.10.47",
+                ServerPort = 1433,
+                DatabaseName = "TestDB",
                 UserName = "testuser",
                 Password = "pwd123!sql"
             };
