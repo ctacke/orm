@@ -1,11 +1,9 @@
-﻿using System;
-using System.Linq;
+﻿using OpenNETCF.ORM.Replication;
+using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Reflection;
-using System.Diagnostics;
 using System.Data;
-using OpenNETCF.ORM.Replication;
+using System.Linq;
+using System.Reflection;
 
 namespace OpenNETCF.ORM
 {
@@ -13,6 +11,7 @@ namespace OpenNETCF.ORM
         where TEntityInfo : EntityInfo, new()
     {
         protected EntityInfoCollection m_entities = new EntityInfoCollection();
+        private RecoveryService<TEntityInfo> m_recoveryService;
 
         public event EventHandler<EntityTypeAddedArgs> EntityTypeAdded;
 
@@ -26,6 +25,7 @@ namespace OpenNETCF.ORM
 
         public event EventHandler<EntityInsertArgs> BeforeInsert;
         public event EventHandler<EntityInsertArgs> AfterInsert;
+
         public abstract void OnInsert(object item, bool insertReferences);
 
         public abstract IEnumerable<T> Select<T>() where T : new();
@@ -50,6 +50,18 @@ namespace OpenNETCF.ORM
         public event EventHandler<EntityDeleteArgs> BeforeDelete;
         public event EventHandler<EntityDeleteArgs> AfterDelete;
         public abstract void OnDelete(object item);
+
+        /// <summary>
+        /// Return <b>true</b> if you want the ORM to retry the operation.  Usefule for server unavailable-type errors
+        /// </summary>
+        /// <param name="ex"></param>
+        /// <returns></returns>
+        public virtual bool IsRecoverableError(Exception ex)
+        {
+            return false;
+        }
+
+        public bool TracingEnabled { get; set; }
 
         protected abstract void OnDynamicEntityRegistration(DynamicEntityDefinition definition, bool ensureCompatibility);
         public abstract DynamicEntityDefinition DiscoverDynamicEntity(string entityName);
@@ -85,7 +97,11 @@ namespace OpenNETCF.ORM
 
         public DataStore()
         {
+            TracingEnabled = false;
             Replicators = new ReplicatorCollection(this);
+            m_recoveryService = new RecoveryService<TEntityInfo>(this);
+            RecoveryEnabled = true;
+            ResetRecoveryStats();
         }
 
         /// <summary>
@@ -214,7 +230,13 @@ namespace OpenNETCF.ORM
             }
         }
 
+
         public void Insert(object item, bool insertReferences)
+        {
+            Insert(item, insertReferences, false);
+        }
+
+        internal void Insert(object item, bool insertReferences, bool recoveryInsert)
         {
             string name;
 
@@ -230,7 +252,18 @@ namespace OpenNETCF.ORM
             }
 
             OnBeforeInsert(name, item, insertReferences);
-            OnInsert(item, insertReferences);
+            try
+            {
+                OnInsert(item, insertReferences);
+            }
+            catch (Exception ex)
+            {
+                if (recoveryInsert) throw;
+                if (!IsRecoverableError(ex)) throw;
+
+                m_recoveryService.QueueInsertForRecovery(item, insertReferences);
+            }
+
             OnAfterInsert(name, item, insertReferences);
         }
 
@@ -676,6 +709,22 @@ namespace OpenNETCF.ORM
             //var items = from Select(entityName)
             //            where filter.FieldName
 
+        }
+
+        public bool RecoveryEnabled
+        {
+            get { return m_recoveryService.Enabled; }
+            set { m_recoveryService.Enabled = value; }
+        }
+
+        public RecoverableInfo GetRecoveryStats()
+        {
+            return m_recoveryService.GetStats();
+        }
+
+        public void ResetRecoveryStats()
+        {
+            m_recoveryService.ResetStats();
         }
     }
 }

@@ -205,6 +205,8 @@ namespace OpenNETCF.ORM
                 throw;
             }
 
+            if (table == null) return null;
+
             try
             {
                 records = table.GetRecords();
@@ -544,7 +546,7 @@ namespace OpenNETCF.ORM
             return RehydrateObjectFromEntityValueDictionary(typeof(T), entityName, record) as T;
         }
 
-        private DynamicEntity DynamicEntityFromEntityValueDictionary(string entityName, object[] record)
+        private DynamicEntity DynamicEntityFromEntityValueDictionary(string entityName, Field[] sourceFieldOrder, object[] record)
         {
             var instance = new DynamicEntity(entityName);
 
@@ -554,51 +556,68 @@ namespace OpenNETCF.ORM
             }
 
             var f = 0;
-            foreach (var field in Entities[entityName].Fields)
+            foreach (var field in sourceFieldOrder)
             {
-                if (record[f] is string)
+                try
                 {
-                    switch (field.DataType)
+                    if (record[f] is string)
                     {
-                        case System.Data.DbType.Int16:
-                        case System.Data.DbType.UInt16:
-                            instance.Fields[field.FieldName] = Convert.ToInt16(record[f]);
-                            break;
-                        case System.Data.DbType.Int32:
-                        case System.Data.DbType.UInt32:
-                            instance.Fields[field.FieldName] = Convert.ToInt32(record[f]);
-                            break;
-                        case System.Data.DbType.Int64:
-                        case System.Data.DbType.UInt64:
-                            instance.Fields[field.FieldName] = Convert.ToInt64(record[f]);
-                            break;
-                        case System.Data.DbType.Double:
-                            instance.Fields[field.FieldName] = Convert.ToDouble(record[f]);
-                            break;
-                        case System.Data.DbType.Single:
-                            instance.Fields[field.FieldName] = Convert.ToSingle(record[f]);
-                            break;
-                        case System.Data.DbType.Decimal:
-                            instance.Fields[field.FieldName] = Convert.ToDecimal(record[f]);
-                            break;
-                        case System.Data.DbType.Guid:
-                            instance.Fields[field.FieldName] = new Guid(record[f] as string);
-                            break;
-                        case System.Data.DbType.Time:
-                            instance.Fields[field.FieldName] = TimeSpan.Parse(record[f] as string);
-                            break;
-                        case System.Data.DbType.Date:
-                        case System.Data.DbType.DateTime:
-                            instance.Fields[field.FieldName] = DateTime.Parse(record[f] as string);
-                            break;
-                        default:
-                            instance.Fields[field.FieldName] = record[f];
-                            break;
+                        switch (field.TypeName.ParseToDbType())
+                        {
+                            case System.Data.DbType.Int16:
+                            case System.Data.DbType.UInt16:
+                                instance.Fields[field.Name] = Convert.ToInt16(record[f]);
+                                break;
+                            case System.Data.DbType.Int32:
+                            case System.Data.DbType.UInt32:
+                                instance.Fields[field.Name] = Convert.ToInt32(record[f]);
+                                break;
+                            case System.Data.DbType.Int64:
+                            case System.Data.DbType.UInt64:
+                                instance.Fields[field.Name] = Convert.ToInt64(record[f]);
+                                break;
+                            case System.Data.DbType.Double:
+                                instance.Fields[field.Name] = Convert.ToDouble(record[f]);
+                                break;
+                            case System.Data.DbType.Single:
+                                instance.Fields[field.Name] = Convert.ToSingle(record[f]);
+                                break;
+                            case System.Data.DbType.Decimal:
+                                instance.Fields[field.Name] = Convert.ToDecimal(record[f]);
+                                break;
+                            case System.Data.DbType.Guid:
+                                instance.Fields[field.Name] = new Guid(record[f] as string);
+                                break;
+                            case System.Data.DbType.Time:
+                                instance.Fields[field.Name] = TimeSpan.Parse(record[f] as string);
+                                break;
+                            case System.Data.DbType.Date:
+                            case System.Data.DbType.DateTime:
+                                DateTime dt;
+                                if (DateTime.TryParse(record[f] as string, out dt))
+                                {
+                                    instance.Fields[field.Name] = dt;
+                                }
+                                else
+                                {
+                                    instance.Fields[field.Name] = null;
+                                }
+
+                                break;
+                            default:
+                                instance.Fields[field.Name] = record[f];
+                                break;
+                        }
+                    }
+                    else
+                    {
+                        instance.Fields[field.Name] = record[f];
                     }
                 }
-                else
+                catch (Exception ex)
                 {
-                    instance.Fields[field.FieldName] = record[f];
+                    Console.WriteLine(string.Format("** Unable to convert field {0} value {1} to {2}: {3}", field.Name, record[f], field.TypeName, ex.Message));
+                    throw ex;
                 }
                 f++;
             }
@@ -741,7 +760,7 @@ namespace OpenNETCF.ORM
 
             foreach (var record in records)
             {
-                var instance = DynamicEntityFromEntityValueDictionary(entityName, record);
+                var instance = DynamicEntityFromEntityValueDictionary(entityName, table.Fields, record);
                 items.Add(instance);
             }
 
@@ -755,7 +774,7 @@ namespace OpenNETCF.ORM
 
             if (record == null) return null;
 
-            return DynamicEntityFromEntityValueDictionary(entityName, record);
+            return DynamicEntityFromEntityValueDictionary(entityName, table.Fields, record);
         }
 
         public override IEnumerable<DynamicEntity> Select(string entityName, IEnumerable<FilterCondition> filters)
@@ -779,7 +798,7 @@ namespace OpenNETCF.ORM
 
             foreach (var record in records)
             {
-                var instance = DynamicEntityFromEntityValueDictionary(entityName, record);
+                var instance = DynamicEntityFromEntityValueDictionary(entityName, table.Fields, record);
                 items.Add(instance);
             }
 
@@ -864,7 +883,7 @@ namespace OpenNETCF.ORM
 
             foreach (var record in records)
             {
-                var instance = DynamicEntityFromEntityValueDictionary(entityName, record);
+                var instance = DynamicEntityFromEntityValueDictionary(entityName, table.Fields, record);
                 items.Add(instance);
             }
 
@@ -913,7 +932,7 @@ namespace OpenNETCF.ORM
 
                 foreach (var record in records)
                 {
-                    var instance = DynamicEntityFromEntityValueDictionary(entityName, record);
+                    var instance = DynamicEntityFromEntityValueDictionary(entityName, table.Fields, record);
                     items.Add(instance);
                 }
 
@@ -1002,7 +1021,15 @@ namespace OpenNETCF.ORM
                 fields.Add(FieldFactory.GetFieldForAttribute(field, entity.EntityAttribute.KeyScheme));
             }
 
-            m_session.Data.UpdateTable(entity.EntityName, fields);
+            try
+            {
+                m_session.Data.UpdateTable(entity.EntityName, fields);
+            }
+            catch (InvalidSessionException)
+            {
+                m_session.Reconnect();
+                m_session.Data.UpdateTable(entity.EntityName, fields);
+            }
         }
 
         public override void CreateStore()

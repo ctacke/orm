@@ -193,7 +193,6 @@ namespace OpenNETCF.DreamFactory
                 tableDescriptor.field.Add(f.AsFieldDescriptor());
             }
 
-//            var request = Session.GetSessionRequest(string.Format("/rest/schema/{0}", tableName), Method.PATCH);
             var request = Session.GetSessionRequest(m_uris.GetTableSchema(tableName), Method.PATCH);
 
             request.JsonSerializer.ContentType = "application/json; charset=utf-8";

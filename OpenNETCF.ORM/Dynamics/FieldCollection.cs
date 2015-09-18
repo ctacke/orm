@@ -56,6 +56,30 @@ namespace OpenNETCF.ORM
             }
         }
 
+        public double GetDouble(string fieldName, double nullValue)
+        {
+            var val = this[fieldName];
+
+            if ((val == null) || (val == DBNull.Value))
+            {
+                return nullValue;
+            }
+
+            return Convert.ToDouble(val);
+        }
+
+        public int GetInt32(string fieldName, int nullValue)
+        {
+            var val = this[fieldName];
+
+            if ((val == null) || (val == DBNull.Value))
+            {
+                return nullValue;
+            }
+
+            return Convert.ToInt32(val);
+        }
+
         public bool ContainsField(string fieldName)
         {
             return m_fields.ContainsKey(fieldName);

@@ -17,16 +17,21 @@ namespace OpenNETCF.ORM
         private SqlConnectionInfo m_info;
         private Version m_version;
 
+        public const int DefaultServerPort = 1433;
+        public const ConnectionBehavior DefaultConnectionBehavior = ConnectionBehavior.AlwaysNew;
+
         public SqlServerDataStore(SqlConnectionInfo info)
             : base()
         {
             // TODO: validate info members
             m_info = info;
+            this.ConnectionBehavior = DefaultConnectionBehavior;
         }
 
         public SqlServerDataStore(string connectionString)
         {
             m_connectionString = connectionString;
+            this.ConnectionBehavior = DefaultConnectionBehavior;
         }
 
         public override string Name
@@ -38,13 +43,27 @@ namespace OpenNETCF.ORM
         {
             var sb = new StringBuilder();
 
+            var commaIndex = info.ServerName.IndexOf(',');
+            if (commaIndex >= 0)
+            {
+                info.ServerName = info.ServerName.Substring(0, commaIndex);
+            }
+
             if (string.IsNullOrEmpty(m_info.InstanceName))
             {
-                sb.AppendFormat("Data Source={0};", info.ServerName);
+                if (info.ServerPort == DefaultServerPort)
+                {
+                    sb.AppendFormat("Data Source={0};", info.ServerName);
+                }
+                else
+                {
+                    sb.AppendFormat("Data Source={0},{1};", info.ServerName, info.ServerPort);
+                }
+
             }
             else
             {
-                sb.AppendFormat("Data Source={0}\\{1};", info.ServerName, info.InstanceName);
+                sb.AppendFormat("Data Source={0}\\{1};", info.ServerName, info.InstanceName); // instances are always on separate ports, so no need to specify the port when you have an instance name
             }
 
             sb.AppendFormat("Initial Catalog={0};", info.DatabaseName);
@@ -168,6 +187,11 @@ namespace OpenNETCF.ORM
 
         private SqlCommand GetInsertCommand(string entityName)
         {
+            return GetInsertCommand(entityName, null);
+        }
+
+        private SqlCommand GetInsertCommand(string entityName, IEnumerable<string> includeFields)
+        {
             // TODO: support command caching to improve bulk insert speeds
             //       simply use a dictionary keyed by entityname
             var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
@@ -178,6 +202,12 @@ namespace OpenNETCF.ORM
 
             foreach (var field in Entities[entityName].Fields)
             {
+                // skip any fields not in the desired field list (if it's null, we'll keep all fields)
+                if (includeFields != null)
+                {
+                    if (!includeFields.Contains(field.FieldName)) continue;
+                }
+
                 // skip auto-increments
                 if ((field.IsPrimaryKey) && (keyScheme == KeyScheme.Identity))
                 {
@@ -254,99 +284,109 @@ namespace OpenNETCF.ORM
             {
                 FieldAttribute identity = null;
                 keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
-                var command = GetInsertCommand(entityName);
-                command.Connection = connection as SqlConnection;
-                command.Transaction = CurrentTransaction as SqlTransaction;
-
-                // TODO: fill the parameters
-                foreach (var field in Entities[entityName].Fields)
+                using (var command = GetInsertCommand(entityName))
                 {
-                    if ((field.IsPrimaryKey) && (keyScheme == KeyScheme.Identity))
-                    {
-                        identity = field;
-                        continue;
-                    }
-                    else if (field.DataType == DbType.Object)
-                    {
-                        // get serializer
-                        var serializer = GetSerializer(itemType);
+                    command.Connection = connection as SqlConnection;
+                    command.Transaction = CurrentTransaction as SqlTransaction;
 
-                        if (serializer == null)
-                        {
-                            throw new MissingMethodException(
-                                string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
-                                field.FieldName, entityName));
-                        }
-                        var value = serializer.Invoke(item, new object[] { field.FieldName });
-                        if (value == null)
-                        {
-                            command.Parameters[ParameterPrefix + field.FieldName].Value = DBNull.Value;
-                        }
-                        else
-                        {
-                            command.Parameters[ParameterPrefix + field.FieldName].Value = value;
-                        }
-                    }
-                    else if (field.DataType == DbType.DateTime)
+                    // TODO: fill the parameters
+                    foreach (var field in Entities[entityName].Fields)
                     {
-                        var dtValue = GetInstanceValue(field, item);
+                        if ((field.IsPrimaryKey) && (keyScheme == KeyScheme.Identity))
+                        {
+                            identity = field;
+                            continue;
+                        }
+                        else if (field.DataType == DbType.Object)
+                        {
+                            // get serializer
+                            var serializer = GetSerializer(itemType);
 
-                        if (dtValue.Equals(DateTime.MinValue) &&
-                            ((field.AllowsNulls) || (field.DefaultType == DefaultType.CurrentDateTime)))
-                        {
-                            // testing of just letting the null fall through is setting the field to null, not using the default
-                            // so we'll set it manually
-                            dtValue = DateTime.Now;
-                        }
-                        command.Parameters[ParameterPrefix + field.FieldName].Value = dtValue;
-                    }
-                    else if (field.IsRowVersion)
-                    {
-                        // read-only, so do nothing
-                    }
-                    else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
-                    {
-                        // SQL Compact doesn't support Time, so we're convert to a DateTime both directions
-                        var value = field.PropertyInfo.GetValue(item, null);
-
-                        if (value == null)
-                        {
-                            command.Parameters[ParameterPrefix + field.FieldName].Value = DBNull.Value;
-                        }
-                        else
-                        {
-                            var timespanTicks = ((TimeSpan)value).Ticks;
-                            command.Parameters[ParameterPrefix + field.FieldName].Value = timespanTicks;
-                        }
-                    }
-                    else
-                    {
-                        var value = field.PropertyInfo.GetValue(item, null);
-                        if (value == null)
-                        {
-                            if (field.DefaultValue != null)
+                            if (serializer == null)
                             {
-                                command.Parameters[ParameterPrefix + field.FieldName].Value = field.DefaultValue;
+                                throw new MissingMethodException(
+                                    string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
+                                    field.FieldName, entityName));
+                            }
+                            var value = serializer.Invoke(item, new object[] { field.FieldName });
+                            if (value == null)
+                            {
+                                command.Parameters[ParameterPrefix + field.FieldName].Value = DBNull.Value;
                             }
                             else
                             {
-                                // this is specific to SQL Server
-                                if (field.DataType == DbType.Binary)
-                                {
-                                    command.Parameters[ParameterPrefix + field.FieldName].SqlDbType = SqlDbType.VarBinary;
-                                    command.Parameters[ParameterPrefix + field.FieldName].Size = -1;
-                                }
+                                command.Parameters[ParameterPrefix + field.FieldName].Value = value;
+                            }
+                        }
+                        else if (field.DataType == DbType.DateTime)
+                        {
+                            var dtValue = GetInstanceValue(field, item);
+
+                            if (dtValue.Equals(DateTime.MinValue) &&
+                                ((field.AllowsNulls) || (field.DefaultType == DefaultType.CurrentDateTime)))
+                            {
+                                // testing of just letting the null fall through is setting the field to null, not using the default
+                                // so we'll set it manually
+                                dtValue = DateTime.Now;
+                            }
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = dtValue;
+                        }
+                        else if (field.IsRowVersion)
+                        {
+                            // read-only, so do nothing
+                        }
+                        else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
+                        {
+                            // SQL Compact doesn't support Time, so we're convert to a DateTime both directions
+                            var value = field.PropertyInfo.GetValue(item, null);
+
+                            if (value == null)
+                            {
                                 command.Parameters[ParameterPrefix + field.FieldName].Value = DBNull.Value;
+                            }
+                            else
+                            {
+                                var timespanTicks = ((TimeSpan)value).Ticks;
+                                command.Parameters[ParameterPrefix + field.FieldName].Value = timespanTicks;
                             }
                         }
                         else
                         {
-                            command.Parameters[ParameterPrefix + field.FieldName].Value = value;
+                            var value = field.PropertyInfo.GetValue(item, null);
+                            if (value == null)
+                            {
+                                if (field.DefaultValue != null)
+                                {
+                                    command.Parameters[ParameterPrefix + field.FieldName].Value = field.DefaultValue;
+                                }
+                                else
+                                {
+                                    // this is specific to SQL Server
+                                    if (field.DataType == DbType.Binary)
+                                    {
+                                        command.Parameters[ParameterPrefix + field.FieldName].SqlDbType = SqlDbType.VarBinary;
+                                        command.Parameters[ParameterPrefix + field.FieldName].Size = -1;
+                                    }
+                                    command.Parameters[ParameterPrefix + field.FieldName].Value = DBNull.Value;
+                                }
+                            }
+                            else
+                            {
+                                command.Parameters[ParameterPrefix + field.FieldName].Value = value;
+                            }
                         }
                     }
-                }
 
-                command.ExecuteNonQuery();
+                    try
+                    {
+                        command.ExecuteNonQuery();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        ReleasePersistentConnection();
+                        throw;
+                    }
+                }
 
                 // did we have an identity field?  If so, we need to update that value in the item
                 if (identity != null)
@@ -424,6 +464,8 @@ namespace OpenNETCF.ORM
 
         private void UpdateIndexCacheForType(string entityName)
         {
+            if (!Entities.Contains(entityName)) return;
+
             // have we already cached this?
             if (((SqlEntityInfo)Entities[entityName]).IndexNames != null) return;
 
@@ -481,7 +523,10 @@ namespace OpenNETCF.ORM
                 {
                     command.Transaction = CurrentTransaction;
                     command.Connection = connection;
-                    var sql = "SELECT table_name FROM information_schema.tables";
+                    var sql = "SELECT table_name FROM information_schema.tables " +
+                        "UNION " +
+                        "SELECT table_name FROM information_schema.views";
+
                     command.CommandText = sql;
                     using (var reader = command.ExecuteReader())
                     {
@@ -556,27 +601,34 @@ namespace OpenNETCF.ORM
 
                     command.CommandText = sql;
 
+                    object[] fieldProps = null;
+
                     using (var reader = command.ExecuteReader())
                     {
-                        if (!reader.Read())
+                        if (reader.Read())
                         {
-                            // field doesn't exist - we must create it
-                            var alter = new StringBuilder(string.Format("ALTER TABLE {0} ", entity.EntityAttribute.NameInStore));
-                            alter.Append(string.Format("ADD [{0}] {1} {2}",
-                                field.FieldName,
-                                GetFieldDataTypeString(entity.EntityName, field),
-                                GetFieldCreationAttributes(entity.EntityAttribute, field)));
-
-                            using (var altercmd = GetNewCommandObject())
-                            {
-                                altercmd.CommandText = alter.ToString();
-                                altercmd.Connection = connection;
-                                altercmd.ExecuteNonQuery();
-                            }
-                        }
-                        else
-                        {
+                            fieldProps = new object[6];
+                            reader.GetValues(fieldProps);
                             // TODO: verify field length, etc.
+                        }
+                    }
+
+                    // do this *outside* the above reader so that the connection doesn't have multiple open readers when it tries the alter command below
+                    // this is critical for some types of connection behaviors
+                    if (fieldProps == null)
+                    {
+                        // field doesn't exist - we must create it
+                        var alter = new StringBuilder(string.Format("ALTER TABLE {0} ", entity.EntityAttribute.NameInStore));
+                        alter.Append(string.Format("ADD [{0}] {1} {2}",
+                            field.FieldName,
+                            GetFieldDataTypeString(entity.EntityName, field),
+                            GetFieldCreationAttributes(entity.EntityAttribute, field)));
+
+                        using (var altercmd = GetNewCommandObject())
+                        {
+                            altercmd.CommandText = alter.ToString();
+                            altercmd.Connection = connection;
+                            altercmd.ExecuteNonQuery();
                         }
                     }
                 }
@@ -1081,6 +1133,44 @@ namespace OpenNETCF.ORM
             }
 
             return base.GetFieldDataTypeString(entityName, field);
+        }
+
+        protected override void OnPersistentConnectionCreated(IDbConnection connection)
+        {
+            // when the global, persistent connection gets disposed, make sure we null the thing out in the base so it can be recreated
+            (connection as SqlConnection).Disposed += SqlServerDataStore_Disposed;
+        }
+
+        void SqlServerDataStore_Disposed(object sender, EventArgs e)
+        {
+            // this will dispose *and* null out the root global connection
+            ReleasePersistentConnection();
+        }
+
+        public override bool IsRecoverableError(Exception ex)
+        {
+            var sqlex = ex as SqlException;
+
+            if (sqlex != null)
+            {
+                switch (sqlex.Number)
+                {
+                    case 1326: // The server was not found or was not accessible
+                    case 4060: // login failed
+                    case 17142: // service paused
+                        return true;
+                    default:
+                        // handle other non-numbered cases here
+                        if (sqlex.Message.Contains("Physical connection is not usable"))
+                        {
+                            return true;
+                        }
+                        break;
+                }
+            }
+
+            // default behavior is to not retry (syntax errors, etc shouldn't be recovered)
+            return false;
         }
     }
 }

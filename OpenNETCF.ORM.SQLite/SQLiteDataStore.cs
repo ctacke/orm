@@ -611,6 +611,11 @@ namespace OpenNETCF.ORM
                 throw new EntityNotFoundException(objectType);
             }
 
+            if (!Entities.Contains(entityName))
+            {
+                if(DiscoverDynamicEntity(entityName) == null) yield return null;
+            }
+
             UpdateIndexCacheForType(entityName);
 
             var items = new List<object>();

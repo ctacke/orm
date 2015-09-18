@@ -45,6 +45,7 @@
     <Compile Include="..\OpenNETCF.ORM.Shared\OpenNETCF.ORM.Version.cs">
       <Link>Properties\OpenNETCF.ORM.Version.cs</Link>
     </Compile>
+    <Compile Include="Extensions.cs" />
     <Compile Include="SqlServerDataStore_dynamic.cs" />
     <Compile Include="SqlConnectionInfo.cs" />
     <Compile Include="SqlServerDataStore.cs" />

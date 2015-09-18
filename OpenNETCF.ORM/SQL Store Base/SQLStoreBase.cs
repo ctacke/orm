@@ -57,12 +57,15 @@ namespace OpenNETCF.ORM
         public abstract string ConnectionString { get; }
 
         private object m_transactionSyncRoot = new object();
+        public int ConnectionPoolSize { get; set; }
 
         public SQLStoreBase()
         {
             DefaultStringFieldSize = 200;
             DefaultNumericFieldPrecision = 16;
             DefaultVarBinaryLength = 8000;
+            m_connectionPool = new List<IDbConnection>();
+            ConnectionPoolSize = 20;
 
             ConnectionBehavior = ORM.ConnectionBehavior.HoldMaintenance;
         }
@@ -157,8 +160,79 @@ namespace OpenNETCF.ORM
 
         protected virtual IDbConnection GetConnection(bool maintenance)
         {
-            IDbConnection result;
+            return GetConnection(maintenance, false);
+        }
 
+        private List<IDbConnection> m_connectionPool;
+        private EventInfo m_disposedEvent;
+
+        private IDbConnection GetPoolConnection()
+        {
+            lock(m_connectionPool)
+            {
+                IDbConnection connection = null;
+
+                do
+                {
+                    connection = (from c in m_connectionPool
+                                  where c.State != ConnectionState.Executing
+                                  && c.State != ConnectionState.Fetching
+                                  select c).FirstOrDefault();
+
+                    if (connection != null)
+                    {
+                        return connection;
+                    }
+
+                    if (m_connectionPool.Count < ConnectionPoolSize)
+                    {
+                        connection = GetNewConnectionObject();
+
+                        if (m_disposedEvent == null)
+                        {
+                            m_disposedEvent = connection.GetType().GetEvent("Disposed");
+
+                            if (m_disposedEvent != null)
+                            {
+                                var target = this.GetType().GetMethod("ConnectionDisposed", BindingFlags.Instance | BindingFlags.NonPublic);
+
+                                m_disposedEvent.AddEventHandler(connection,
+                                    Delegate.CreateDelegate(m_disposedEvent.EventHandlerType, this, target)
+                                    );
+                            }
+                        }
+
+                        connection.Open();
+                        m_connectionPool.Add(connection);
+                        Interlocked.Increment(ref m_connectionCount);
+                        Debug.WriteLine("Creating pooled connection");
+                        return connection;
+                    }
+
+                    // pool is full, we have to wait
+                    Thread.Sleep(1000);
+
+                    // TODO: add a timeout?
+                } while (connection == null);
+
+                // this should never happen
+                return null;
+            }
+        }
+
+        private void ConnectionDisposed(object sender, EventArgs e)
+        {
+            var c = sender as IDbConnection;
+            if (c != null)
+            {
+                m_connectionPool.Remove(c);
+            }
+        }
+
+        private IDbConnection GetConnection(bool maintenance, bool isRetry)
+        {
+            IDbConnection result;
+            
             switch (ConnectionBehavior)
             {
                 case ConnectionBehavior.AlwaysNew:
@@ -172,35 +246,81 @@ namespace OpenNETCF.ORM
                     {
                         m_connection = GetNewConnectionObject();
                         m_connection.Open();
+                        OnPersistentConnectionCreated(m_connection);
                         Interlocked.Increment(ref m_connectionCount);
                     }
-                    if (maintenance) return m_connection;
-                    var connection2 = GetNewConnectionObject();
-                    connection2.Open();
+                    if (maintenance)
+                    {
+                        while((m_connection.State == ConnectionState.Executing) 
+                            || (m_connection.State == ConnectionState.Fetching))
+                        {
+                            Thread.Sleep(1000);
+                        }
+                        return m_connection;
+                    }
+                    var connection2 = GetPoolConnection();
                     Interlocked.Increment(ref m_connectionCount);
                     result = connection2;
                     break;
                 case ConnectionBehavior.Persistent:
-                    if (m_connection == null)
-                    {
-                        m_connection = GetNewConnectionObject();
-                        m_connection.Open();
-                        Interlocked.Increment(ref m_connectionCount);
-                    }
-                    result = m_connection;
+                    var pooledConnection = GetPoolConnection();
+                    result = pooledConnection;
                     break;
                 default:
                     throw new NotSupportedException();
             }
 
-            // make sure the connection is open (in the event we has some network condition that closed it, etc.
+            // make sure the connection is open (in the event we has some network condition that closed it, etc.)
             if (result.State != ConnectionState.Open)
             {
-                result.Open();
+                try
+                {
+                    result.Open();
+                }
+                catch
+                {
+                    if (isRetry) throw;
+
+                    result.Dispose();
+                    result = null;
+
+                    // retry once
+                    Thread.Sleep(1000);
+                    return GetConnection(maintenance, true);
+                }
             }
 
             return result;
         }
+
+        protected virtual void OnPersistentConnectionCreated(IDbConnection connection) { }
+
+        protected void ReleasePersistentConnection()
+        {
+            if (m_connection == null) return;
+            try
+            {
+                var disp = m_connection as IDisposable;
+                if (disp != null)
+                {
+                    // set the global ref to null to prevent recursion
+                    m_connection = null;
+                    try
+                    {
+                        // make sure it's disposed
+                        disp.Dispose();
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                    }
+                }
+            }
+            finally
+            {
+                m_connection = null;
+            }
+        }
+
 
         protected virtual void DoneWithConnection(IDbConnection connection, bool maintenance)
         {
@@ -209,12 +329,14 @@ namespace OpenNETCF.ORM
                 case ConnectionBehavior.AlwaysNew:
                     connection.Close();
                     connection.Dispose();
+                    connection = null;
                     Interlocked.Decrement(ref m_connectionCount);
                     break;
                 case ConnectionBehavior.HoldMaintenance:
                     if (maintenance) return;
                     connection.Close();
                     connection.Dispose();
+                    connection = null;
                     Interlocked.Decrement(ref m_connectionCount);
                     break;
                 case ConnectionBehavior.Persistent:
@@ -1105,6 +1227,11 @@ namespace OpenNETCF.ORM
 
         protected virtual void CheckOrdinals(string entityName)
         {
+            if (!Entities.Contains(entityName))
+            {
+                if (DiscoverDynamicEntity(entityName) == null) return;
+            }
+
             if (Entities[entityName].Fields.OrdinalsAreValid) return;
 
             var connection = GetConnection(true);
@@ -1794,14 +1921,41 @@ namespace OpenNETCF.ORM
             return ExecuteReader(sql, parameters, CommandBehavior.Default, throwExceptions);
         }
 
+        private IDbConnection m_readerConnection;
+
+        public void CloseReader()
+        {
+            if (m_readerConnection != null)
+            {
+                m_readerConnection.Close();
+                m_readerConnection.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="sql"></param>
+        /// <param name="parameters"></param>
+        /// <param name="behavior"></param>
+        /// <param name="throwExceptions"></param>
+        /// <returns></returns>
+        /// <remarks>You <b>MUST</b> call CloseReader after calling this method to prevent a leak</remarks>
         public virtual IDataReader ExecuteReader(string sql, IEnumerable<IDataParameter> parameters, CommandBehavior behavior, bool throwExceptions)
         {
+            IDbConnection connection;
+
             if (ConnectionBehavior != ORM.ConnectionBehavior.Persistent)
             {
-                throw new Exception("ConnectionBehavior must be Persistent to use ExecuteReader");
+                m_readerConnection = GetNewConnectionObject();
+                m_readerConnection.Open();
+                connection = m_readerConnection;
+            }
+            else
+            {
+                connection = GetConnection(false);
             }
 
-            var connection = GetConnection(false);
             try
             {
                 using (var command = GetNewCommandObject())
@@ -1830,7 +1984,10 @@ namespace OpenNETCF.ORM
             }
             finally
             {
-                DoneWithConnection(connection, false);
+                if (ConnectionBehavior == ORM.ConnectionBehavior.Persistent)
+                {
+                    DoneWithConnection(connection, false);
+                }
             }
         }
 
@@ -1863,6 +2020,13 @@ namespace OpenNETCF.ORM
             if (!string.IsNullOrEmpty(sortField))
             {
                 sql.AppendFormat(" ORDER BY {0} {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+            }
+            else if (sortOrder != FieldSearchOrder.NotSearchable)
+            {
+                if (Entities[entityName].Fields.KeyField != null)
+                {
+                    sql.AppendFormat(" ORDER BY {0} {1}", Entities[entityName].Fields.KeyField.FieldName, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                }
             }
 
             if (fetchCount > 0)

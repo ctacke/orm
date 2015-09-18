@@ -28,7 +28,7 @@ namespace OpenNETCF.ORM
 
                     command.Connection = connection;
 
-                    command.CommandText = string.Format("SELECT * FROM {0} WHERE [{1}] = {2)keyparam",
+                    command.CommandText = string.Format("SELECT * FROM {0} WHERE [{1}] = {2}keyparam",
                         entityName,
                         Entities[entityName].Fields.KeyField.FieldName,
                         ParameterPrefix);
@@ -84,14 +84,24 @@ namespace OpenNETCF.ORM
                             // only execute if a change occurred
                             if (changeDetected)
                             {
-                                // remove the trailing comma and append the filter
-                                updateSQL.Length -= 2;
-                                updateSQL.AppendFormat(" WHERE {0} = {1}keyparam", keyField, ParameterPrefix);
-                                insertCommand.Parameters.Add(CreateParameterObject(ParameterPrefix + "keyparam", keyValue));
-                                insertCommand.CommandText = updateSQL.ToString();
-                                insertCommand.Connection = connection;
-                                insertCommand.Transaction = CurrentTransaction;
-                                insertCommand.ExecuteNonQuery();
+                                var insertConnection = GetConnection(false);
+
+                                try
+                                {
+                                    // remove the trailing comma and append the filter
+                                    updateSQL.Length -= 2;
+                                    updateSQL.AppendFormat(" WHERE {0} = {1}keyparam", keyField, ParameterPrefix);
+                                    insertCommand.Parameters.Add(CreateParameterObject(ParameterPrefix + "keyparam", keyValue));
+                                    insertCommand.CommandText = updateSQL.ToString();
+                                    insertCommand.Connection = insertConnection;
+                                    insertCommand.Transaction = CurrentTransaction;
+                                    insertCommand.ExecuteNonQuery();
+                                }
+                                finally
+                                {
+                                    DoneWithConnection(insertConnection, false);
+                                }
+
                             }
                         }
                     }
@@ -111,47 +121,62 @@ namespace OpenNETCF.ORM
             {
                 var entityName = item.EntityName;
 
-                var command = GetInsertCommand(entityName);
-                command.Connection = connection as SqlConnection;
-                command.Transaction = CurrentTransaction as SqlTransaction;
+                var fields = from f in item.Fields
+                             select f.Name;
 
-                string keyFieldName = null;
-
-                if (Entities[entityName].EntityAttribute.KeyScheme == KeyScheme.Identity)
+                using (var command = GetInsertCommand(entityName, fields))
                 {
-                    var keyField = Entities[entityName].Fields.FirstOrDefault(f => f.IsPrimaryKey);
+                    command.Connection = connection as SqlConnection;
+                    command.Transaction = CurrentTransaction as SqlTransaction;
 
-                    if (keyField != null)
+                    string keyFieldName = null;
+
+                    if (Entities[entityName].EntityAttribute.KeyScheme == KeyScheme.Identity)
                     {
-                        keyFieldName = keyField.FieldName;
-                    }
-                }
+                        var keyField = Entities[entityName].Fields.FirstOrDefault(f => f.IsPrimaryKey);
 
-                foreach (var field in item.Fields)
-                {
-                    if (field.Name == keyFieldName) continue;
-                    var p = command.Parameters[ParameterPrefix + field.Name] as SqlParameter;
-                    
-                    var value = ParseToSqlDbType(field.Value, p.SqlDbType);
-                    var length = Entities[entityName].Fields[field.Name].Length;
-
-                    if (value is string && length > 0)
-                    {
-                        value = (value as string).Truncate(length);
+                        if (keyField != null)
+                        {
+                            keyFieldName = keyField.FieldName;
+                        }
                     }
 
-                    p.Value = value;
-
-                }
-
-                command.ExecuteNonQuery();
-
-                // did we have an identity field?  If so, we need to update that value in the item
-                if (Entities[entityName].EntityAttribute.KeyScheme == KeyScheme.Identity)
-                {
-                    if (keyFieldName != null)
+                    foreach (var field in item.Fields)
                     {
-                        item.Fields[keyFieldName] = GetIdentity(connection);
+                        if (field.Name == keyFieldName) continue;
+                        var p = command.Parameters[ParameterPrefix + field.Name] as SqlParameter;
+
+                        var value = ParseToSqlDbType(field.Value, p.SqlDbType);
+                        var length = Entities[entityName].Fields[field.Name].Length;
+
+                        if (value is string && length > 0)
+                        {
+                            value = (value as string).Truncate(length);
+                        }
+
+                        p.Value = value;
+
+                    }
+
+                    try
+                    {
+                        command.ExecuteNonQuery();
+
+                        // did we have an identity field?  If so, we need to update that value in the item
+                        if (Entities[entityName].EntityAttribute.KeyScheme == KeyScheme.Identity)
+                        {
+                            if (keyFieldName != null)
+                            {
+                                item.Fields[keyFieldName] = GetIdentity(connection);
+                            }
+                        }
+
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // connection was disposed?
+                        ReleasePersistentConnection();
+                        throw;
                     }
                 }
             }
@@ -163,27 +188,95 @@ namespace OpenNETCF.ORM
 
         private object ParseToSqlDbType(object o, SqlDbType t)
         {
-            if (o.Equals(DBNull.Value)) return DBNull.Value;
             if (o == null) return DBNull.Value;
+            if (o.Equals(DBNull.Value)) return DBNull.Value;
 
             switch (t)
             {
                 case SqlDbType.Int:
-                    return Convert.ToInt32(o);
+                    if (o == null) return 0;
+                    if (o.Equals(string.Empty)) return 0;
+                    try
+                    {
+                        return Convert.ToInt32(o);
+                    }
+                    catch
+                    {
+                        return 0;
+                    }
                 case SqlDbType.BigInt:
-                    return Convert.ToInt64(o);
+                    if (o == null) return 0;
+                    if (o.Equals(string.Empty)) return 0;
+                    try
+                    {
+                        return Convert.ToInt64(o);
+                    }
+                    catch
+                    {
+                        return 0;
+                    }
                 case SqlDbType.SmallInt:
-                    return Convert.ToInt16(o);
+                    if (o == null) return 0;
+                    if (o.Equals(string.Empty)) return 0;
+                    try
+                    {
+                        return Convert.ToInt16(o);
+                    }
+                    catch
+                    {
+                        return 0;
+                    }
                 case SqlDbType.Bit:
-                    return Convert.ToBoolean(o);
+                    if (o == null) return false;
+                    if (o.Equals(string.Empty)) return false;
+
+                    try
+                    {
+                        var b = Convert.ToBoolean(o);
+                        return b;
+                    }
+                    catch
+                    {
+                        if (o.ToString() == "0") return false;
+                        if (o.ToString() == "1") return true;
+                    }
+
+                    return false;
                 case SqlDbType.NVarChar:
                     return o.ToString();
                 case SqlDbType.Decimal:
-                    return Convert.ToDecimal(o);
+                    if (o == null) return 0.0;
+                    if (o.Equals(string.Empty)) return 0.0;
+                    try
+                    {
+                        return Convert.ToDecimal(o);
+                    }
+                    catch
+                    {
+                        return 0.0;
+                    }
                 case SqlDbType.Float:
-                    return Convert.ToDouble(o);
+                    if (o == null) return 0;
+                    if (o.Equals(string.Empty)) return 0;
+                    try
+                    {
+                        return Convert.ToDouble(o);
+                    }
+                    catch
+                    {
+                        return 0;
+                    }
                 case SqlDbType.DateTime:
-                    return Convert.ToDateTime(o);
+                    if (o == null) return DBNull.Value;
+                    if (o.Equals(string.Empty)) return DBNull.Value;
+                    try
+                    {
+                        return Convert.ToDateTime(o);
+                    }
+                    catch
+                    {
+                        return DBNull.Value;
+                    }
                 default:
                     throw new NotSupportedException();
             }
@@ -205,6 +298,11 @@ namespace OpenNETCF.ORM
             };
 
             return (DynamicEntity)Select(entityName, typeof(DynamicEntity), new FilterCondition[] { filter }, -1, -1, false).FirstOrDefault();
+        }
+
+        public override void RegisterDynamicEntity(DynamicEntityDefinition entityDefinition)
+        {
+            base.RegisterDynamicEntity(entityDefinition, true);
         }
 
         public override DynamicEntityDefinition DiscoverDynamicEntity(string entityName)
@@ -321,19 +419,42 @@ namespace OpenNETCF.ORM
             }
         }
 
+
         public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
             if (fillReferences) throw new NotSupportedException("References not currently supported with this version of Fetch.");
             if (filter != null) throw new NotSupportedException("Filters not currently supported with this version of Fetch.  Try post-filtering with LINQ");
 
+            var entities = new List<DynamicEntity>();
+
+            if (!Entities.Contains(entityName))
+            {
+                // check to see if the underlying table exists
+                // if it does, add to the Entities and continue the query
+                if (DiscoverDynamicEntity(entityName) == null)
+                {
+                    return entities;
+                }
+            }
+
             var v = ServerVersion;
 
             string sql;
+
+            if ((sortField == null) && (sortOrder != FieldSearchOrder.NotSearchable))
+            {
+                // sorted, but not specific field, so sort by key, if available
+                if (Entities[entityName].Fields.KeyField != null)
+                {
+                    sortField = Entities[entityName].Fields.KeyField.FieldName;
+                }
+            }
 
             // TODO: get this working then revert the version number to 11 in the "if" startement below
             //       For now, all paths lead through the else condition
             if (v.Major >= 99) // sql server 2012 or later support OFFSET and FETCH
             {
+                Debug.WriteLineIf(TracingEnabled, "SQL Server 2012 or later detected");
                 if (firstRowOffset <= 0)
                 {
                     sql = string.Format("SELECT * FROM {0} ", entityName);
@@ -341,6 +462,13 @@ namespace OpenNETCF.ORM
                     if (!string.IsNullOrEmpty(sortField))
                     {
                         sql += string.Format("ORDER BY {0} {1} ", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                    }
+                    else if (sortOrder != FieldSearchOrder.NotSearchable)
+                    {
+                        if (Entities[entityName].Fields.KeyField != null)
+                        {
+                            sql += string.Format(" ORDER BY {0} {1}", Entities[entityName].Fields.KeyField.FieldName, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                        }
                     }
 
                     if (fetchCount > 0)
@@ -367,6 +495,7 @@ namespace OpenNETCF.ORM
                         {
                             sql += string.Format("FETCH FIRST {0} ROWS ONLY", fetchCount);
                         }
+                        Debug.WriteLineIf(TracingEnabled, "SQL for empty sort field generated");
                     }
                     else
                     {
@@ -378,6 +507,7 @@ namespace OpenNETCF.ORM
                         {
                             sql += string.Format("FETCH FIRST {0} ROWS ONLY", fetchCount);
                         }
+                        Debug.WriteLineIf(TracingEnabled, "SQL for search with sort field generated");
                     }
                 }
             }
@@ -391,11 +521,19 @@ namespace OpenNETCF.ORM
                     {
                         sql += string.Format("ORDER BY {0} {1} ", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
                     }
+                    else if (sortOrder != FieldSearchOrder.NotSearchable)
+                    {
+                        if (Entities[entityName].Fields.KeyField != null)
+                        {
+                            sql += string.Format(" ORDER BY {0} {1}", Entities[entityName].Fields.KeyField.FieldName, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                        }
+                    }
 
                     if (fetchCount > 0)
                     {
                         sql = sql.Replace("*", string.Format("TOP ({0}) *", fetchCount));
                     }
+                    Debug.WriteLineIf(TracingEnabled, "SQL for page 1 generated");
                 }
                 else
                 {
@@ -443,6 +581,8 @@ namespace OpenNETCF.ORM
                             entityName,
                             fetchCount > 0 ? string.Format("SELECT TOP ({0}) ", fetchCount) : string.Empty,
                             firstRowOffset);
+
+                        Debug.WriteLineIf(TracingEnabled, "SQL for empty sort field generated");
                     }
                     else
                     {
@@ -460,15 +600,17 @@ namespace OpenNETCF.ORM
                             entityName,
                             fetchCount > 0 ? string.Format("SELECT TOP ({0}) ", fetchCount) : string.Empty,
                             firstRowOffset);
+
+                        Debug.WriteLineIf(TracingEnabled, "SQL for search with sort field generated");
                     }                    
                 }
             }
 
+            Debug.WriteLineIf(TracingEnabled, "Getting connection");
             var connection = GetConnection(false);
             try
             {
-                var entities = new List<DynamicEntity>();
-
+                Debug.WriteLineIf(TracingEnabled, "Getting command");
                 using (var command = GetNewCommandObject())
                 {
                     command.CommandType = CommandType.Text;
@@ -494,13 +636,16 @@ namespace OpenNETCF.ORM
                         }
                     }
                 }
-
-                return entities;
+            }
+            catch (Exception ex2)
+            {
             }
             finally
             {
                 DoneWithConnection(connection, false);
             }
+
+            return entities;
         }
     }
 }
