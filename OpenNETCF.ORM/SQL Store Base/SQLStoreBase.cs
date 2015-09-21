@@ -196,6 +196,8 @@ namespace OpenNETCF.ORM
                             {
                                 var target = this.GetType().GetMethod("ConnectionDisposed", BindingFlags.Instance | BindingFlags.NonPublic);
 
+                                // while these objects (event and target method) exist in the CF, the handler never gets called.
+                                // not sure if the CF just never raises the Disposed event on an IDbConnection or not
                                 m_disposedEvent.AddEventHandler(connection,
                                     Delegate.CreateDelegate(m_disposedEvent.EventHandlerType, this, target)
                                     );
@@ -279,10 +281,21 @@ namespace OpenNETCF.ORM
                 }
                 catch
                 {
-                    if (isRetry) throw;
-
-                    result.Dispose();
-                    result = null;
+                    if (Environment.OSVersion.Platform == PlatformID.WinCE)
+                    {
+                        // The CF doesn't appear to actually raise the Disposed event on the IDbCOnnection.  No idea why.
+                        // This is a work-around for that behavior.
+                        m_connectionPool.Remove(result);
+                    }
+                    else if (isRetry)
+                    {
+                        throw;
+                    }
+                    else
+                    {
+                        result.Dispose();
+                        result = null;
+                    }
 
                     // retry once
                     Thread.Sleep(1000);
@@ -1227,11 +1240,6 @@ namespace OpenNETCF.ORM
 
         protected virtual void CheckOrdinals(string entityName)
         {
-            if (!Entities.Contains(entityName))
-            {
-                if (DiscoverDynamicEntity(entityName) == null) return;
-            }
-
             if (Entities[entityName].Fields.OrdinalsAreValid) return;
 
             var connection = GetConnection(true);
