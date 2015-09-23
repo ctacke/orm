@@ -34,6 +34,7 @@ namespace OpenNETCF.ORM
     {
         private string m_connectionString;
 
+        private string Password { get; set; }
         public string FileName { get; protected set; }
         
         protected SQLiteDataStore()
@@ -42,6 +43,11 @@ namespace OpenNETCF.ORM
         }
 
         public SQLiteDataStore(string fileName)
+            : this(fileName, null)
+        {
+        }
+
+        public SQLiteDataStore(string fileName, string password)
             : this()
         {
             if (string.IsNullOrEmpty(fileName))
@@ -50,6 +56,7 @@ namespace OpenNETCF.ORM
             }
 
             FileName = fileName;
+            Password = password;
         }
 
         public override string Name
@@ -68,8 +75,12 @@ namespace OpenNETCF.ORM
             {
                 if (m_connectionString == null)
                 {
-                    m_connectionString = string.Format("Data Source={0}", FileName);
+                    m_connectionString = string.Format("Data Source={0};", FileName);
 
+                    if (!string.IsNullOrEmpty(Password))
+                    {
+                        m_connectionString += string.Format("Password={0};", Password);
+                    }
                 }
                 return m_connectionString;
             }
