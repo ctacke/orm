@@ -1,21 +1,21 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{08063EDA-3FDF-4FD2-A640-07FBCC6AD480}</ProjectGuid>
+    <ProjectGuid>{1AA3827F-2B66-43F2-8C88-9EED8D15D76B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>OpenNETCF.ORM</RootNamespace>
-    <AssemblyName>OpenNETCF.ORM.Azure</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <AssemblyName>OpenNETCF.ORM.DreamFactory</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>
     <SccLocalPath>SAK</SccLocalPath>
     <SccAuxPath>SAK</SccAuxPath>
     <SccProvider>SAK</SccProvider>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -25,19 +25,18 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>..\..\bin\Release\FFx\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="OpenNETCF.Extensions">
-      <HintPath>..\..\References\FFx\OpenNETCF.Extensions.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -46,18 +45,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AzureDataStore.cs" />
-    <Compile Include="Extensions.cs" />
+    <Compile Include="..\..\Shared\OpenNETCF.ORM.Version.cs">
+      <Link>Properties\OpenNETCF.ORM.Version.cs</Link>
+    </Compile>
+    <Compile Include="DreamFactoryDataStore.cs" />
+    <Compile Include="FieldFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Core\OpenNETCF.ORM.FFx.csproj">
-      <Project>{6E9C7DA3-AD60-4E44-9D3A-7BBD3A20D79F}</Project>
+      <Project>{6e9c7da3-ad60-4e44-9d3a-7bbd3a20d79f}</Project>
       <Name>OpenNETCF.ORM.FFx</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Library\OpenNETCF.Azure.FFx.csproj">
-      <Project>{b96281bb-11c8-4d0b-ae28-690608b590be}</Project>
-      <Name>OpenNETCF.Azure.FFx</Name>
+    <ProjectReference Include="..\Library\OpenNETCF.DreamFactory.FFx.csproj">
+      <Project>{4d8ffd95-87bd-4873-83ce-01ba4a5cd5f1}</Project>
+      <Name>OpenNETCF.DreamFactory.FFx</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
