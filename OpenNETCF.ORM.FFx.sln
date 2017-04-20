@@ -43,6 +43,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SQL Server", "SQL Server", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SqlServer.FFx", "SQL Server\OpenNETCF.ORM.SqlServer.FFx.csproj", "{023B7B18-050D-44B7-8E9B-8F95BB042874}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SQL Compact", "SQL Compact", "{360B115D-61F8-42A4-A3FA-CA5F33045311}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SqlCe.FFx", "SQL Compact\OpenNETCF.ORM.SqlCe.FFx.csproj", "{B63F2DF8-E247-402D-A250-2514EF4A08FD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -165,6 +169,18 @@ Global
 		{023B7B18-050D-44B7-8E9B-8F95BB042874}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{023B7B18-050D-44B7-8E9B-8F95BB042874}.Release|x86.ActiveCfg = Release|Any CPU
 		{023B7B18-050D-44B7-8E9B-8F95BB042874}.Release|x86.Build.0 = Release|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Debug|x86.Build.0 = Debug|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Release|x86.ActiveCfg = Release|Any CPU
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -180,6 +196,7 @@ Global
 		{4D8FFD95-87BD-4873-83CE-01BA4A5CD5F1} = {0E2F6E7B-8F53-488E-B3D5-EB5B03E311DB}
 		{1AA3827F-2B66-43F2-8C88-9EED8D15D76B} = {0E2F6E7B-8F53-488E-B3D5-EB5B03E311DB}
 		{023B7B18-050D-44B7-8E9B-8F95BB042874} = {348971FC-7500-4C62-8FBD-20C9AB65B06F}
+		{B63F2DF8-E247-402D-A250-2514EF4A08FD} = {360B115D-61F8-42A4-A3FA-CA5F33045311}
 	EndGlobalSection
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = OpenNETCF.ORM.FFx.vsmdi
