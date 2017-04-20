@@ -7,6 +7,7 @@ using System.Data;
 using System.Data.Common;
 using System.Reflection;
 using System.Threading;
+using System.Collections;
 
 namespace OpenNETCF.ORM
 {
@@ -165,6 +166,7 @@ namespace OpenNETCF.ORM
 
         private List<IDbConnection> m_connectionPool;
         private EventInfo m_disposedEvent;
+        private MethodInfo m_disposedHandler;
 
         private IDbConnection GetPoolConnection()
         {
@@ -194,14 +196,20 @@ namespace OpenNETCF.ORM
 
                             if (m_disposedEvent != null)
                             {
-                                var target = this.GetType().GetMethod("ConnectionDisposed", BindingFlags.Instance | BindingFlags.NonPublic);
-
-                                // while these objects (event and target method) exist in the CF, the handler never gets called.
-                                // not sure if the CF just never raises the Disposed event on an IDbConnection or not
-                                m_disposedEvent.AddEventHandler(connection,
-                                    Delegate.CreateDelegate(m_disposedEvent.EventHandlerType, this, target)
-                                    );
+                                m_disposedHandler = this.GetType().GetMethod("ConnectionDisposed", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
                             }
+                        }
+
+                        if (m_disposedHandler != null)
+                        {
+                            m_disposedEvent.AddEventHandler(connection,
+                                Delegate.CreateDelegate(m_disposedEvent.EventHandlerType, this, m_disposedHandler)
+                                );
+                        }
+                        else
+                        {
+                            m_disposedEvent.AddEventHandler(connection,
+                                new EventHandler(ConnectionDisposed));
                         }
 
                         connection.Open();
@@ -231,79 +239,83 @@ namespace OpenNETCF.ORM
             }
         }
 
+        private object m_lock = new object();
+        private IDbConnection m_transactionConnection;
+
         private IDbConnection GetConnection(bool maintenance, bool isRetry)
         {
             IDbConnection result;
-            
-            switch (ConnectionBehavior)
-            {
-                case ConnectionBehavior.AlwaysNew:
-                    var connection = GetNewConnectionObject();
-                    connection.Open();
-                    Interlocked.Increment(ref m_connectionCount);
-                    result = connection;
-                    break;
-                case ConnectionBehavior.HoldMaintenance:
-                    if (m_connection == null)
-                    {
-                        m_connection = GetNewConnectionObject();
-                        m_connection.Open();
-                        OnPersistentConnectionCreated(m_connection);
-                        Interlocked.Increment(ref m_connectionCount);
-                    }
-                    if (maintenance)
-                    {
-                        while((m_connection.State == ConnectionState.Executing) 
-                            || (m_connection.State == ConnectionState.Fetching))
-                        {
-                            Thread.Sleep(1000);
-                        }
-                        return m_connection;
-                    }
-                    var connection2 = GetPoolConnection();
-                    Interlocked.Increment(ref m_connectionCount);
-                    result = connection2;
-                    break;
-                case ConnectionBehavior.Persistent:
-                    var pooledConnection = GetPoolConnection();
-                    result = pooledConnection;
-                    break;
-                default:
-                    throw new NotSupportedException();
-            }
 
-            // make sure the connection is open (in the event we has some network condition that closed it, etc.)
-            if (result.State != ConnectionState.Open)
+            lock (m_lock)
             {
-                try
+                Debug.WriteLineIf(TracingEnabled, "+GetConnection");
+
+                if (CurrentTransaction != null)
                 {
-                    result.Open();
+                    return m_transactionConnection;
                 }
-                catch
+
+                switch (ConnectionBehavior)
                 {
-                    if (Environment.OSVersion.Platform == PlatformID.WinCE)
+                    case ConnectionBehavior.AlwaysNew:
+                        var connection = GetNewConnectionObject();
+                        connection.Open();
+                        Interlocked.Increment(ref m_connectionCount);
+                        result = connection;
+                        break;
+                    case ConnectionBehavior.HoldMaintenance:
+                        if (m_connection == null)
+                        {
+                            m_connection = GetNewConnectionObject();
+                            m_connection.Open();
+                            OnPersistentConnectionCreated(m_connection);
+                            Interlocked.Increment(ref m_connectionCount);
+                        }
+                        if (maintenance)
+                        {
+                            while ((m_connection.State == ConnectionState.Executing)
+                                || (m_connection.State == ConnectionState.Fetching))
+                            {
+                                Thread.Sleep(1000);
+                            }
+                            result = m_connection;
+                        }
+                        var connection2 = GetPoolConnection();
+                        Interlocked.Increment(ref m_connectionCount);
+                        result = connection2;
+                        break;
+                    case ConnectionBehavior.Persistent:
+                        var pooledConnection = GetPoolConnection();
+                        result = pooledConnection;
+                        break;
+                    default:
+                        throw new NotSupportedException();
+                }
+
+                // make sure the connection is open (in the event we had some network condition that closed it, etc.)
+                if (result.State != ConnectionState.Open)
+                {
+                    try
                     {
-                        // The CF doesn't appear to actually raise the Disposed event on the IDbCOnnection.  No idea why.
-                        // This is a work-around for that behavior.
-                        m_connectionPool.Remove(result);
+                        result.Open();
                     }
-                    else if (isRetry)
+                    catch
                     {
-                        throw;
-                    }
-                    else
-                    {
+                        if (isRetry) throw;
+
                         result.Dispose();
                         result = null;
+
+                        // retry once
+                        Thread.Sleep(1000);
+                        return GetConnection(maintenance, true);
                     }
-
-                    // retry once
-                    Thread.Sleep(1000);
-                    return GetConnection(maintenance, true);
                 }
-            }
 
-            return result;
+                Debug.WriteLineIf(TracingEnabled, "-GetConnection");
+
+                return result;
+            }
         }
 
         protected virtual void OnPersistentConnectionCreated(IDbConnection connection) { }
@@ -322,6 +334,7 @@ namespace OpenNETCF.ORM
                     {
                         // make sure it's disposed
                         disp.Dispose();
+                        Debug.WriteLineIf(TracingEnabled, "  Disposed persistent connection");
                     }
                     catch (ObjectDisposedException)
                     {
@@ -334,9 +347,9 @@ namespace OpenNETCF.ORM
             }
         }
 
-
         protected virtual void DoneWithConnection(IDbConnection connection, bool maintenance)
         {
+            Debug.WriteLineIf(TracingEnabled, "+DoneWithConnection");
             switch (ConnectionBehavior)
             {
                 case ConnectionBehavior.AlwaysNew:
@@ -344,6 +357,7 @@ namespace OpenNETCF.ORM
                     connection.Dispose();
                     connection = null;
                     Interlocked.Decrement(ref m_connectionCount);
+                    Debug.WriteLineIf(TracingEnabled, "  Disposed AlwaysNew connection: " + m_connectionCount);
                     break;
                 case ConnectionBehavior.HoldMaintenance:
                     if (maintenance) return;
@@ -351,12 +365,14 @@ namespace OpenNETCF.ORM
                     connection.Dispose();
                     connection = null;
                     Interlocked.Decrement(ref m_connectionCount);
+                    Debug.WriteLineIf(TracingEnabled, "  Disposed Maintenance connection: " + m_connectionCount);
                     break;
                 case ConnectionBehavior.Persistent:
                     return;
                 default:
                     throw new NotSupportedException();
             }
+            Debug.WriteLineIf(TracingEnabled, "-DoneWithConnection");
         }
 
         public int ExecuteNonQuery(string sql)
@@ -513,14 +529,21 @@ namespace OpenNETCF.ORM
             sql.Append(")");
 
             Debug.WriteLine(sql);
-
             
             using (var command = GetNewCommandObject())
             {
                 command.CommandText = sql.ToString();
                 command.Connection = connection;
                 command.Transaction = CurrentTransaction;
-                command.ExecuteNonQuery();
+
+                try
+                {
+                    command.ExecuteNonQuery();
+                }
+                catch
+                {
+                    throw new Exception("ERROR: " + sql);
+                }
             }
 
             // create indexes
@@ -885,6 +908,11 @@ namespace OpenNETCF.ORM
             return items.Cast<T>();
         }
 
+        public override IEnumerable<T> Select<T>(params FilterCondition[] filters)
+        {
+            return Select<T>(filters, false);
+        }
+
         public override IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters)
         {
             return Select<T>(filters, false);
@@ -1020,7 +1048,6 @@ namespace OpenNETCF.ORM
             }
             else
             {
-//                sb = new StringBuilder(string.Format("SELECT * FROM {0}", entityName));
                 sb = new StringBuilder("SELECT ");
 
                 var count = Entities[entityName].Fields.Count;
@@ -1114,7 +1141,6 @@ namespace OpenNETCF.ORM
 
             return command;
         }
-
 
         protected IDbCommand BuildFilterCommand(string entityName, IEnumerable<FilterCondition> filters, bool isCount)
         {
@@ -1224,6 +1250,55 @@ namespace OpenNETCF.ORM
             return command;
         }
 
+        protected virtual string GenerateWhereClause(IEnumerable<FilterCondition> filters)
+        {
+            if ((filters == null) || (filters.Count() == 0)) return string.Empty;
+
+            var sb = new StringBuilder();
+
+            for (int i = 0; i < filters.Count(); i++)
+            {
+                sb.Append(i == 0 ? " WHERE " : " AND ");
+
+                var filter = filters.ElementAt(i);
+                sb.Append(filter.FieldName);
+
+                switch (filters.ElementAt(i).Operator)
+                {
+                    case FilterCondition.FilterOperator.Equals:
+                        if ((filter.Value == null) || (filter.Value == DBNull.Value))
+                        {
+                            sb.Append(" IS NULL ");
+                            continue;
+                        }
+                        sb.Append(" = ");
+                        break;
+                    case FilterCondition.FilterOperator.Like:
+                        sb.Append(" LIKE ");
+                        break;
+                    case FilterCondition.FilterOperator.LessThan:
+                        sb.Append(" < ");
+                        break;
+                    case FilterCondition.FilterOperator.GreaterThan:
+                        sb.Append(" > ");
+                        break;
+                    default:
+                        throw new NotSupportedException();
+                }
+
+                if (filter.Value is string)
+                {                    
+                    sb.Append("'" + filter.Value + "'");
+                }
+                else
+                {
+                    sb.Append(filter.Value ?? DBNull.Value);
+                }
+            }
+
+            return sb.ToString();
+        }
+
         protected void CheckPrimaryKeyIndex(string entityName)
         {
             var info = Entities[entityName] as SqlEntityInfo;
@@ -1240,6 +1315,11 @@ namespace OpenNETCF.ORM
 
         protected virtual void CheckOrdinals(string entityName)
         {
+            if (!Entities.Contains(entityName))
+            {
+                if (DiscoverDynamicEntity(entityName) == null) return;
+            }
+
             if (Entities[entityName].Fields.OrdinalsAreValid) return;
 
             var connection = GetConnection(true);
@@ -1287,96 +1367,113 @@ namespace OpenNETCF.ORM
 
         protected void DoInsertReferences(object item, string entityName, KeyScheme keyScheme, bool beforeParentInsert)
         {
-            // cascade insert any References
-            // do this last because we need the PK from above
-            foreach (var reference in Entities[entityName].References)
+            Debug.WriteLineIf(TracingEnabled, "+InsertReferences", "SQLStoreBase");
+
+            // prevent the ORM from disposing the connection ater the referential inserts
+            var oldConnectionBehavior = this.ConnectionBehavior;
+            this.ConnectionBehavior = ORM.ConnectionBehavior.Persistent;
+
+            try
             {
-                if (beforeParentInsert && (reference.ReferenceType == ReferenceType.ManyToOne)) // N:1
+                // cascade insert any References
+                // do this last because we need the PK from above
+                foreach (var reference in Entities[entityName].References)
                 {
-                    // in an N:1 we need to insert the related item first, so it can get a PK assigned
-                    var referenceEntity = reference.PropertyInfo.GetValue(item, null);
-
-                    // is there anything to insert?
-                    if (referenceEntity == null) continue;
-
-                    var referenceEntityName = Entities.GetNameForType(reference.ReferenceEntityType);
-                    var refPK = Entities[referenceEntityName].Fields.KeyField.PropertyInfo.GetValue(referenceEntity, null);
-
-                    // does the reference entity already exist in the store?
-                    var existing = Select(reference.ReferenceEntityType, null, refPK, -1, -1, true).FirstOrDefault();
-
-                    if (existing == null)
+                    if (beforeParentInsert && (reference.ReferenceType == ReferenceType.ManyToOne)) // N:1
                     {
-                        Insert(referenceEntity);
+                        // in an N:1 we need to insert the related item first, so it can get a PK assigned
+                        var referenceEntity = reference.PropertyInfo.GetValue(item, null);
 
-                        // we then copy the PK of the reference item into the "local" FK field - need to re-query the key
-                        refPK = Entities[referenceEntityName].Fields.KeyField.PropertyInfo.GetValue(referenceEntity, null);
+                        // is there anything to insert?
+                        if (referenceEntity == null) continue;
 
-                        // set the item key
-                        // we already inserted, so we have to do an update
-                        // TODO: in the future, we should move this up and do reference inserts first, then back=propagate references
-                        Entities[entityName].Fields[reference.ForeignReferenceField].PropertyInfo.SetValue(item, refPK, null);
+                        var referenceEntityName = Entities.GetNameForType(reference.ReferenceEntityType);
+                        var refPK = Entities[referenceEntityName].Fields.KeyField.PropertyInfo.GetValue(referenceEntity, null);
+
+                        // does the reference entity already exist in the store?
+                        var existing = Select(reference.ReferenceEntityType, null, refPK, -1, -1, true).FirstOrDefault();
+
+                        if (existing == null)
+                        {
+                            Insert(referenceEntity);
+
+                            // we then copy the PK of the reference item into the "local" FK field - need to re-query the key
+                            refPK = Entities[referenceEntityName].Fields.KeyField.PropertyInfo.GetValue(referenceEntity, null);
+
+                            // set the item key
+                            // we already inserted, so we have to do an update
+                            // TODO: in the future, we should move this up and do reference inserts first, then back=propagate references
+                            Entities[entityName].Fields[reference.ForeignReferenceField].PropertyInfo.SetValue(item, refPK, null);
+                        }
+                        else
+                        {
+                            // TODO: should we look for reference entity updates?  That's complex and probably out of scope for the purposes of ORM
+                        }
                     }
-                    else
+                    else if (!beforeParentInsert && (reference.ReferenceType == ReferenceType.OneToMany)) // 1:N
                     {
-                        // TODO: should we look for reference entity updates?  That's complex and probably out of scope for the purposes of ORM
+                        // cascade insert any References
+                        // do this last because we need the PK from above
+                        string et = null;
+
+                        var valueArray = reference.PropertyInfo.GetValue(item, null);
+                        if (valueArray == null) continue;
+
+                        //entityName = m_entities.GetNameForType(reference.ReferenceEntityType);
+                        var fk = Entities[entityName].Fields[reference.ForeignReferenceField].PropertyInfo.GetValue(item, null);
+
+                        // we've already enforced this to be an array when creating the store
+                        foreach (var element in (valueArray as IEnumerable<object>))
+                        {
+                            if (et == null)
+                            {
+                                et = m_entities.GetNameForType(element.GetType());
+                            }
+
+                            if (et == null)
+                            {
+                                throw new EntityNotFoundException(element.GetType().Name);
+                            }
+
+                            // get the FK value
+                            var keyValue = Entities[et].Fields.KeyField.PropertyInfo.GetValue(element, null);
+
+                            bool isNew = false;
+
+
+                            // only do an insert if the value is new (i.e. need to look for existing reference items)
+                            // not certain how this will work right now, so for now we ask the caller to know what they're doing
+                            switch (keyScheme)
+                            {
+                                case KeyScheme.Identity:
+                                    // SQLCE and SQLite start with an ID == 1, so 0 mean "not in DB"
+                                    isNew = keyValue.Equals(0) || keyValue.Equals(-1);
+                                    break;
+                                case KeyScheme.GUID:
+                                    // TODO: see if PK field value == null
+                                    isNew = keyValue.Equals(null);
+                                    break;
+                            }
+
+                            if (isNew)
+                            {
+                                Entities[et].Fields[reference.ForeignReferenceField].PropertyInfo.SetValue(element, fk, null);
+                                Insert(element);
+                            }
+                        }
                     }
                 }
-                else if(!beforeParentInsert && (reference.ReferenceType == ReferenceType.OneToMany)) // 1:N
-                {
-                    // cascade insert any References
-                    // do this last because we need the PK from above
-                    string et = null;
-
-                    var valueArray = reference.PropertyInfo.GetValue(item, null);
-                    if (valueArray == null) continue;
-
-                    //entityName = m_entities.GetNameForType(reference.ReferenceEntityType);
-                    var fk = Entities[entityName].Fields[reference.ForeignReferenceField].PropertyInfo.GetValue(item, null);
-
-                    // we've already enforced this to be an array when creating the store
-                    foreach (var element in valueArray as Array)
-                    {
-                        if (et == null)
-                        {
-                            et = m_entities.GetNameForType(element.GetType());
-                        }
-
-                        // get the FK value
-                        var keyValue = Entities[et].Fields.KeyField.PropertyInfo.GetValue(element, null);
-
-                        bool isNew = false;
-
-
-                        // only do an insert if the value is new (i.e. need to look for existing reference items)
-                        // not certain how this will work right now, so for now we ask the caller to know what they're doing
-                        switch (keyScheme)
-                        {
-                            case KeyScheme.Identity:
-                                // SQLCE and SQLite start with an ID == 1, so 0 mean "not in DB"
-                                isNew = keyValue.Equals(0) || keyValue.Equals(-1);
-                                break;
-                            case KeyScheme.GUID:
-                                // TODO: see if PK field value == null
-                                isNew = keyValue.Equals(null);
-                                break;
-                        }
-
-                        if (isNew)
-                        {
-                            Entities[et].Fields[reference.ForeignReferenceField].PropertyInfo.SetValue(element, fk, null);
-                            Insert(element);
-                        }
-                    }
-                }
-
+            }
+            finally
+            {
+                this.ConnectionBehavior = oldConnectionBehavior;
             }
         }
-        
+
         protected void FillReferences(object instance, object keyValue, ReferenceAttribute[] fieldsToFill, bool cacheReferenceTable)
         {
             if (instance == null) return;
-
+            Debug.WriteLineIf(TracingEnabled, "+FillReferences");
             Type type = instance.GetType();
             var entityName = m_entities.GetNameForType(type);
 
@@ -1390,99 +1487,113 @@ namespace OpenNETCF.ORM
 
             Dictionary<ReferenceAttribute, object[]> referenceItems = new Dictionary<ReferenceAttribute, object[]>();
 
-            // query the key if not provided
-            if (keyValue == null)
+            // prevent the ORM from disposing the connection ater the referential inserts
+            var oldConnectionBehavior = this.ConnectionBehavior;
+            this.ConnectionBehavior = ORM.ConnectionBehavior.Persistent;
+            try
             {
-                keyValue = m_entities[entityName].Fields.KeyField.PropertyInfo.GetValue(instance, null);
-            }
-
-            // populate reference fields
-            foreach (var reference in Entities[entityName].References)
-            {
-                if (fieldsToFill != null)
+                // query the key if not provided
+                if (keyValue == null)
                 {
-                    if (!fieldsToFill.Contains(reference))
-                    {
-                        continue;
-                    }
+                    keyValue = m_entities[entityName].Fields.KeyField.PropertyInfo.GetValue(instance, null);
                 }
 
-                if (reference.ReferenceType == ReferenceType.ManyToOne)
+                // populate reference fields
+                foreach (var reference in Entities[entityName].References)
                 {
-                    // In a N:1 relation, the local ('instance' coming in here) key is the FK and the remote it the PK.  
-                    // We need to read the local FK, so we can go to the reference table and pull the one row with that PK value
-                    keyValue = m_entities[entityName].Fields[reference.ForeignReferenceField].PropertyInfo.GetValue(instance, null);
-                }
-
-                // get the lookup values - until we support filtered selects, this may be very expensive memory-wise
-                if (!referenceItems.ContainsKey(reference))
-                {
-                    IEnumerable<object> refData;
-                    if (cacheReferenceTable)
+                    if (fieldsToFill != null)
                     {
-                        // TODO: ref cache needs to be type->reftype->ref's, not type->refs
-
-                        if (!m_referenceCache.ContainsKey(reference.ReferenceEntityType))
+                        if (!fieldsToFill.Contains(reference))
                         {
-                            refData = Select(reference.ReferenceEntityType, null, null, -1, 0);
-                            m_referenceCache.Add(reference.ReferenceEntityType, refData.ToArray());
+                            continue;
+                        }
+                    }
+
+                    if (reference.ReferenceType == ReferenceType.ManyToOne)
+                    {
+                        // In a N:1 relation, the local ('instance' coming in here) key is the FK and the remote it the PK.  
+                        // We need to read the local FK, so we can go to the reference table and pull the one row with that PK value
+                        keyValue = m_entities[entityName].Fields[reference.ForeignReferenceField].PropertyInfo.GetValue(instance, null);
+                    }
+
+                    // get the lookup values - until we support filtered selects, this may be very expensive memory-wise
+                    if (!referenceItems.ContainsKey(reference))
+                    {
+                        object[] refData;
+                        if (cacheReferenceTable)
+                        {
+                            // TODO: ref cache needs to be type->reftype->ref's, not type->refs
+
+                            if (!m_referenceCache.ContainsKey(reference.ReferenceEntityType))
+                            {
+                                refData = Select(reference.ReferenceEntityType, null, null, -1, 0).ToArray();
+                                m_referenceCache.Add(reference.ReferenceEntityType, refData);
+                            }
+                            else
+                            {
+                                refData = m_referenceCache[reference.ReferenceEntityType];
+                            }
                         }
                         else
                         {
-                            refData = m_referenceCache[reference.ReferenceEntityType];
+                            // FALSE for last parameter to prevent circular reference filling
+                            refData = Select(reference.ReferenceEntityType, reference.ForeignReferenceField, keyValue, -1, 0, false).ToArray();
+                        }
+
+                        // see if the reference type is known - if not, try to add it automatically
+                        var name = Entities.GetNameForType(reference.ReferenceEntityType);
+                        if (name == null)
+                        {
+                            AddType(reference.ReferenceEntityType);
+                        }
+
+                        referenceItems.Add(reference, refData);
+                    }
+
+                    // get the lookup field
+                    var childEntityName = m_entities.GetNameForType(reference.ReferenceEntityType);
+
+                    var children = new List<object>();
+
+                    // now look for those that match our pk
+                    foreach (var child in referenceItems[reference])
+                    {
+                        var childKey = m_entities[childEntityName].Fields[reference.ForeignReferenceField].PropertyInfo.GetValue(child, null);
+
+                        // this seems "backward" because childKey may turn out null, 
+                        // so doing it backwards (keyValue.Equals instead of childKey.Equals) prevents a null referenceexception
+                        // we have to do the conversion becasue SQLite will have one of these as a 32-bit and the other as a 64-bit, and "Equals" will turn out false
+                        if (keyValue.Equals(Convert.ChangeType(childKey, keyValue.GetType(), null)))
+                        {
+                            children.Add(child);
                         }
                     }
+                    var carr = children.ConvertAll(reference.ReferenceEntityType);
+
+                    if (reference.PropertyInfo.PropertyType.IsArray)
+                    { // reference is an array
+                        reference.PropertyInfo.SetValue(instance, carr, null);
+                    }
+                    else if (reference.PropertyInfo.PropertyType.IsGenericType && reference.PropertyInfo.PropertyType.Implements(typeof(IList)))
+                    { // reference is a generic list
+                        reference.PropertyInfo.SetValue(instance, (carr as IEnumerable).ToList(reference.PropertyInfo.PropertyType.GenericTypeArguments.First()), null);
+                    }
                     else
-                    {
-                        // FALSE for last parameter to prevent circular reference filling
-                        refData = Select(reference.ReferenceEntityType, reference.ForeignReferenceField, keyValue, -1, 0, false);
-                    }
+                    { // reference is a single object
+                        var enumerator = carr.GetEnumerator();
 
-                    // see if the reference type is known - if not, try to add it automatically
-                    var name = Entities.GetNameForType(reference.ReferenceEntityType);
-                    if (name == null)
-                    {
-                        AddType(reference.ReferenceEntityType);
-                    }
-
-                    referenceItems.Add(reference, refData.ToArray());
-                }
-
-                // get the lookup field
-                var childEntityName = m_entities.GetNameForType(reference.ReferenceEntityType);
-
-                var children = new List<object>();
-
-                // now look for those that match our pk
-                foreach (var child in referenceItems[reference])
-                {
-                    var childKey = m_entities[childEntityName].Fields[reference.ForeignReferenceField].PropertyInfo.GetValue(child, null);
-
-                    // this seems "backward" because childKey may turn out null, 
-                    // so doing it backwards (keyValue.Equals instead of childKey.Equals) prevents a null referenceexception
-                    // we have to do the conversion becasue SQLite will have one of these as a 32-bit and the other as a 64-bit, and "Equals" will turn out false
-                    if (keyValue.Equals(Convert.ChangeType(childKey, keyValue.GetType(), null)))
-                    {
-                        children.Add(child);
-                    }
-                }
-                var carr = children.ConvertAll(reference.ReferenceEntityType);
-
-                if (reference.PropertyInfo.PropertyType.IsArray)
-                {
-                    reference.PropertyInfo.SetValue(instance, carr, null);
-//                    reference.PropertyInfo.SetValue(instance, Convert.ChangeType(carr, reference.PropertyInfo.PropertyType), null);
-                }
-                else
-                {
-                    var enumerator = carr.GetEnumerator();
-
-                    if (enumerator.MoveNext())
-                    {
-                        reference.PropertyInfo.SetValue(instance, children[0], null);
+                        if (enumerator.MoveNext())
+                        {
+                            reference.PropertyInfo.SetValue(instance, children[0], null);
+                        }
                     }
                 }
             }
+            finally
+            {
+                this.ConnectionBehavior = oldConnectionBehavior;
+            }
+            Debug.WriteLineIf(TracingEnabled, "-FillReferences");
         }
 
         /// <summary>
@@ -1602,6 +1713,33 @@ namespace OpenNETCF.ORM
                     var param = CreateParameterObject(ParameterPrefix + "val", matchValue);
                     command.Parameters.Add(param);
                     command.ExecuteNonQuery();
+                }
+            }
+            finally
+            {
+                DoneWithConnection(connection, true);
+            }
+        }
+
+        public override int Delete<T>(IEnumerable<FilterCondition> filters)
+        {
+            return Delete(GetNameInStore<T>(), filters);
+        }
+
+        public override int Delete(string entityName, IEnumerable<FilterCondition> filters)
+        {
+            var connection = GetConnection(true);
+            try
+            {
+                using (var command = GetNewCommandObject())
+                {
+                    command.Connection = connection;
+                    command.Transaction = CurrentTransaction;
+
+                    var whereClause = GenerateWhereClause(filters);
+
+                    command.CommandText = string.Format("DELETE FROM {0} {1}", entityName, whereClause);
+                    return command.ExecuteNonQuery();
                 }
             }
             finally
@@ -1850,23 +1988,25 @@ namespace OpenNETCF.ORM
                 {
                     throw new InvalidOperationException("Parallel transactions are not supported");
                 }
+                /*
+                                // we must escalate the connection behavior for the transaction to remain valid
+                                if (ConnectionBehavior != ORM.ConnectionBehavior.Persistent)
+                                {
+                                    m_nonTransactionConnectionBehavior = ConnectionBehavior;
+                                    ConnectionBehavior = ORM.ConnectionBehavior.Persistent;
+                                }
 
-                // we must escalate the connection behavior for the transaction to remain valid
-                if (ConnectionBehavior != ORM.ConnectionBehavior.Persistent)
-                {
-                    m_nonTransactionConnectionBehavior = ConnectionBehavior;
-                    ConnectionBehavior = ORM.ConnectionBehavior.Persistent;
-                }
 
+                                if (m_connection == null)
+                                {
+                                    // force creation of the persistent connection
+                                    var c = GetConnection(false);
+                                    DoneWithConnection(c, false);
+                                }
+                */
+                m_transactionConnection = GetConnection(false);
 
-                if (m_connection == null)
-                {
-                    // force creation of the persistent connection
-                    var c = GetConnection(false);
-                    DoneWithConnection(c, false);
-                }
-
-                CurrentTransaction = m_connection.BeginTransaction(isolationLevel);
+                CurrentTransaction = m_transactionConnection.BeginTransaction(isolationLevel);
             }
         }
 
@@ -1882,8 +2022,13 @@ namespace OpenNETCF.ORM
                 CurrentTransaction.Commit();
                 CurrentTransaction.Dispose();
                 CurrentTransaction = null;
+
+                m_transactionConnection.Close();
+                m_transactionConnection.Dispose();
+                m_transactionConnection = null;
+
                 // revert connection behavior if we escalated
-                ConnectionBehavior = m_nonTransactionConnectionBehavior;
+//                ConnectionBehavior = m_nonTransactionConnectionBehavior;
             }
         }
 
@@ -1899,8 +2044,12 @@ namespace OpenNETCF.ORM
                 CurrentTransaction.Rollback();
                 CurrentTransaction.Dispose();
                 CurrentTransaction = null;
+
+                m_transactionConnection.Close();
+                m_transactionConnection.Dispose();
+                m_transactionConnection = null;
                 // revert connection behavior if we escalated
-                ConnectionBehavior = m_nonTransactionConnectionBehavior;
+//                ConnectionBehavior = m_nonTransactionConnectionBehavior;
             }
         }
 

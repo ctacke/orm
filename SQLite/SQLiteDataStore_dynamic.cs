@@ -140,6 +140,64 @@ namespace OpenNETCF.ORM
             }
         }
 
+        protected override string GenerateWhereClause(IEnumerable<FilterCondition> filters)
+        {
+            if ((filters == null) || (filters.Count() == 0)) return string.Empty;
+
+            var sb = new StringBuilder();
+
+            for (int i = 0; i < filters.Count(); i++)
+            {
+                sb.Append(i == 0 ? " WHERE " : " AND ");
+
+                var filter = filters.ElementAt(i);
+                sb.Append(filter.FieldName);
+
+                switch (filters.ElementAt(i).Operator)
+                {
+                    case FilterCondition.FilterOperator.Equals:
+                        if ((filter.Value == null) || (filter.Value == DBNull.Value))
+                        {
+                            sb.Append(" IS NULL ");
+                            continue;
+                        }
+                        sb.Append(" = ");
+                        break;
+                    case FilterCondition.FilterOperator.Like:
+                        sb.Append(" LIKE ");
+                        break;
+                    case FilterCondition.FilterOperator.LessThan:
+                        sb.Append(" < ");
+                        break;
+                    case FilterCondition.FilterOperator.GreaterThan:
+                        sb.Append(" > ");
+                        break;
+                    default:
+                        throw new NotSupportedException();
+                }
+
+                // SQlite doesn't actually have "datetime" or "time" fields - it uses strings and if you need to compare, things get weird without a conversion
+                if(filter.Value == null)
+                {
+                    sb.Append(DBNull.Value);
+                }
+                else if(filter.Value is DateTime)
+                {
+                    sb.Append( string.Format("datetime('{0}')", ((DateTime)filter.Value).ToString("yyyy-MM-dd HH:mm:ss.fff")));
+                }
+                else if(filter.Value is TimeSpan)
+                {
+                    sb.Append( string.Format("time('{0}')", ((TimeSpan)filter.Value).ToString("HH:mm:ss.fff")));
+                }
+                else
+                {
+                    sb.Append(filter.Value ?? DBNull.Value);
+                }
+            }
+
+            return sb.ToString();
+        }
+
         private void OnInsertDynamicEntity(DynamicEntity item, bool insertReferences)
         {
             var connection = GetConnection(false);

@@ -501,5 +501,20 @@ namespace OpenNETCF.ORM
         {
             throw new NotImplementedException();
         }
+
+        public override IEnumerable<T> Select<T>(params FilterCondition[] filters)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override int Delete<T>(IEnumerable<FilterCondition> filters)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override int Delete(string entityName, IEnumerable<FilterCondition> filters)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

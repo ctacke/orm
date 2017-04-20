@@ -10,7 +10,8 @@ namespace OpenNETCF.ORM
     {
         OneToMany,
         ManyToMany,
-        ManyToOne
+        ManyToOne,
+        OneToOne
     }
 
     [AttributeUsage(AttributeTargets.Property)]

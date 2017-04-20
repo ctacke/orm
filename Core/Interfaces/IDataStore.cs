@@ -49,6 +49,7 @@ namespace OpenNETCF.ORM
         IEnumerable<T> Select<T>(string searchFieldName, object matchValue) where T : new();
         IEnumerable<T> Select<T>(string searchFieldName, object matchValue, bool fillReferences) where T : new();
         IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters) where T : new();
+        IEnumerable<T> Select<T>(params FilterCondition[] filters) where T : new();
         IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences) where T : new();
         IEnumerable<object> Select(Type entityType);
         IEnumerable<object> Select(Type entityType, bool fillReferences);
@@ -64,6 +65,8 @@ namespace OpenNETCF.ORM
         void Delete(object item);
         void Delete(string entityName, object primaryKey);
         void Delete(string entityName, string fieldName, object matchValue);
+        int Delete(string entityName, IEnumerable<FilterCondition> filters);
+        int Delete<T>(IEnumerable<FilterCondition> filters);
         void Delete<T>(object primaryKey) where T : new();
         void Delete<T>() where T : new();
         void Delete<T>(string fieldName, object matchValue) where T : new();

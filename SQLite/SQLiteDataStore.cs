@@ -93,6 +93,7 @@ namespace OpenNETCF.ORM
 
         protected override IDbConnection GetNewConnectionObject()
         {
+            Debug.WriteLineIf(TracingEnabled, "Created new SQLiteConnection");
             return new SQLiteConnection(ConnectionString);
         }
 
@@ -617,6 +618,7 @@ namespace OpenNETCF.ORM
 
         private IEnumerable<object> Select(string entityName, Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
         {
+            Debug.WriteLineIf(TracingEnabled, "+Select");
             if (entityName == null)
             {
                 throw new EntityNotFoundException(objectType);
@@ -849,6 +851,8 @@ namespace OpenNETCF.ORM
                 FlushReferenceTableCache();
                 DoneWithConnection(connection, false);
             }
+
+            Debug.WriteLineIf(TracingEnabled, "-Select");
         }
         
         public override void OnUpdate(object item, bool cascadeUpdates, string fieldName)

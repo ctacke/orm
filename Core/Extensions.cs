@@ -5,6 +5,7 @@ using System.Text;
 using System.Data;
 using System.Security.Cryptography;
 using System.Diagnostics;
+using System.Collections;
 
 namespace OpenNETCF.ORM
 {
@@ -386,6 +387,13 @@ namespace OpenNETCF.ORM
         {
             var hash = string.Format("{0}{1}{2}", r.PropertyInfo.Name, r.ReferenceEntityType.Name, r.ForeignReferenceField);
             return hash;
+        }
+
+        public static IEnumerable ToList(this IEnumerable self, Type innerType)
+        {
+            var methodInfo = typeof(Enumerable).GetMethod("ToList");
+            var genericMethod = methodInfo.MakeGenericMethod(innerType);
+            return genericMethod.Invoke(null, new[] { self }) as IEnumerable;
         }
     }
 }

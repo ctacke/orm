@@ -7,7 +7,7 @@ namespace OpenNETCF.ORM
 {
     public class FieldValue : ICloneable
     {
-        internal FieldValue(string name, object value)
+        public FieldValue(string name, object value)
         {
             Name = name;
             Value = value;

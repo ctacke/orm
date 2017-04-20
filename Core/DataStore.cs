@@ -35,6 +35,7 @@ namespace OpenNETCF.ORM
         public abstract IEnumerable<T> Select<T>(string searchFieldName, object matchValue) where T : new();
         public abstract IEnumerable<T> Select<T>(string searchFieldName, object matchValue, bool fillReferences) where T : new();
         public abstract IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters) where T : new();
+        public abstract IEnumerable<T> Select<T>(params FilterCondition[] filters) where T : new();
         public abstract IEnumerable<T> Select<T>(IEnumerable<FilterCondition> filters, bool fillReferences) where T : new();
         public abstract IEnumerable<object> Select(Type entityType);
         public abstract IEnumerable<object> Select(Type entityType, bool fillReferences);
@@ -82,8 +83,18 @@ namespace OpenNETCF.ORM
         /// <remarks>This method does <b>not</b> Fire the Before/AfterDelete events</remarks>
         public abstract void Delete<T>(string fieldName, object matchValue) where T : new();
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="fieldName"></param>
+        /// <param name="matchValue"></param>
+        /// <remarks>This method does <b>not</b> Fire the Before/AfterDelete events</remarks>
+        public abstract int Delete<T>(IEnumerable<FilterCondition> filters);
+
         public abstract void Delete(string entityName, object primaryKey);
         public abstract void Delete(string entityName, string fieldName, object matchValue);
+        public abstract int Delete(string entityName, IEnumerable<FilterCondition> filters);
 
         public abstract void FillReferences(object instance);
         public abstract IEnumerable<T> Fetch<T>(int fetchCount) where T : new();
@@ -517,6 +528,20 @@ namespace OpenNETCF.ORM
                 var args = new EntityTypeAddedArgs(info);
                 handler(this, args);
             }
+        }
+
+        /// <summary>
+        /// Gets the registered NameInStore for the given type or null it the type is unregsitered
+        /// </summary>
+        /// <typeparam name="TEntity"></typeparam>
+        /// <returns></returns>
+        public string GetNameInStore<TEntity>()
+        {
+            var ei = m_entities.FirstOrDefault(e => e.EntityType == typeof(TEntity));
+
+            if (ei == null) return null;
+
+            return ei.EntityName;
         }
 
         protected virtual DbType? PropertyTypeToDbType(Type propertyType)

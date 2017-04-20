@@ -13,6 +13,7 @@ namespace OpenNETCF.ORM
 {
     public partial class SqlServerDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
     {
+        private bool m_connectionStringProvided;
         private string m_connectionString;
         private SqlConnectionInfo m_info;
         private Version m_version;
@@ -26,10 +27,12 @@ namespace OpenNETCF.ORM
             // TODO: validate info members
             m_info = info;
             this.ConnectionBehavior = DefaultConnectionBehavior;
+            m_connectionStringProvided = false;
         }
 
         public SqlServerDataStore(string connectionString)
         {
+            m_connectionStringProvided = true;
             m_connectionString = connectionString;
             this.ConnectionBehavior = DefaultConnectionBehavior;
         }
@@ -49,7 +52,7 @@ namespace OpenNETCF.ORM
                 info.ServerName = info.ServerName.Substring(0, commaIndex);
             }
 
-            if (string.IsNullOrEmpty(m_info.InstanceName))
+            if (string.IsNullOrEmpty(info.InstanceName))
             {
                 if (info.ServerPort == DefaultServerPort)
                 {
@@ -144,6 +147,15 @@ namespace OpenNETCF.ORM
                 throw new StoreAlreadyExistsException();
             }
 
+            if (m_connectionStringProvided)
+            {
+                // we'll assume that it exists for now - probably not the most robust,
+                // but it prevents a break when a connection string was provided
+
+                // TODO: improve this
+                return;
+            }
+
             var masterInfo = (SqlConnectionInfo)m_info.Clone();
             masterInfo.DatabaseName = "master";
             var masterConnectionString = BuildConnectionString(masterInfo);
@@ -167,6 +179,15 @@ namespace OpenNETCF.ORM
         {
             get
             {
+                if (m_connectionStringProvided)
+                {
+                    // we'll assume that it exists for now - probably not the most robust,
+                    // but it prevents a break when a connection string was provided
+
+                    // TODO: improve this
+                    return true;
+                }
+
                 var masterInfo = (SqlConnectionInfo)m_info.Clone();
                 masterInfo.DatabaseName = "master";
 

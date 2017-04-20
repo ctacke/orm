@@ -7,19 +7,18 @@ namespace OpenNETCF.ORM
 {
     public class FieldCollection : IEnumerable<FieldValue>, ICloneable
     {
-        private Dictionary<string, FieldValue> m_fields;
+        private SafeDictionary<string, FieldValue> m_fields;
 
         internal FieldCollection()
         {
-            m_fields = new Dictionary<string, FieldValue>(StringComparer.InvariantCultureIgnoreCase);
+            m_fields = new SafeDictionary<string, FieldValue>(StringComparer.InvariantCultureIgnoreCase);
         }
 
         public object Clone()
         {
-            return new FieldCollection()
-            {
-                m_fields = this.m_fields.ToDictionary(e => e.Key, e => e.Value.Clone() as FieldValue, m_fields.Comparer)
-            };
+            var fc = new FieldCollection();
+            fc.m_fields.AddRange(this.m_fields.ToDictionary(e => e.Key, e => e.Value.Clone() as FieldValue));
+            return fc;
         }
 
         public int Count

@@ -148,17 +148,26 @@ namespace OpenNETCF.ORM.Replication
             // if we have an insert on a replicated entity, don't wait for the full period, let the replication proc know immediately
 
             // TODO: add preemption?
+            bool shouldRaise = false;
 
             lock (Registrations)
             {
                 if (Registrations.Contains(e.EntityName))
                 {
-                    m_dataAvailable.Set();
+                    shouldRaise = true;
                 }
                 else if (Registrations.Contains(e.Item.GetType()))
                 {
-                    m_dataAvailable.Set();
+                    shouldRaise = true;
                 }
+            }
+
+            if (shouldRaise)
+            {
+                ThreadPool.QueueUserWorkItem(delegate
+                {
+                    m_dataAvailable.Set();
+                });
             }
         }
 
