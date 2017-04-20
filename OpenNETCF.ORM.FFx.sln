@@ -23,6 +23,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ORM Core", "ORM Core", "{94
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SQLiteNorthwind", "Samples\SQLiteNorthwind\SQLiteNorthwind.csproj", "{F2D73EF5-F9AC-4926-8847-40393D641AF0}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MySQL", "MySQL", "{818C4827-39C9-4828-87B8-42F7B8496FE6}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.MySQL.FFx", "MySQL\OpenNETCF.ORM.MySQL.FFx.csproj", "{77196BF3-0C9E-452B-887E-B110985E2209}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -73,6 +77,18 @@ Global
 		{F2D73EF5-F9AC-4926-8847-40393D641AF0}.Release|Mixed Platforms.Build.0 = Release|x86
 		{F2D73EF5-F9AC-4926-8847-40393D641AF0}.Release|x86.ActiveCfg = Release|x86
 		{F2D73EF5-F9AC-4926-8847-40393D641AF0}.Release|x86.Build.0 = Release|x86
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Debug|x86.Build.0 = Debug|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Release|Any CPU.Build.0 = Release|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Release|x86.ActiveCfg = Release|Any CPU
+		{77196BF3-0C9E-452B-887E-B110985E2209}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -82,6 +98,7 @@ Global
 		{750ED0AF-FE89-4EFC-BF7A-C29CBDD8AA7F} = {46B57893-C73E-4F80-B05C-387AB94F65F4}
 		{97A3ADC5-EED5-4BC8-BE5B-1FD8DF86A1C3} = {46B57893-C73E-4F80-B05C-387AB94F65F4}
 		{F2D73EF5-F9AC-4926-8847-40393D641AF0} = {46B57893-C73E-4F80-B05C-387AB94F65F4}
+		{77196BF3-0C9E-452B-887E-B110985E2209} = {818C4827-39C9-4828-87B8-42F7B8496FE6}
 	EndGlobalSection
 	GlobalSection(TestCaseManagementSettings) = postSolution
 		CategoryFile = OpenNETCF.ORM.FFx.vsmdi
