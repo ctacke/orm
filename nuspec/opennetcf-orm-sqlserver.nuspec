@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>opennetcf-orm-sqlserver</id>
+        <version>1.0.17110.0</version>
+        <title>OpenNETCF ORM for Microsoft SQL Server</title>
+        <authors>Chris Tacke</authors>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>OpenNETCF's ORM Framework with the Microsoft SQL Server Implementation</description>
+
+    <dependencies>
+      <group>
+        <dependency id="com.opennetcf.extensions.ffx" version="1.0.17110"/>
+      </group>
+    </dependencies>
+    </metadata>
+    <files>
+        <!-- .NET 4.0 and later -->
+        <file src="..\bin\Release\FFx\OpenNETCF.ORM.dll" target="lib\net40" />
+        <file src="..\bin\Release\FFx\OpenNETCF.ORM.SqlServer.dll" target="lib\net40" />
+
+        <!-- Mono -->
+        <file src="..\bin\Release\FFx\OpenNETCF.ORM.dll" target="lib\MonoTouch40" />
+        <file src="..\bin\Release\FFx\OpenNETCF.ORM.SqlServer.dll" target="lib\MonoTouch40" />
+
+    </files>
+</package>
