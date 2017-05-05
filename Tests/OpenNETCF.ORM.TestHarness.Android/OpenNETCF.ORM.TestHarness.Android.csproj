@@ -21,13 +21,15 @@
     <SccProvider>SAK</SccProvider>
     <AndroidManifest>Properties\AndroidManifest.xml</AndroidManifest>
     <DeployExternal>False</DeployExternal>
+    <AndroidUseLatestPlatformSdk>False</AndroidUseLatestPlatformSdk>
+    <TargetFrameworkVersion>v6.0</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;ANDROID</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <AndroidUseSharedRuntime>True</AndroidUseSharedRuntime>
@@ -72,17 +74,17 @@
     <AndroidResource Include="Resources\Drawable\Icon.png" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\OpenNETCF.ORM.SQLite\OpenNETCF.ORM.SQLite.Android.csproj">
-      <Project>{8225AFAF-2FED-40C8-A602-0432AB17E2E1}</Project>
-      <Name>OpenNETCF.ORM.SQLite.Android</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\OpenNETCF.ORM\OpenNETCF.ORM.Android.csproj">
-      <Project>{F4BE7A66-3E7B-4226-800F-4CABB7252DD1}</Project>
-      <Name>OpenNETCF.ORM.Android</Name>
-    </ProjectReference>
+    <Content Include="Properties\AndroidManifest.xml" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Properties\AndroidManifest.xml" />
+    <ProjectReference Include="..\..\Core\OpenNETCF.ORM.Android.csproj">
+      <Project>{f4be7a66-3e7b-4226-800f-4cabb7252dd1}</Project>
+      <Name>OpenNETCF.ORM.Android</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\SQLite\OpenNETCF.ORM.SQLite.Android.csproj">
+      <Project>{8225afaf-2fed-40c8-a602-0432ab17e2e1}</Project>
+      <Name>OpenNETCF.ORM.SQLite.Android</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Novell\Novell.MonoDroid.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -13,13 +13,16 @@
     <AssemblyName>OpenNETCF.ORM</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <GenerateSerializationAssemblies>Off</GenerateSerializationAssemblies>
+    <!--
     <AndroidSupportedAbis>armeabi</AndroidSupportedAbis>
     <AndroidStoreUncompressedFileExtensions />
-    <MandroidI18n />
+    <MandroidI18n />-->
     <SccProjectName>SAK</SccProjectName>
     <SccLocalPath>SAK</SccLocalPath>
     <SccAuxPath>SAK</SccAuxPath>
     <SccProvider>SAK</SccProvider>
+    <AndroidUseLatestPlatformSdk>False</AndroidUseLatestPlatformSdk>
+    <TargetFrameworkVersion>v6.0</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -38,11 +41,14 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <AndroidSdkBuildToolsVersion>23.0.2</AndroidSdkBuildToolsVersion>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="Mono.Data.Sqlite" />
     <Reference Include="mscorlib" />
-    <Reference Include="OpenNETCF.Extensions">
-      <HintPath>..\References\FFx\OpenNETCF.Extensions.dll</HintPath>
+    <Reference Include="OpenNETCF.Extensions.Android">
+      <HintPath>..\References\Android\OpenNETCF.Extensions.Android.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -51,7 +57,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\OpenNETCF.ORM.Shared\OpenNETCF.ORM.Version.cs">
+    <Compile Include="..\Shared\OpenNETCF.ORM.Version.cs">
       <Link>Properties\OpenNETCF.ORM.Version.cs</Link>
     </Compile>
     <Compile Include="Attributes\EntityAttribute.cs" />
@@ -93,7 +99,10 @@
     <Compile Include="SQL Store Base\SQLStoreBase.cs" />
     <Compile Include="SqlDateTimeDefault.cs" />
   </ItemGroup>
-  <Import Project="$(MSBuildExtensionsPath)\Novell\Novell.MonoDroid.CSharp.targets" />
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Xamarin\Android\Xamarin.Android.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
