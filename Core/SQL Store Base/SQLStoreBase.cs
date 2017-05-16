@@ -1574,8 +1574,8 @@ namespace OpenNETCF.ORM
                     { // reference is an array
                         reference.PropertyInfo.SetValue(instance, carr, null);
                     }
-                    else if (reference.PropertyInfo.PropertyType.IsGenericType && reference.PropertyInfo.PropertyType.Implements(typeof(IList)))
-                    { // reference is a generic list
+                    else if (reference.PropertyInfo.PropertyType.IsGenericType && typeof(IList).IsAssignableFrom(reference.PropertyInfo.PropertyType))
+                    { // reference is a generic list                        
                         reference.PropertyInfo.SetValue(instance, (carr as IEnumerable).ToList(reference.PropertyInfo.PropertyType.GenericTypeArguments.First()), null);
                     }
                     else

@@ -39,7 +39,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="OpenNETCF.Extensions, Version=1.0.17110.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\com.opennetcf.extensions.ffx.1.0.17110.0\lib\net40\OpenNETCF.Extensions.dll</HintPath>
+      <HintPath>..\..\packages\com.opennetcf.extensions.pcl.1.0.17110.0\lib\portable45-net45+win8+wpa81\OpenNETCF.Extensions.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />

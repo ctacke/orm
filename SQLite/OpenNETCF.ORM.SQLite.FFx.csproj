@@ -70,7 +70,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Shared\OpenNETCF.ORM.Version.cs">
-      <Link>OpenNETCF.ORM.Version.cs</Link>
+      <Link>Properties\OpenNETCF.ORM.Version.cs</Link>
     </Compile>
     <Compile Include="SQLiteDataStore_dynamic.cs" />
     <Compile Include="SQLiteDataStore.cs" />

@@ -79,7 +79,7 @@ namespace OpenNETCF.Azure
         {
             Validate
                 .Begin()
-                .IsNotNull(entity)
+                .ParameterIsNotNull(entity, "entity")
                 .Check();
 
             m_proxy.InsertEntity(this.TableName, entity);
@@ -89,7 +89,7 @@ namespace OpenNETCF.Azure
         {
             Validate
                 .Begin()
-                .IsNotNull(entity)
+                .ParameterIsNotNull(entity, "entity")
                 .Check();
 
             m_proxy.InsertOrReplaceEntity(this.TableName, entity);
@@ -99,7 +99,7 @@ namespace OpenNETCF.Azure
         {
             Validate
                 .Begin()
-                .IsNotNull(entity)
+                .ParameterIsNotNull(entity, "entity")
                 .Check();
 
             m_proxy.UpdateEntity(this.TableName, entity);
@@ -109,7 +109,7 @@ namespace OpenNETCF.Azure
         {
             Validate
                 .Begin()
-                .IsNotNull(entity)
+                .ParameterIsNotNull(entity, "entity")
                 .Check();
 
             Delete(entity.PartitionKey, entity.RowKey);

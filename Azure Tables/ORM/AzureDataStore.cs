@@ -23,7 +23,7 @@ namespace OpenNETCF.ORM
         {
             Validate
                 .Begin()
-                .IsNotNull(service)
+                .ParameterIsNotNull(service, "service")
                 .IsNotNullOrEmpty(partitionKey)
                 .Check();
 

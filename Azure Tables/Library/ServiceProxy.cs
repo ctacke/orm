@@ -184,7 +184,8 @@ namespace OpenNETCF.Azure
         {
             Validate
                 .Begin()
-                .IsNotNull(entity)
+                .ParameterIsNotNull(tableName, "tableName")
+                .ParameterIsNotNull(entity, "entity")
                 .Check();
 
             var entry = entity.AsATOMEntry();
@@ -224,7 +225,8 @@ namespace OpenNETCF.Azure
         {
             Validate
                 .Begin()
-                .IsNotNull(entity)
+                .ParameterIsNotNull(tableName, "tableName")
+                .ParameterIsNotNull(entity, "entity")
                 .Check();
 
             var entry = entity.AsATOMEntry();
