@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
         <id>opennetcf-orm-sqlcompact</id>
-        <version>1.0.17135.0</version>
+        <version>1.0.17139.0</version>
         <title>OpenNETCF ORM for Microsoft SQL Server Compact</title>
         <authors>Chris Tacke</authors>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -10,13 +10,13 @@
 
     <dependencies>
       <group>
-        <dependency id="com.opennetcf.extensions.pcl" version="1.0.17110"/>
+        <dependency id="com.opennetcf.extensions.pcl" version="1.0.17139"/>
+        <dependency id="opennetcf-orm-core" version="1.0.17139"/>
       </group>
     </dependencies>
     </metadata>
     <files>
         <!-- .NET 4.0 and later -->
-        <file src="..\bin\Release\FFx\OpenNETCF.ORM.dll" target="lib\net40" />
         <file src="..\bin\Release\FFx\OpenNETCF.ORM.SqlCe.dll" target="lib\net40" />
     </files>
 </package>
