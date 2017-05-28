@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace OpenNETCF.ORM.SQLite.Integration.Test
 {
@@ -140,5 +141,47 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
         {
             return this.locationId == other.locationId;
         }
+    }
+
+    [Entity(KeyScheme = KeyScheme.Identity, NameInStore ="Orders")]
+    public class Order
+    {
+        [Field(IsPrimaryKey = true)]
+        public int OrderID { get; set; }
+        [Field]
+        public string Number { get; set; }
+
+        [Field]
+        public int DriverID { get; set; }
+        [Reference(typeof(Driver), "DriverID", ReferenceType = ReferenceType.ManyToOne)]
+        public Driver Driver { get; set; }
+    }
+
+    [Entity(KeyScheme = KeyScheme.Identity)]
+    public class Driver
+    {
+        public Driver()
+        {
+            Vehicles = new List<Vehicle>();
+        }
+
+        [Field(IsPrimaryKey = true)]
+        public int DriverID { get; set; }
+        [Field]
+        public string Name { get; set; }
+
+        [Reference(typeof(Driver), "DriverID")]
+        public List<Vehicle> Vehicles { get; set; }
+    }
+
+    [Entity(KeyScheme = KeyScheme.Identity)]
+    public class Vehicle
+    {
+        [Field(IsPrimaryKey = true)]
+        public int VehicleID { get; set; }
+        [Field]
+        public int DriverID { get; set; }
+        [Field]
+        public string Model { get; set; }
     }
 }

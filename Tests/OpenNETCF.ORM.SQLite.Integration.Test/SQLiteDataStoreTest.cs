@@ -158,6 +158,42 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             var settings = store.Select<OSATestSettings>().ToArray();
         }
 
-        
+        [TestMethod()]
+        [DeploymentItem("SQLite.Interop.dll")]
+        public void ManyToOneReferenceTest()
+        {
+            var driver = new Driver()
+            {
+                Name = "Speed Racer"
+            };
+
+            driver.Vehicles.AddRange(
+                new Vehicle[]
+                {
+                    new Vehicle()
+                    {
+                        Model = "Super Fast"
+                    },
+                    new Vehicle()
+                    {
+                        Model = "Sorta Fast"
+                    }
+                });
+
+            var Order = new Order()
+            {
+                 Number = "1234",
+                 Driver = driver
+            };
+
+            var store = new SQLiteDataStore("test.sqlite");
+            store.AddType<Order>();
+            store.AddType<Driver>();
+            store.AddType<Vehicle>();
+            store.CreateStore();
+            store.Insert(Order, true);
+        }
+
+
     }
 }

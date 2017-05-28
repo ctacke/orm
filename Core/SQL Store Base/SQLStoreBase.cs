@@ -1395,7 +1395,8 @@ namespace OpenNETCF.ORM
 
                         if (existing == null)
                         {
-                            Insert(referenceEntity);
+                            // the referenceEntity might *also* have references
+                            Insert(referenceEntity, true);
 
                             // we then copy the PK of the reference item into the "local" FK field - need to re-query the key
                             refPK = Entities[referenceEntityName].Fields.KeyField.PropertyInfo.GetValue(referenceEntity, null);
@@ -1403,6 +1404,12 @@ namespace OpenNETCF.ORM
                             // set the item key
                             // we already inserted, so we have to do an update
                             // TODO: in the future, we should move this up and do reference inserts first, then back=propagate references
+                            if(!Entities[entityName].Fields.ContainsField(reference.ForeignReferenceField))
+                            {
+                                throw new FieldNotFoundException(string.Format("The reference field {0} is missing from the {1} Entity",
+                                    reference.ForeignReferenceField,
+                                    entityName));
+                            }
                             Entities[entityName].Fields[reference.ForeignReferenceField].PropertyInfo.SetValue(item, refPK, null);
                         }
                         else
