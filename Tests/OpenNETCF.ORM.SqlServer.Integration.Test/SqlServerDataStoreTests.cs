@@ -37,6 +37,24 @@ namespace OpenNETCF.ORM.SqlServer.Integration.Test
         }
 
         [TestMethod]
+        public void GuidPKTest()
+        {
+            var store = new SqlServerDataStore(GetInfo());
+
+            store.AddType<GuidItem>();
+
+            var item = new GuidItem();
+
+            store.Insert(item);
+
+
+            var results = store.Select<GuidItem>().ToArray();
+            results[0].FieldA = 42;
+            store.Update(results[0]);
+            results = store.Select<GuidItem>().ToArray();
+        }
+
+        [TestMethod]
         public void TestCreateStore()
         {
             var store = new SqlServerDataStore(GetInfo());

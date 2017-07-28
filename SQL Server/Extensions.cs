@@ -37,6 +37,8 @@ namespace OpenNETCF.ORM.SqlServer
                     return SqlDbType.DateTime;
                 case DbType.Time:
                     return SqlDbType.Time;
+                case DbType.Guid:
+                    return SqlDbType.UniqueIdentifier;
                 default:
                     throw new NotSupportedException();
             }
