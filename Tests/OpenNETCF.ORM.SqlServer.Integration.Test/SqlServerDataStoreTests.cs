@@ -10,14 +10,13 @@ namespace OpenNETCF.ORM.SqlServer.Integration.Test
     {
         private SqlConnectionInfo GetInfo()
         {
-            return new SqlConnectionInfo()
-            {
-                ServerName = "192.168.10.47",
-                ServerPort = 1433,
-                DatabaseName = "TestDB",
-                UserName = "testuser",
-                Password = "pwd123!sql"
-            };
+            var connection = new SqlConnectionInfo();
+                connection.DatabaseName = "EnRouteDev";
+            connection.ServerName = "enroutemobile.database.windows.net";
+            connection.ServerPort = 1433;
+            connection.UserName = "EnRouteAPI";
+            connection.Password = "EnRoute123456!";
+            return connection;
         }
 
         private SqlServerDataStore GetTestStore()
