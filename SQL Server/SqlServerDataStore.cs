@@ -675,7 +675,7 @@ namespace OpenNETCF.ORM
                 {
                     command.Connection = connection;
                     
-                    var sql = string.Format("SELECT COUNT(*) FROM sys.indexes WHERE name = '{0}' AND object_id = OBJECT_ID('dbo.{1}')", entityName);
+                    var sql = string.Format("SELECT COUNT(*) FROM sys.indexes WHERE name = '{0}' AND object_id = OBJECT_ID('dbo.{1}')", indexName, entityName);
                     command.CommandText = sql;
 
                     var i = (long)command.ExecuteScalar();

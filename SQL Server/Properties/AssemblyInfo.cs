@@ -8,9 +8,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("OpenNETCF.ORM.SqlServer")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Tacke Consulting, LLC")]
-[assembly: AssemblyProduct("OpenNETCF.ORM.SqlServer")]
-[assembly: AssemblyCopyright("Copyright © Tacke Consulting, LLC 2013")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

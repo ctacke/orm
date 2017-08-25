@@ -8,9 +8,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("OpenNETCF.ORM.SqlCe")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("OpenNETCF Consulting, LLC")]
-[assembly: AssemblyProduct("OpenNETCF.ORM")]
-[assembly: AssemblyCopyright("Copyright © OpenNETCF 2010-2013")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

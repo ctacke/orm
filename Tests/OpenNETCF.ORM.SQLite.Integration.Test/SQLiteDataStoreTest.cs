@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Linq;
 using AFL.OSA.Models;
+using System.IO;
 
 namespace OpenNETCF.ORM.SQLite.Integration.Test
 {
@@ -10,6 +11,24 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
     public class SQLiteDataStoreTest
     {
         public TestContext TestContext { get; set; }
+
+        [TestMethod()]
+        [DeploymentItem("SQLite.Interop.dll")]
+        public void DisposalTest()
+        {
+            try
+            {
+                var path = Path.Combine(TestContext.TestResultsDirectory, "test.sqlite");
+                var store = new SQLiteDataStore(path);
+                store.CreateStore();
+                store.Dispose();
+                var fs = new FileStream(path, FileMode.Open);
+            }
+            catch (Exception ex)
+            {
+                Assert.Fail(ex.Message);
+            }
+        }
 
         [TestMethod()]
         [DeploymentItem("SQLite.Interop.dll")]

@@ -5,4 +5,9 @@ using System.Reflection;
 
 // see http://landweb.nascom.nasa.gov/browse/calendar.html
 
-[assembly: AssemblyVersion("1.0.17229.0")]
+[assembly: AssemblyCompany("Tacke Consulting, LLC")]
+[assembly: AssemblyProduct("OpenNETCF.ORM")]
+[assembly: AssemblyCopyright("Copyright © Chris Tacke 2010-2017")]
+
+[assembly: AssemblyVersion("1.0.17237.0")]
+[assembly: AssemblyFileVersion("1.0.17237.0")]

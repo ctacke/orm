@@ -50,6 +50,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\Shared\OpenNETCF.ORM.Version.cs">
+      <Link>Properties\OpenNETCF.ORM.Version.cs</Link>
+    </Compile>
     <Compile Include="AzureDataStore.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

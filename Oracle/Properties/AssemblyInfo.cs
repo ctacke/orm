@@ -8,9 +8,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("OpenNETCF.ORM.Oracle")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Tacke Consulting")]
-[assembly: AssemblyProduct("OpenNETCF.ORM.Oracle")]
-[assembly: AssemblyCopyright("Copyright © Tacke Consulting 2013")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

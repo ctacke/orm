@@ -3,3 +3,4 @@ packages/
 /bin
 bin/
 TestResults/
+.vs/

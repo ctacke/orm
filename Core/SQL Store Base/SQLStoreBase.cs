@@ -134,6 +134,20 @@ namespace OpenNETCF.ORM
             {
                 if (disposing)
                 {
+                    if (m_connectionPool != null)
+                    {
+                        foreach (var connection in m_connectionPool.ToArray())
+                        {
+                            if (connection.State == ConnectionState.Open)
+                            {
+                                connection.Close();
+                            }
+
+                            connection.Dispose();
+                            m_connectionPool.Remove(connection);
+                        }
+                    }
+
                     if (m_connection != null)
                     {
                         if (m_connection.State == ConnectionState.Open)
