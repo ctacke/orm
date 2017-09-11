@@ -37,9 +37,8 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="OpenNETCF.Extensions, Version=1.0.17110.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\..\packages\com.opennetcf.extensions.pcl.1.0.17110.0\lib\portable45-net45+win8+wpa81\OpenNETCF.Extensions.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="OpenNETCF.Extensions, Version=1.0.17160.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\..\packages\opennetcf-extensions-standard.1.0.17160.0\lib\netstandard1.1\OpenNETCF.Extensions.dll</HintPath>
     </Reference>
     <Reference Include="RestSharp">
       <HintPath>..\..\References\FFx\RestSharp.dll</HintPath>

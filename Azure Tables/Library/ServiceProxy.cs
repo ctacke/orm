@@ -43,7 +43,7 @@ namespace OpenNETCF.Azure
         {
             var request = GenerateRequest("GET", tableName);
 
-            using (var response = (HttpWebResponse)request.GetResponse(false))
+            using (var response = (HttpWebResponse)request.GetResponse())
             {
                 var dataStream = response.GetResponseStream();
 
@@ -86,7 +86,7 @@ namespace OpenNETCF.Azure
         {
             var request = GenerateRequest("GET", "Tables");
 
-            using (var response = (HttpWebResponse)request.GetResponse(false))
+            using (var response = (HttpWebResponse)request.GetResponse())
             {
                 var dataStream = response.GetResponseStream();
 
@@ -138,7 +138,7 @@ namespace OpenNETCF.Azure
 
             var request = GenerateRequest("POST", "Tables", null, createAtom);
 
-            using (var response = (HttpWebResponse)request.GetResponse(false))
+            using (var response = (HttpWebResponse)request.GetResponse())
             {
                 switch (response.StatusCode)
                 {
@@ -192,7 +192,7 @@ namespace OpenNETCF.Azure
 
             var request = GenerateRequest("POST", tableName, null, entry);
 
-            using (var response = (HttpWebResponse)request.GetResponse(false))
+            using (var response = (HttpWebResponse)request.GetResponse())
             {
                 switch (response.StatusCode)
                 {
@@ -242,7 +242,7 @@ namespace OpenNETCF.Azure
                 request.Headers.Add("If-Match", "*");
             }
 
-            using (var response = (HttpWebResponse)request.GetResponse(false))
+            using (var response = (HttpWebResponse)request.GetResponse())
             {
                 switch (response.StatusCode)
                 {
@@ -263,7 +263,7 @@ namespace OpenNETCF.Azure
         {
             var request = GenerateRequest("GET", string.Format("{0}(PartitionKey='{1}',RowKey='{2}')", tableName, partitionKey, rowKey));
 
-            using (var response = (HttpWebResponse)request.GetResponse(false))
+            using (var response = (HttpWebResponse)request.GetResponse())
             {
                 var dataStream = response.GetResponseStream();
                 using (var reader = new StreamReader(dataStream))
@@ -288,7 +288,7 @@ namespace OpenNETCF.Azure
         {
             var request = GenerateRequest("DELETE", string.Format("{0}(PartitionKey='{1}',RowKey='{2}')", tableName, partitionKey, rowKey));
             request.Headers.Add("If-Match", "*");
-            using (var response = (HttpWebResponse)request.GetResponse(false))
+            using (var response = (HttpWebResponse)request.GetResponse())
             {
                 var dataStream = response.GetResponseStream();
                 using (var reader = new StreamReader(dataStream))
@@ -337,7 +337,7 @@ namespace OpenNETCF.Azure
 
             var request = GenerateRequest("GET", uri, queryString);
 
-            using (var response = (HttpWebResponse)request.GetResponse(false))
+            using (var response = (HttpWebResponse)request.GetResponse())
             {
                 var dataStream = response.GetResponseStream();
 

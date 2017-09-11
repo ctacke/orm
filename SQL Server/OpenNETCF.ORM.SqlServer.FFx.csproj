@@ -37,6 +37,9 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="OpenNETCF.Extensions, Version=1.0.17160.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\opennetcf-extensions-standard.1.0.17160.0\lib\netstandard1.1\OpenNETCF.Extensions.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -59,6 +62,9 @@
       <Project>{6e9c7da3-ad60-4e44-9d3a-7bbd3a20d79f}</Project>
       <Name>OpenNETCF.ORM.FFx</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
