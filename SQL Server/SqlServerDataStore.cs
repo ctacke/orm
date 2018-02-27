@@ -678,7 +678,8 @@ namespace OpenNETCF.ORM
                     var sql = string.Format("SELECT COUNT(*) FROM sys.indexes WHERE name = '{0}' AND object_id = OBJECT_ID('dbo.{1}')", indexName, entityName);
                     command.CommandText = sql;
 
-                    var i = (long)command.ExecuteScalar();
+                    var idx = command.ExecuteScalar();
+                    var i = Convert.ToInt64(idx);
 
                     if (i == 0)
                     {

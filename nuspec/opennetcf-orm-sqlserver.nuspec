@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
         <id>opennetcf-orm-sqlserver</id>
-        <version>1.0.17254.0</version>
+        <version>1.0.18058.0</version>
         <title>OpenNETCF ORM for Microsoft SQL Server</title>
         <authors>Chris Tacke</authors>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>

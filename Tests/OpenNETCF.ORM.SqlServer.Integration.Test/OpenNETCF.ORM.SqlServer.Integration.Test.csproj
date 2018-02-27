@@ -65,6 +65,9 @@
   </Choose>
   <ItemGroup>
     <Compile Include="Entities\GuidItem.cs" />
+    <Compile Include="Entities\PublishedEntityBase.cs" />
+    <Compile Include="Entities\PublishedTenantApartmentState.cs" />
+    <Compile Include="Entities\PublishedTenantBuildingState.cs" />
     <Compile Include="SqlServerDynamicEntityTest.cs" />
     <Compile Include="Entities\Author.cs" />
     <Compile Include="Entities\Book.cs" />

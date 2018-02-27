@@ -2,6 +2,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenNETCF.ORM.Tests;
 using System.Linq;
+using OpenNETCF.ORM.SqlServer.Integration.Test.Entities;
 
 namespace OpenNETCF.ORM.SqlServer.Integration.Test
 {
@@ -11,11 +12,11 @@ namespace OpenNETCF.ORM.SqlServer.Integration.Test
         private SqlConnectionInfo GetInfo()
         {
             var connection = new SqlConnectionInfo();
-                connection.DatabaseName = "EnRouteDev";
-            connection.ServerName = "enroutemobile.database.windows.net";
+            connection.DatabaseName = "TEST";
+            connection.ServerName = "TEST.opennetcf.com";
             connection.ServerPort = 1433;
-            connection.UserName = "EnRouteAPI";
-            connection.Password = "EnRoute123456!";
+            connection.UserName = "TEST";
+            connection.Password = "TEST";
             return connection;
         }
 
@@ -33,6 +34,29 @@ namespace OpenNETCF.ORM.SqlServer.Integration.Test
             }
 
             return store;
+        }
+
+        [TestMethod]
+        public void BaseClassTest()
+        {
+            var connection = new SqlConnectionInfo();
+            connection.DatabaseName = "TEST";
+            connection.ServerName = "test.opennetcf.com";
+            connection.ServerPort = 1433;
+            connection.UserName = "TEST";
+            connection.Password = "TEST";
+
+            var store = new SqlServerDataStore(connection);
+
+            try
+            {
+                store.AddType<PublishedTenantBuildingState>();
+                store.AddType<PublishedTenantApartmentState>();
+            }
+            catch (Exception ex)
+            {
+            }
+
         }
 
         [TestMethod]
