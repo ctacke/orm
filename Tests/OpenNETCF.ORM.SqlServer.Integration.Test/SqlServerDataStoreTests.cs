@@ -60,6 +60,54 @@ namespace OpenNETCF.ORM.SqlServer.Integration.Test
         }
 
         [TestMethod]
+        public void TransactionTest()
+        {
+            var connection = new SqlConnectionInfo();
+            connection.DatabaseName = "TEST";
+            connection.ServerName = "test.opennetcf.com";
+            connection.ServerPort = 1433;
+            connection.UserName = "TEST";
+            connection.Password = "TEST!";
+
+            var store = new SqlServerDataStore(connection);
+
+            try
+            {
+                store.AddType<PublishedTenantBuildingState>();
+                store.AddType<PublishedTenantApartmentState>();
+
+                var b = new PublishedTenantBuildingState()
+                {
+                    PublishID = Guid.NewGuid(),
+                    RecordDateUtc = DateTime.Now.ToUniversalTime()
+                };
+                var a1 = new PublishedTenantApartmentState()
+                {
+                    PublishID = Guid.NewGuid(),
+                    PublishedBuildingStateID = b.PublishID,
+                    SpaceTemperature = 1
+                };
+                var a2 = new PublishedTenantApartmentState()
+                {
+                    PublishID = Guid.NewGuid(),
+                    PublishedBuildingStateID = b.PublishID,
+                    SpaceTemperature = 2
+                };
+
+                
+                store.BeginTransaction();
+                store.Insert(b);
+                store.Insert(a1);
+                store.Insert(a2);
+                store.Commit();
+            }
+            catch (Exception ex)
+            {
+            }
+
+        }
+
+        [TestMethod]
         public void GuidPKTest()
         {
             var store = new SqlServerDataStore(GetInfo());

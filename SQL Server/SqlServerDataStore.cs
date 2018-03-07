@@ -20,6 +20,8 @@ namespace OpenNETCF.ORM
 
         public const int DefaultServerPort = 1433;
         public const ConnectionBehavior DefaultConnectionBehavior = ConnectionBehavior.AlwaysNew;
+        private IDbConnection m_transactionConnection = null;
+        private IDbTransaction m_transaction = null;
 
         public SqlServerDataStore(SqlConnectionInfo info)
             : base()
@@ -432,6 +434,41 @@ namespace OpenNETCF.ORM
             {
                 DoneWithConnection(connection, false);
             }
+        }
+
+        public override void BeginTransaction()
+        {
+            if (m_transactionConnection != null)
+            {
+                throw new Exception("Transaction already in progress");
+            }
+
+            m_transactionConnection = GetConnection(false);
+            m_transaction = m_transactionConnection.BeginTransaction(IsolationLevel.ReadCommitted);
+        }
+
+        public override void Commit()
+        {
+            if (m_transaction == null)
+            {
+                throw new Exception("No active transaction");
+            }
+            m_transaction.Commit();
+            m_transaction = null;
+            DoneWithConnection(m_transactionConnection, false);
+            m_transactionConnection = null;
+        }
+
+        public override void Rollback()
+        {
+            if (m_transaction == null)
+            {
+                throw new Exception("No active transaction");
+            }
+            m_transaction.Rollback();
+            m_transaction = null;
+            DoneWithConnection(m_transactionConnection, false);
+            m_transactionConnection = null;
         }
 
         private int GetIdentity(IDbConnection connection)

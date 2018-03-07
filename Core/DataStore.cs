@@ -700,7 +700,7 @@ namespace OpenNETCF.ORM
         }
 
         public virtual void BeginTransaction()
-        {
+        {            
             BeginTransaction(IsolationLevel.Unspecified);
         }
 
