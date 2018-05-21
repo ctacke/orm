@@ -213,6 +213,41 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             store.Insert(Order, true);
         }
 
+        [TestMethod()]
+        [DeploymentItem("SQLite.Interop.dll")]
+        public void SingleEntityFetchTest()
+        {
+            var drivers = new Driver[]
+                {
+                    new Driver()
+                    {
+                        Name = "Speed Racer"
+                    },
+                    new Driver()
+                    {
+                        Name = "Shaggy"
+                    },
+                    new Driver()
+                    {
+                        Name = "Mario"
+                    },
+                    new Driver()
+                    {
+                        Name = "Luigi"
+                    },
+                };
+
+            var store = new SQLiteDataStore("test.sqlite");
+            store.AddType<Driver>();
+            store.CreateStore();
+            foreach (var driver in drivers)
+            {
+                store.Insert(driver);
+            }
+
+            var items = store.Fetch<Driver>(2).ToArray();
+            Assert.AreEqual(2, items.Length);
+        }
 
     }
 }

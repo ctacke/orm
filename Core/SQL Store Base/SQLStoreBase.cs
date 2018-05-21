@@ -43,8 +43,6 @@ namespace OpenNETCF.ORM
 
         public abstract override void OnUpdate(object item, bool cascadeUpdates, string fieldName);
 
-        public abstract override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences);
-
         public abstract override int Count<T>(IEnumerable<FilterCondition> filters);
 
         public abstract string[] GetTableNames();
@@ -943,6 +941,30 @@ namespace OpenNETCF.ORM
             return Select(objectType, searchFieldName, matchValue, fetchCount, firstRowOffset, true);
         }
 
+        public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        {
+            var objectType = typeof(T);
+
+            var entityName = Entities.GetNameForType(objectType);
+            // if the entity type hasn't already been registered, try to auto-register
+            if (entityName == null)
+            {
+                AddType(objectType);
+            }
+
+            return Select(
+                objectType,
+                (filter == null) ? null :
+                    new FilterCondition[]
+                    {
+                        filter
+                    },
+                fetchCount,
+                firstRowOffset,
+                fillReferences)
+                .Cast<T>();
+        }
+
         protected virtual IEnumerable<object> Select(Type objectType, string searchFieldName, object matchValue, int fetchCount, int firstRowOffset, bool fillReferences)
         {
             var entityName = Entities.GetNameForType(objectType);
@@ -951,7 +973,7 @@ namespace OpenNETCF.ORM
             {
                 AddType(objectType);
             }
-            
+
             FilterCondition filter = null;
 
             if (searchFieldName == null)
@@ -1050,6 +1072,26 @@ namespace OpenNETCF.ORM
             where TCommand : DbCommand, new()
             where TParameter : IDataParameter, new()
         {
+            return BuildFilterCommand<TCommand, TParameter>(entityName, filters, -1, isCount);
+        }
+
+        /// <summary>
+        /// For DB providers that support "TOP", use this to return a TOP SQL sub-command
+        /// </summary>
+        /// <param name="fetchCount"></param>
+        /// <returns></returns>
+        protected virtual string GetTopSubCommand(int fetchCount) { return string.Empty; }
+        /// <summary>
+        /// For DB providers that support "LIMIT", use this to return a LIMIT SQL sub-command
+        /// </summary>
+        /// <param name="fetchCount"></param>
+        /// <returns></returns>
+        protected virtual string GetLimitSubCommand(int fetchCount) { return string.Empty; }
+
+        protected TCommand BuildFilterCommand<TCommand, TParameter>(string entityName, IEnumerable<FilterCondition> filters, int fetchCount, bool isCount)
+            where TCommand : DbCommand, new()
+            where TParameter : IDataParameter, new()
+        {
             var command = new TCommand();
             command.CommandType = CommandType.Text;
             var @params = new List<TParameter>();
@@ -1063,6 +1105,7 @@ namespace OpenNETCF.ORM
             else
             {
                 sb = new StringBuilder("SELECT ");
+                sb.Append(GetTopSubCommand(fetchCount) + " ");
 
                 var count = Entities[entityName].Fields.Count;
                 var ordinal = 0;
@@ -1120,6 +1163,9 @@ namespace OpenNETCF.ORM
                     @params.Add(param);
                 }
             }
+
+            sb.Append(" " + GetLimitSubCommand(fetchCount));
+
             var sql = sb.ToString();
             command.CommandText = sql;
             command.Parameters.AddRange(@params.ToArray());
@@ -1890,9 +1936,15 @@ namespace OpenNETCF.ORM
         /// <returns></returns>
         public override IEnumerable<T> Fetch<T>(int fetchCount)
         {
-            var type = typeof(T);
-            var items = Select(type, null, null, fetchCount, 0, false);
-            return items.Cast<T>();
+            var objectType = typeof(T);
+            var entityName = Entities.GetNameForType(objectType);
+            // if the entity type hasn't already been registered, try to auto-register
+            if (entityName == null)
+            {
+                AddType(objectType);
+            }
+
+            return Fetch<T>(fetchCount, 0, null, FieldSearchOrder.NotSearchable, null, false);
         }
 
         /// <summary>
@@ -1904,9 +1956,7 @@ namespace OpenNETCF.ORM
         /// <returns></returns>
         public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset)
         {
-            var type = typeof(T);
-            var items = Select(type, null, null, fetchCount, firstRowOffset, false);
-            return items.Cast<T>();
+            return Fetch<T>(fetchCount, firstRowOffset, null, FieldSearchOrder.NotSearchable, null, false);
         }
 
         protected override void AfterAddEntityType(Type entityType, bool ensureCompatibility)

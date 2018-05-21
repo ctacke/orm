@@ -616,6 +616,16 @@ namespace OpenNETCF.ORM
             return Select(entityName, objectType, filters, fetchCount, firstRowOffset, fillReferences);
         }
 
+        protected override string GetLimitSubCommand(int fetchCount)
+        {
+            if (fetchCount > 0)
+            {
+                return string.Format("LIMIT " + fetchCount);
+            }
+
+            return string.Empty;
+        }
+
         private IEnumerable<object> Select(string entityName, Type objectType, IEnumerable<FilterCondition> filters, int fetchCount, int firstRowOffset, bool fillReferences)
         {
             Debug.WriteLineIf(TracingEnabled, "+Select");
@@ -639,8 +649,7 @@ namespace OpenNETCF.ORM
             try
             {
                 CheckOrdinals(entityName);
-                bool tableDirect;
-                command = GetSelectCommand<SQLiteCommand, SQLiteParameter>(entityName, filters, out tableDirect);
+                command = BuildFilterCommand<SQLiteCommand, SQLiteParameter>(entityName, filters, fetchCount, false);
                 command.Connection = connection as SQLiteConnection;
                 command.Transaction = CurrentTransaction as SQLiteTransaction;
 
@@ -1067,11 +1076,6 @@ namespace OpenNETCF.ORM
             {
                 DoneWithConnection(connection, true);
             }
-        }
-
-        public override IEnumerable<T> Fetch<T>(int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
-        {
-            throw new NotSupportedException("Fetch is not currently supported with this Provider.");
         }
 
         protected override string GetFieldDataTypeString(string entityName, FieldAttribute field)
