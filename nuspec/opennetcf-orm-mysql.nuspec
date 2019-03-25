@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+    <metadata>
+        <id>opennetcf-orm-mysql</id>
+        <version>1.0.19092.0</version>
+        <title>OpenNETCF ORM for MySQL</title>
+        <authors>Chris Tacke</authors>
+        <requireLicenseAcceptance>false</requireLicenseAcceptance>
+        <description>OpenNETCF's ORM Framework with the MySQL Implementation</description>
+
+    <dependencies>
+      <group>
+        <dependency id="MySQL.Data" version="6.9.12"/>
+        <dependency id="opennetcf-extensions-standard" version="1.0.17160"/>
+        <dependency id="opennetcf-orm-core" version="1.0.17254"/>
+      </group>
+    </dependencies>
+    </metadata>
+    <files>
+        <!-- .NET 4.0 and later -->
+        <file src="..\bin\Release\FFx\OpenNETCF.ORM.MySQL.dll" target="lib\net40" />
+
+        <!-- Mono -->
+        <file src="..\bin\Release\FFx\OpenNETCF.ORM.MySQL.dll" target="lib\MonoTouch40" />
+
+    </files>
+</package>
