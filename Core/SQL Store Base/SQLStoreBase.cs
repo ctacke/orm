@@ -2097,9 +2097,6 @@ namespace OpenNETCF.ORM
                 m_transactionConnection.Close();
                 m_transactionConnection.Dispose();
                 m_transactionConnection = null;
-
-                // revert connection behavior if we escalated
-//                ConnectionBehavior = m_nonTransactionConnectionBehavior;
             }
         }
 
@@ -2119,8 +2116,6 @@ namespace OpenNETCF.ORM
                 m_transactionConnection.Close();
                 m_transactionConnection.Dispose();
                 m_transactionConnection = null;
-                // revert connection behavior if we escalated
-//                ConnectionBehavior = m_nonTransactionConnectionBehavior;
             }
         }
 

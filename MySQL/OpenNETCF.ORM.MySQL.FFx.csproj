@@ -57,6 +57,7 @@
     <Compile Include="MySQLDataStore.cs" />
     <Compile Include="MySQLConnectionInfo.cs" />
     <Compile Include="MySQLDataStore_dynamic.cs" />
+    <Compile Include="MySQLPermissionsException.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

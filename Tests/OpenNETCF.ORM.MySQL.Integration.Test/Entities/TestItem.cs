@@ -31,9 +31,12 @@ namespace OpenNETCF.ORM.Tests
     {
         public TestItem()
         {
+            TS = DateTime.Now.TimeOfDay;
+            DT = DateTime.Now;
         }
 
         public TestItem(string name)
+            : this()
         {
             Name = name;
         }
@@ -64,6 +67,9 @@ namespace OpenNETCF.ORM.Tests
 
         [Field]
         public TimeSpan TS { get; set; }
+
+        [Field]
+        public DateTime DT { get; set; }
 
         [Field(Length = int.MaxValue)]
         public string BigString { get; set; }

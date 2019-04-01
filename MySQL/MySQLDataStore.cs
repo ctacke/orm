@@ -9,10 +9,9 @@ using System.Threading;
 using MySql.Data.MySqlClient;
 
 namespace OpenNETCF.ORM
-{    
+{
     public partial class MySQLDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
     {
-        private string m_lastEntity;
         private string m_connectionString;
         private MySQLConnectionInfo m_info;
 
@@ -68,7 +67,21 @@ namespace OpenNETCF.ORM
                 var cs = BuildConnectionString(m_info, true);
                 using (var connection = GetNewConnectionObject(cs))
                 {
-                    connection.Open();
+                    try
+                    {
+                        connection.Open();
+                    }
+                    catch (MySqlException ex)
+                    {
+                        if (ex.ErrorCode == -2147467259)
+                        {
+                            // this call (and others in ORM) requires access to the system table to determine meta-info
+                            // make this more obvious in the error description
+                            throw new MySQLPermissionsException("ORM Requires access to the 'mysql' database to retrieve store meta data and the current user does not have the required permissions.");
+                        }
+
+                        throw ex;
+                    }
 
                     using (var command = GetNewCommandObject())
                     {
@@ -174,6 +187,8 @@ namespace OpenNETCF.ORM
                     return MySqlDbType.Bit;
                 case DbType.Byte:
                     return MySqlDbType.Byte;
+                case DbType.Time:
+                    return MySqlDbType.Time;
                 default:
                     throw new NotSupportedException(string.Format("Cannot translate DbType '{0}' to OracleDbType", type.ToString()));
             }
@@ -301,8 +316,7 @@ namespace OpenNETCF.ORM
                         }
                         else
                         {
-                            var timespanTicks = ((TimeSpan)value).Ticks;
-                            command.Parameters[ParameterPrefix + field.FieldName].Value = timespanTicks;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = value;
                         }
                     }
                     else if (field.DataType == DbType.Guid)
@@ -378,9 +392,6 @@ namespace OpenNETCF.ORM
 
         protected override void ValidateTable(IDbConnection connection, IEntityInfo entity)
         {
-            // prevent cached reads of entitiy fields
-            m_lastEntity = null;
-
             // first make sure the table exists
             if (!TableExists(entity.EntityAttribute.NameInStore))
             {
@@ -553,11 +564,6 @@ namespace OpenNETCF.ORM
                                                 field.PropertyInfo.SetValue(item, @object, null);
                                             }
                                         }
-                                        else if (field.IsTimespan)
-                                        {
-                                            var valueAsTimeSpan = new TimeSpan((long)value);
-                                            field.PropertyInfo.SetValue(item, valueAsTimeSpan, null);
-                                        }
                                         else if (field.DataType == DbType.Guid)
                                         {
                                             if (value != null)
@@ -611,7 +617,11 @@ namespace OpenNETCF.ORM
                 }
 
                 FlushReferenceTableCache();
-                DoneWithConnection(connection, false);
+
+                if (CurrentTransaction == null)
+                {
+                    DoneWithConnection(connection, false);
+                }
             }
         }
 
@@ -847,7 +857,10 @@ namespace OpenNETCF.ORM
             finally
             {
                 insertCommand.Dispose();
-                DoneWithConnection(connection, false);
+                if (CurrentTransaction == null)
+                {
+                    DoneWithConnection(connection, false);
+                }
             }
 
             if (cascadeUpdates)
@@ -944,6 +957,12 @@ namespace OpenNETCF.ORM
                     }
                 case DbType.Single:
                     return "float";
+                case DbType.Time:
+                    return "TIME";
+                case DbType.DateTime:
+                case DbType.Date:
+                case DbType.DateTime2:
+                    return "DATETIME";
                 default:
                     return base.GetFieldDataTypeString(entityName, field);
             }
