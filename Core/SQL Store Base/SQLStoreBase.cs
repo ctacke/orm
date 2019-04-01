@@ -1580,7 +1580,7 @@ namespace OpenNETCF.ORM
                     {
                         // In a N:1 relation, the local ('instance' coming in here) key is the FK and the remote it the PK.  
                         // We need to read the local FK, so we can go to the reference table and pull the one row with that PK value
-                        keyValue = m_entities[entityName].Fields[reference.ForeignReferenceField].PropertyInfo.GetValue(instance, null);
+                        keyValue = m_entities[entityName].Fields[reference.LocalReferenceField].PropertyInfo.GetValue(instance, null);
                     }
 
                     // get the lookup values - until we support filtered selects, this may be very expensive memory-wise
