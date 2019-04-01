@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -8,7 +8,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>OpenNETCF.ORM.MySQL.Integration.Test</RootNamespace>
     <AssemblyName>OpenNETCF.ORM.MySQL.Integration.Test</AssemblyName>
-    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
@@ -20,6 +20,7 @@
     <SccLocalPath>SAK</SccLocalPath>
     <SccAuxPath>SAK</SccAuxPath>
     <SccProvider>SAK</SccProvider>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -29,6 +30,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -37,6 +39,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -65,17 +68,17 @@
     <Compile Include="Entities\TestItem.cs" />
     <Compile Include="Entities\TestTable.cs" />
     <Compile Include="MySqlDynamicEntityTest.cs" />
-    <Compile Include="UnitTest1.cs" />
+    <Compile Include="MySQLDataStoreTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\OpenNETCF.ORM.MySQL\OpenNETCF.ORM.MySQL.FFx.csproj">
-      <Project>{77196bf3-0c9e-452b-887e-b110985e2209}</Project>
-      <Name>OpenNETCF.ORM.MySQL.FFx</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\..\OpenNETCF.ORM\OpenNETCF.ORM.FFx.csproj">
+    <ProjectReference Include="..\..\Core\OpenNETCF.ORM.FFx.csproj">
       <Project>{6e9c7da3-ad60-4e44-9d3a-7bbd3a20d79f}</Project>
       <Name>OpenNETCF.ORM.FFx</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\MySQL\OpenNETCF.ORM.MySQL.FFx.csproj">
+      <Project>{77196bf3-0c9e-452b-887e-b110985e2209}</Project>
+      <Name>OpenNETCF.ORM.MySQL.FFx</Name>
     </ProjectReference>
   </ItemGroup>
   <Choose>

@@ -9,10 +9,9 @@ using System.Threading;
 using MySql.Data.MySqlClient;
 
 namespace OpenNETCF.ORM
-{    
+{
     public partial class MySQLDataStore : SQLStoreBase<SqlEntityInfo>, IDisposable
     {
-        private string m_lastEntity;
         private string m_connectionString;
         private MySQLConnectionInfo m_info;
 
@@ -68,7 +67,21 @@ namespace OpenNETCF.ORM
                 var cs = BuildConnectionString(m_info, true);
                 using (var connection = GetNewConnectionObject(cs))
                 {
-                    connection.Open();
+                    try
+                    {
+                        connection.Open();
+                    }
+                    catch (MySqlException ex)
+                    {
+                        if (ex.ErrorCode == -2147467259)
+                        {
+                            // this call (and others in ORM) requires access to the system table to determine meta-info
+                            // make this more obvious in the error description
+                            throw new MySQLPermissionsException("ORM Requires access to the 'mysql' database to retrieve store meta data and the current user does not have the required permissions.");
+                        }
+
+                        throw ex;
+                    }
 
                     using (var command = GetNewCommandObject())
                     {
@@ -378,9 +391,6 @@ namespace OpenNETCF.ORM
 
         protected override void ValidateTable(IDbConnection connection, IEntityInfo entity)
         {
-            // prevent cached reads of entitiy fields
-            m_lastEntity = null;
-
             // first make sure the table exists
             if (!TableExists(entity.EntityAttribute.NameInStore))
             {
