@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
         <id>opennetcf-orm-sqlite</id>
-        <version>1.0.18141.0</version>
+        <version>1.0.19094.0</version>
         <title>OpenNETCF ORM for SQLite</title>
         <authors>Chris Tacke</authors>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -11,7 +11,7 @@
     <dependencies>
       <group>
         <dependency id="opennetcf-extensions-standard" version="1.0.17160"/>
-        <dependency id="opennetcf-orm-core" version="1.0.18141"/>
+        <dependency id="opennetcf-orm-core" version="1.0.19094"/>
         <dependency id="System.Data.SQLite.Core" version="1.0.108" />
         <dependency id="System.Data.SQLite.Linq" version="1.0.108" />
       </group>

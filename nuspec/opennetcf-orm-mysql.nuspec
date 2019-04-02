@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
         <id>opennetcf-orm-mysql</id>
-        <version>1.0.19093.0</version>
+        <version>1.0.19094.0</version>
         <title>OpenNETCF ORM for MySQL</title>
         <authors>Chris Tacke</authors>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -12,7 +12,7 @@
       <group>
         <dependency id="MySQL.Data" version="6.9.12"/>
         <dependency id="opennetcf-extensions-standard" version="1.0.17160"/>
-        <dependency id="opennetcf-orm-core" version="1.0.17254"/>
+        <dependency id="opennetcf-orm-core" version="1.0.19094"/>
       </group>
     </dependencies>
     </metadata>

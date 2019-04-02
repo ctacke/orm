@@ -11,7 +11,9 @@ namespace OpenNETCF.ORM.MySQL.Integration.Test
     {
         private MySQLDataStore GetTestStore(bool verifyExists = true)
         {
-            var info = new MySQLConnectionInfo("192.168.10.246", 3306, "TestDB", "root", "password");
+            var info = new MySQLConnectionInfo("173.10.132.188", 3306, "ORMTest", "SolutionEngine", "rtx64");
+
+//            var info = new MySQLConnectionInfo("192.168.10.246", 3306, "TestDB", "root", "password");
 
             var store = new MySQLDataStore(info);
 
