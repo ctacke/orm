@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
         <id>opennetcf-orm-core</id>
-        <version>1.0.19108.0</version>
+        <version>1.0.19094.0</version>
         <title>OpenNETCF ORM Core</title>
         <authors>Chris Tacke</authors>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>

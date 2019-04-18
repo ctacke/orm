@@ -7,7 +7,7 @@ using System.Reflection;
 
 namespace OpenNETCF.ORM
 {
-    public abstract class DataStore<TEntityInfo> : DisposableBase, IDataStore
+    public abstract class DataStore<TEntityInfo> : IDataStore
         where TEntityInfo : EntityInfo, new()
     {
         protected EntityInfoCollection m_entities = new EntityInfoCollection();
@@ -51,11 +51,6 @@ namespace OpenNETCF.ORM
         public event EventHandler<EntityDeleteArgs> BeforeDelete;
         public event EventHandler<EntityDeleteArgs> AfterDelete;
         public abstract void OnDelete(object item);
-
-        protected override void ReleaseManagedResources()
-        {
-            m_recoveryService.Dispose();
-        }
 
         /// <summary>
         /// Return <b>true</b> if you want the ORM to retry the operation.  Usefule for server unavailable-type errors

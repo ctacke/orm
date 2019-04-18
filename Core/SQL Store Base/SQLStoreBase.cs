@@ -513,18 +513,24 @@ namespace OpenNETCF.ORM
                 throw new ReservedWordException(entity.EntityName);
             }
 
-            sql.AppendFormat("CREATE TABLE [{0}] (", entity.EntityName);
+            sql.AppendFormat("CREATE TABLE {0} (", entity.EntityName);
 
             int count = entity.Fields.Count;
 
             foreach (var field in entity.Fields)
             {
+                //if (field is ReferenceFieldAttribute)
+                //{
+                //    count--;
+                //    continue;
+                //}
+
                 if (ReservedWords.Contains(field.FieldName, StringComparer.InvariantCultureIgnoreCase))
                 {
                     throw new ReservedWordException(field.FieldName);
                 }
 
-                sql.AppendFormat("[{0}] {1} {2}",
+                sql.AppendFormat("{0} {1} {2}",
                     field.FieldName,
                     GetFieldDataTypeString(entity.EntityName, field),
                     GetFieldCreationAttributes(entity.EntityAttribute, field));
@@ -1094,7 +1100,7 @@ namespace OpenNETCF.ORM
 
             if (isCount)
             {
-                sb = new StringBuilder(string.Format("SELECT COUNT(*) FROM [{0}]", entityName));
+                sb = new StringBuilder(string.Format("SELECT COUNT(*) FROM {0}", entityName));
             }
             else
             {
@@ -1107,10 +1113,10 @@ namespace OpenNETCF.ORM
                 {
                     field.Ordinal = ordinal;
                     ordinal++;
-                    sb.Append($"[{field.FieldName}]");
+                    sb.Append(field.FieldName);
                     if (--count > 0) sb.Append(", ");
                 }
-                sb.Append(string.Format(" FROM [{0}]", entityName));
+                sb.Append(string.Format(" FROM {0}", entityName));
             }
 
             if (filters != null)
@@ -1120,7 +1126,7 @@ namespace OpenNETCF.ORM
                     sb.Append(i == 0 ? " WHERE " : " AND ");
 
                     var filter = filters.ElementAt(i);
-                    sb.Append($"[{filter.FieldName}]");
+                    sb.Append(filter.FieldName);
 
                     switch (filters.ElementAt(i).Operator)
                     {
@@ -1233,7 +1239,7 @@ namespace OpenNETCF.ORM
                     sb.Append(i == 0 ? " WHERE " : " AND ");
 
                     var filter = filters.ElementAt(i);
-                    sb.Append($"[{filter.FieldName}]");
+                    sb.Append(filter.FieldName);
 
                     switch (filters.ElementAt(i).Operator)
                     {
@@ -1315,7 +1321,7 @@ namespace OpenNETCF.ORM
                 sb.Append(i == 0 ? " WHERE " : " AND ");
 
                 var filter = filters.ElementAt(i);
-                sb.Append($"[{filter.FieldName}]");
+                sb.Append(filter.FieldName);
 
                 switch (filters.ElementAt(i).Operator)
                 {
@@ -1384,7 +1390,7 @@ namespace OpenNETCF.ORM
                     command.Connection = connection;
 
                     // only bring back the structure, not any data (for improved speed)
-                    command.CommandText = $"SELECT * FROM [{entityName}] WHERE 0 = 1";
+                    command.CommandText = string.Format("SELECT * FROM {0} WHERE 0 = 1", entityName);
 
                     using (var reader = command.ExecuteReader())
                     {
@@ -1673,7 +1679,7 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 {
                     command.Connection = connection;
-                    command.CommandText = string.Format("DELETE FROM [{0}]", tableName);
+                    command.CommandText = string.Format("DELETE FROM {0}", tableName);
                     command.ExecuteNonQuery();
                 }
             }
@@ -1698,7 +1704,7 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 {
                     command.Connection = connection;
-                    command.CommandText = string.Format("DROP TABLE [{0}]", tableName);
+                    command.CommandText = string.Format("DROP TABLE {0}", tableName);
                     command.ExecuteNonQuery();
                 }
 
@@ -1774,7 +1780,7 @@ namespace OpenNETCF.ORM
                 {
                     command.Connection = connection;
                     command.Transaction = CurrentTransaction;
-                    command.CommandText = string.Format("DELETE FROM [{0}] WHERE [{1}] = {2}val", entityName, fieldName, ParameterPrefix);
+                    command.CommandText = string.Format("DELETE FROM {0} WHERE {1} = {2}val", entityName, fieldName, ParameterPrefix);
                     var param = CreateParameterObject(ParameterPrefix + "val", matchValue);
                     command.Parameters.Add(param);
                     command.ExecuteNonQuery();
@@ -1803,7 +1809,7 @@ namespace OpenNETCF.ORM
 
                     var whereClause = GenerateWhereClause(filters);
 
-                    command.CommandText = string.Format("DELETE FROM [{0}] {1}", entityName, whereClause);
+                    command.CommandText = string.Format("DELETE FROM {0} {1}", entityName, whereClause);
                     return command.ExecuteNonQuery();
                 }
             }
@@ -1902,7 +1908,7 @@ namespace OpenNETCF.ORM
                 using (var command = GetNewCommandObject())
                 {
                     command.Connection = connection;
-                    command.CommandText = string.Format("SELECT COUNT(*) FROM [{0}]", entityName);
+                    command.CommandText = string.Format("SELECT COUNT(*) FROM {0}", entityName);
                     var count = command.ExecuteScalar();
                     return Convert.ToInt32(count);
                 }
@@ -2236,17 +2242,17 @@ namespace OpenNETCF.ORM
 
             var sql = new StringBuilder(1024);
 
-            sql.AppendFormat("SELECT * FROM [{0}]", entityName);
+            sql.AppendFormat("SELECT * FROM {0}", entityName);
 
             if (!string.IsNullOrEmpty(sortField))
             {
-                sql.AppendFormat(" ORDER BY [{0}] {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                sql.AppendFormat(" ORDER BY {0} {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
             }
             else if (sortOrder != FieldSearchOrder.NotSearchable)
             {
                 if (Entities[entityName].Fields.KeyField != null)
                 {
-                    sql.AppendFormat(" ORDER BY [{0}] {1}", Entities[entityName].Fields.KeyField.FieldName, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                    sql.AppendFormat(" ORDER BY {0} {1}", Entities[entityName].Fields.KeyField.FieldName, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
                 }
             }
 

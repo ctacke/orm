@@ -201,7 +201,7 @@ namespace OpenNETCF.ORM
             var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
             var insertCommand = new MySqlCommand();
 
-            var sbFields = new StringBuilder(string.Format("INSERT INTO [{0}] (", entityName));
+            var sbFields = new StringBuilder(string.Format("INSERT INTO {0} (", entityName));
             var sbParams = new StringBuilder(" VALUES (");
 
             foreach (var field in Entities[entityName].Fields)
@@ -211,7 +211,7 @@ namespace OpenNETCF.ORM
                 {
                     continue;
                 }
-                sbFields.Append($"[{field.FieldName}],");
+                sbFields.Append(field.FieldName + ",");
                 sbParams.Append(ParameterPrefix + field.FieldName + ",");
 
                 var parameter = new MySqlParameter(ParameterPrefix + field.FieldName, TranslateDbTypeToMySqlDbType(field.DataType));
@@ -430,7 +430,7 @@ namespace OpenNETCF.ORM
                         {
                             // field doesn't exist - we must create it
                             var alter = new StringBuilder(string.Format("ALTER TABLE {0} ", entity.EntityAttribute.NameInStore));
-                            alter.Append(string.Format("ADD [{0}] {1} {2}",
+                            alter.Append(string.Format("ADD {0} {1} {2}",
                                 field.FieldName,
                                 GetFieldDataTypeString(entity.EntityName, field),
                                 GetFieldCreationAttributes(entity.EntityAttribute, field)));
@@ -740,7 +740,7 @@ namespace OpenNETCF.ORM
 
                     command.Connection = connection;
 
-                    command.CommandText = string.Format("SELECT * FROM [{0}] WHERE [{1}] = {2}keyparam",
+                    command.CommandText = string.Format("SELECT * FROM {0} WHERE {1} = {2}keyparam",
                         entityName,
                         Entities[entityName].Fields.KeyField.FieldName,
                         ParameterPrefix);
@@ -749,7 +749,7 @@ namespace OpenNETCF.ORM
                     command.Parameters.Add(new MySqlParameter(ParameterPrefix + "keyparam", keyValue));
                     command.Transaction = CurrentTransaction;
 
-                    var updateSQL = new StringBuilder(string.Format("UPDATE [{0}] SET ", entityName));
+                    var updateSQL = new StringBuilder(string.Format("UPDATE {0} SET ", entityName));
 
                     using (var reader = command.ExecuteReader() as MySqlDataReader)
                     {
@@ -794,11 +794,11 @@ namespace OpenNETCF.ORM
 
                                 if (value == null)
                                 {
-                                    updateSQL.AppendFormat("[{0}]=NULL, ", field.FieldName);
+                                    updateSQL.AppendFormat("{0}=NULL, ", field.FieldName);
                                 }
                                 else
                                 {
-                                    updateSQL.AppendFormat("[{0}]={1}{0}, ", field.FieldName, ParameterPrefix);
+                                    updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
                                     insertCommand.Parameters.Add(new MySqlParameter(ParameterPrefix + field.FieldName, value));
                                 }
                             }
@@ -809,12 +809,12 @@ namespace OpenNETCF.ORM
                                 var value = field.PropertyInfo.GetValue(item, null);
                                 if (value == null)
                                 {
-                                    updateSQL.AppendFormat("[{0}]=NULL, ", field.FieldName);
+                                    updateSQL.AppendFormat("{0}=NULL, ", field.FieldName);
                                 }
                                 else
                                 {
                                     var ticks = ((TimeSpan)value).Ticks;
-                                    updateSQL.AppendFormat("[{0}]={1}{0}, ", field.FieldName, ParameterPrefix);
+                                    updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
                                     insertCommand.Parameters.Add(new MySqlParameter(ParameterPrefix + field.FieldName, ticks));
                                 }
                             }
@@ -828,11 +828,11 @@ namespace OpenNETCF.ORM
 
                                     if (value == null)
                                     {
-                                        updateSQL.AppendFormat("[{0}]=NULL, ", field.FieldName);
+                                        updateSQL.AppendFormat("{0}=NULL, ", field.FieldName);
                                     }
                                     else
                                     {
-                                        updateSQL.AppendFormat("[{0}]={1}{0}, ", field.FieldName, ParameterPrefix);
+                                        updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
                                         insertCommand.Parameters.Add(new MySqlParameter(ParameterPrefix + field.FieldName, value));
                                     }
                                 }
@@ -845,7 +845,7 @@ namespace OpenNETCF.ORM
                     {
                         // remove the trailing comma and append the filter
                         updateSQL.Length -= 2;
-                        updateSQL.AppendFormat(" WHERE [{0}] = {1}keyparam", Entities[entityName].Fields.KeyField.FieldName, ParameterPrefix);
+                        updateSQL.AppendFormat(" WHERE {0} = {1}keyparam", Entities[entityName].Fields.KeyField.FieldName, ParameterPrefix);
                         insertCommand.Parameters.Add(new MySqlParameter(ParameterPrefix + "keyparam", keyValue));
                         insertCommand.CommandText = updateSQL.ToString();
                         insertCommand.Connection = connection;

@@ -156,7 +156,7 @@ namespace OpenNETCF.ORM
             var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
             var insertCommand = new SQLiteCommand();
             
-            var sbFields = new StringBuilder(string.Format("INSERT INTO [{0}] (", entityName));
+            var sbFields = new StringBuilder(string.Format("INSERT INTO {0} (", entityName));
             var sbParams = new StringBuilder( " VALUES (");
 
             foreach (var field in Entities[entityName].Fields)
@@ -166,11 +166,10 @@ namespace OpenNETCF.ORM
                 {
                     continue;
                 }
-                sbFields.Append($"\"{field.FieldName}\",");
-                var paramName = GenerateParameterName(field.FieldName);
-                sbParams.Append($"{paramName},");
+                sbFields.Append(field.FieldName + ",");
+                sbParams.Append(ParameterPrefix + field.FieldName + ",");
 
-                insertCommand.Parameters.Add(new SQLiteParameter(paramName, field.DataType));
+                insertCommand.Parameters.Add(new SQLiteParameter(ParameterPrefix + field.FieldName, field.DataType));
             }
 
             // replace trailing commas
@@ -242,11 +241,11 @@ namespace OpenNETCF.ORM
                         var value = serializer.Invoke(item, new object[] { field.FieldName });
                         if (value == null)
                         {
-                            command.Parameters[GenerateParameterName(field.FieldName)].Value = DBNull.Value;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = DBNull.Value;
                         }
                         else
                         {
-                            command.Parameters[GenerateParameterName(field.FieldName)].Value = value;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = value;
                         }
                     }
                     else if (field.DataType == DbType.DateTime)
@@ -260,7 +259,7 @@ namespace OpenNETCF.ORM
                             // so we'll set it manually
                             dtValue = DateTime.Now;
                         }
-                        command.Parameters[GenerateParameterName(field.FieldName)].Value = dtValue;
+                        command.Parameters[ParameterPrefix + field.FieldName].Value = dtValue;
                     }
                     else if (field.IsRowVersion)
                     {
@@ -274,12 +273,12 @@ namespace OpenNETCF.ORM
 
                         if (value == null)
                         {
-                            command.Parameters[GenerateParameterName(field.FieldName)].Value = DBNull.Value;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = DBNull.Value;
                         }
                         else
                         {
                             var storeTime = new DateTime(1980, 1, 1) + (TimeSpan)value;
-                            command.Parameters[GenerateParameterName(field.FieldName)].Value = storeTime;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = storeTime;
                         }
                     }
                     else
@@ -287,11 +286,11 @@ namespace OpenNETCF.ORM
                         var value = field.PropertyInfo.GetValue(item, null);
                         if ((value == null) && (field.DefaultValue != null))
                         {
-                            command.Parameters[GenerateParameterName(field.FieldName)].Value = field.DefaultValue;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = field.DefaultValue;
                         }
                         else
                         {
-                            command.Parameters[GenerateParameterName(field.FieldName)].Value = value;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = value;
                         }
                     }
                 }
@@ -525,7 +524,7 @@ namespace OpenNETCF.ORM
                 if (existing == null)
                 {
                     // field doesn't exist - we must create it
-                    var alter = new StringBuilder(string.Format("ALTER TABLE [{0}] ", entity.EntityAttribute.NameInStore));
+                    var alter = new StringBuilder(string.Format("ALTER TABLE {0} ", entity.EntityAttribute.NameInStore));
                     alter.Append(string.Format("ADD [{0}] {1} {2}",
                         field.FieldName,
                         GetFieldDataTypeString(entity.EntityName, field),
@@ -572,7 +571,7 @@ namespace OpenNETCF.ORM
 
                     if (i == 0)
                     {
-                        sql = string.Format("CREATE INDEX {0} ON [{1}]({2} {3})",
+                        sql = string.Format("CREATE INDEX {0} ON {1}({2} {3})",
                             indexName,
                             entityName,
                             fieldName,
@@ -720,123 +719,104 @@ namespace OpenNETCF.ORM
                                         if (mi == null) continue;
                                     }
 
-                                    object value = null;
-
-                                    if (field.IsTimespan)
+                                    var value = results[field.Ordinal];
+                                    if (value != DBNull.Value)
                                     {
-                                        // SQLite and timespans are....challenging
-                                        try
+                                        if (field.DataType == DbType.Object)
                                         {
-                                            var tsr = results.GetString(field.Ordinal);
+                                            if (fillReferences)
+                                            {
+                                                // get serializer
+                                                var itemType = item.GetType();
+                                                var deserializer = GetDeserializer(itemType);
 
+                                                if (deserializer == null)
+                                                {
+                                                    throw new MissingMethodException(
+                                                        string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
+                                                        field.FieldName, entityName));
+                                                }
+
+                                                var @object = deserializer.Invoke(item, new object[] { field.FieldName, value });
+                                                field.PropertyInfo.SetValue(item, @object, null);
+                                            }
+                                        }
+                                        else if (field.IsRowVersion)
+                                        {
+                                            // sql stores this an 8-byte array
+                                            field.PropertyInfo.SetValue(item, BitConverter.ToInt64((byte[])value, 0), null);
+                                        }
+                                        else if (field.IsTimespan)
+                                        {
                                             // SQLite doesn't support "timespan" - and date/time must be stored as text, real or 64-bit integer (see the SQLite docs for more details)
                                             // here we'll pull TimeSpans (since they can be negative) as an offset from a base date
-                                            var storeDate = DateTime.Parse(tsr);
+                                            var storeDate = (DateTime)value;
                                             var storeTime = storeDate - new DateTime(1980, 1, 1);
                                             field.PropertyInfo.SetValue(item, storeTime, null);
-                                            value = storeTime;
                                         }
-                                        catch
+                                        else if (field.DataType == DbType.DateTime)
                                         {
-                                            var tsd = results.GetInt64(field.Ordinal);
-                                            var timeFromTicks = new TimeSpan(tsd);
-                                            field.PropertyInfo.SetValue(item, timeFromTicks, null);
-                                            value = timeFromTicks;
+                                            field.PropertyInfo.SetValue(item, Convert.ToDateTime(value), null);
                                         }
-                                    }
-                                    else
-                                    {
-                                        value = results[field.Ordinal];
-                                        if (value != DBNull.Value)
+                                        else if ((field.IsPrimaryKey) && (value is Int64))
                                         {
-                                            if (field.DataType == DbType.Object)
+                                            if (field.PropertyInfo.PropertyType.Equals(typeof(int)))
                                             {
-                                                if (fillReferences)
-                                                {
-                                                    // get serializer
-                                                    var itemType = item.GetType();
-                                                    var deserializer = GetDeserializer(itemType);
-
-                                                    if (deserializer == null)
-                                                    {
-                                                        throw new MissingMethodException(
-                                                            string.Format("The field '{0}' requires a custom serializer/deserializer method pair in the '{1}' Entity",
-                                                            field.FieldName, entityName));
-                                                    }
-
-                                                    var @object = deserializer.Invoke(item, new object[] { field.FieldName, value });
-                                                    field.PropertyInfo.SetValue(item, @object, null);
-                                                }
-                                            }
-                                            else if (field.IsRowVersion)
-                                            {
-                                                // sql stores this an 8-byte array
-                                                field.PropertyInfo.SetValue(item, BitConverter.ToInt64((byte[])value, 0), null);
-                                            }
-                                            else if (field.DataType == DbType.DateTime)
-                                            {
-                                                field.PropertyInfo.SetValue(item, Convert.ToDateTime(value), null);
-                                            }
-                                            else if ((field.IsPrimaryKey) && (value is Int64))
-                                            {
-                                                if (field.PropertyInfo.PropertyType.Equals(typeof(int)))
-                                                {
-                                                    // SQLite automatically makes auto-increment fields 64-bit, so this works around that behavior
-                                                    field.PropertyInfo.SetValue(item, Convert.ToInt32(value), null);
-                                                }
-                                                else
-                                                {
-                                                    field.PropertyInfo.SetValue(item, Convert.ToInt64(value), null);
-                                                }
-                                            }
-                                            else if ((value is Int64) || (value is double))
-                                            {
-                                                // SQLite is "interesting" in that its 'integer' has a strong affinity toward 64-bit, so int and uint properties
-                                                // end up as 64-bit fields.  Decimals have a strong affinity toward 'double', so float properties
-                                                // end up as 'double'. Even more fun is that a decimal value '0' will come back as an int64
-
-                                                // When we query those back, we must convert to put them into the property or we crash hard
-                                                object setval;
-
-                                                if (field.PropertyInfo.PropertyType.Equals(typeof(UInt32)))
-                                                {
-                                                    setval = Convert.ToUInt32(value);
-                                                }
-                                                else if ((field.PropertyInfo.PropertyType.Equals(typeof(Int32))) || (field.PropertyInfo.PropertyType.Equals(typeof(Int32?))))
-                                                {
-                                                    setval = Convert.ToInt32(value);
-                                                }
-                                                else if (field.PropertyInfo.PropertyType.Equals(typeof(decimal)))
-                                                {
-                                                    setval = Convert.ToDecimal(value);
-                                                }
-                                                else if (field.PropertyInfo.PropertyType.Equals(typeof(float)))
-                                                {
-                                                    setval = Convert.ToSingle(value);
-                                                }
-                                                else if (field.PropertyInfo.PropertyType.IsEnum)
-                                                {
-                                                    setval = Enum.ToObject(field.PropertyInfo.PropertyType, value);
-                                                }
-                                                else
-                                                {
-                                                    setval = value;
-                                                }
-
-                                                if (mi == null)
-                                                {
-                                                    field.PropertyInfo.SetValue(item, setval, null);
-                                                }
-                                                else
-                                                {
-                                                    mi.Invoke(setval, null);
-                                                }
+                                                // SQLite automatically makes auto-increment fields 64-bit, so this works around that behavior
+                                                field.PropertyInfo.SetValue(item, Convert.ToInt32(value), null);
                                             }
                                             else
                                             {
-                                                var t = value.GetType();
-                                                field.PropertyInfo.SetValue(item, value, null);
+                                                field.PropertyInfo.SetValue(item, Convert.ToInt64(value), null);
                                             }
+                                        }
+                                        else if ((value is Int64) || (value is double))
+                                        {
+                                            // SQLite is "interesting" in that its 'integer' has a strong affinity toward 64-bit, so int and uint properties
+                                            // end up as 64-bit fields.  Decimals have a strong affinity toward 'double', so float properties
+                                            // end up as 'double'. Even more fun is that a decimal value '0' will come back as an int64
+
+                                            // When we query those back, we must convert to put them into the property or we crash hard
+                                            object setval;
+
+                                            if (field.PropertyInfo.PropertyType.Equals(typeof(UInt32)))
+                                            {
+                                                setval = Convert.ToUInt32(value);
+                                            }
+                                            else if ((field.PropertyInfo.PropertyType.Equals(typeof(Int32))) || (field.PropertyInfo.PropertyType.Equals(typeof(Int32?))))
+                                            {
+                                                setval = Convert.ToInt32(value);
+                                            }
+                                            else if (field.PropertyInfo.PropertyType.Equals(typeof(decimal)))
+                                            {
+                                                setval = Convert.ToDecimal(value);
+                                            }
+                                            else if (field.PropertyInfo.PropertyType.Equals(typeof(float)))
+                                            {
+                                                setval = Convert.ToSingle(value);
+                                            }
+                                            else if (field.PropertyInfo.PropertyType.IsEnum)
+                                            {
+                                                setval = Enum.ToObject(field.PropertyInfo.PropertyType, value);
+                                            }
+                                            else
+                                            {
+                                                setval = value;
+                                            }
+
+                                            if (mi == null)
+                                            {
+                                                field.PropertyInfo.SetValue(item, setval, null);
+                                            }
+                                            else
+                                            {
+                                                mi.Invoke(setval, null);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            var t = value.GetType();
+                                            field.PropertyInfo.SetValue(item, value, null);
                                         }
                                     }
 
@@ -973,30 +953,28 @@ namespace OpenNETCF.ORM
 
                                 if (value == null)
                                 {
-                                    updateSQL.AppendFormat("[{0}]=NULL, ", field.FieldName);
+                                    updateSQL.AppendFormat("{0}=NULL, ", field.FieldName);
                                 }
                                 else
                                 {
-                                    var paramName = GenerateParameterName(field.FieldName);
-                                    updateSQL.AppendFormat("[{0}]={1}, ", field.FieldName, paramName);
-                                    insertCommand.Parameters.Add(new SQLiteParameter(paramName, value));
+                                    updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
+                                    insertCommand.Parameters.Add(new SQLiteParameter(ParameterPrefix + field.FieldName, value));
                                 }
                             }
                             else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
                             {
                                 changeDetected = true;
-                                // SQLite doesn't support Time, so we're convert to ticks in both directions
+                                // SQL Compact doesn't support Time, so we're convert to ticks in both directions
                                 var value = field.PropertyInfo.GetValue(item, null);
                                 if (value == null)
                                 {
-                                    updateSQL.AppendFormat("[{0}]=NULL, ", field.FieldName);
+                                    updateSQL.AppendFormat("{0}=NULL, ", field.FieldName);
                                 }
                                 else
                                 {
                                     var ticks = ((TimeSpan)value).Ticks;
-                                    var paramName = GenerateParameterName(field.FieldName);
-                                    updateSQL.AppendFormat("[{0}]={1}, ", field.FieldName, paramName);
-                                    insertCommand.Parameters.Add(new SQLiteParameter(paramName, ticks));
+                                    updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
+                                    insertCommand.Parameters.Add(new SQLiteParameter(ParameterPrefix + field.FieldName, ticks));
                                 }
                             }
                             else
@@ -1009,11 +987,11 @@ namespace OpenNETCF.ORM
 
                                     if (value == null)
                                     {
-                                        updateSQL.AppendFormat("[{0}]=NULL, ", field.FieldName);
+                                        updateSQL.AppendFormat("{0}=NULL, ", field.FieldName);
                                     }
                                     else
                                     {
-                                        updateSQL.AppendFormat("[{0}]={1}{0}, ", field.FieldName, ParameterPrefix);
+                                        updateSQL.AppendFormat("{0}={1}{0}, ", field.FieldName, ParameterPrefix);
                                         insertCommand.Parameters.Add(new SQLiteParameter(ParameterPrefix + field.FieldName, value));
                                     }
                                 }
@@ -1036,7 +1014,7 @@ namespace OpenNETCF.ORM
                 {
                     // remove the trailing comma and append the filter
                     updateSQL.Length -= 2;
-                    updateSQL.AppendFormat(" WHERE [{0}] = {1}keyparam", Entities[entityName].Fields.KeyField.FieldName, ParameterPrefix);
+                    updateSQL.AppendFormat(" WHERE {0} = {1}keyparam", Entities[entityName].Fields.KeyField.FieldName, ParameterPrefix);
                     insertCommand.Parameters.Add(new SQLiteParameter(ParameterPrefix + "keyparam", keyValue));
                     insertCommand.CommandText = updateSQL.ToString();
                     insertCommand.Connection = connection;

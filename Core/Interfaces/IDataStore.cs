@@ -8,7 +8,7 @@ using OpenNETCF.ORM.Replication;
 
 namespace OpenNETCF.ORM
 {
-    public interface IDataStore : IDisposable
+    public interface IDataStore
     {
         event EventHandler<EntityTypeAddedArgs> EntityTypeAdded;
         event EventHandler<EntityInsertArgs> BeforeInsert;
