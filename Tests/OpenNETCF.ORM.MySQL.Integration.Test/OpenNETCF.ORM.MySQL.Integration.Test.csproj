@@ -81,6 +81,11 @@
       <Name>OpenNETCF.ORM.MySQL.FFx</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="opennetcf-extensions-standard">
+      <Version>1.0.17160</Version>
+    </PackageReference>
+  </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
       <ItemGroup>

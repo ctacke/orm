@@ -151,7 +151,16 @@ namespace OpenNETCF.ORM
                     }
                 }
 
-                Thread.Sleep(RetryPeriod);
+                try
+                {
+                    Thread.Sleep(RetryPeriod);
+                }
+                catch (ThreadAbortException)
+                {
+                    // if we shut down or are disposed while sleeping, we'll throw and end up here
+                    // it's save to ignore, as we're shutting down anyway
+                    return;
+                }
             }
         }
 

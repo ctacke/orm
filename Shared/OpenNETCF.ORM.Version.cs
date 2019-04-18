@@ -9,5 +9,5 @@ using System.Reflection;
 [assembly: AssemblyProduct("OpenNETCF.ORM")]
 [assembly: AssemblyCopyright("Copyright © Chris Tacke 2010-2017")]
 
-[assembly: AssemblyVersion("1.0.19094.0")]
-[assembly: AssemblyFileVersion("1.0.19094.0")]
+[assembly: AssemblyVersion("1.0.19108.0")]
+[assembly: AssemblyFileVersion("1.0.19108.0")]

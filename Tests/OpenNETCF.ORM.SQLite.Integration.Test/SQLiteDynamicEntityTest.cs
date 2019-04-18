@@ -16,8 +16,6 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
 
         private SQLiteDataStore GetTestStore()
         {
-//            var info = new MySQLConnectionInfo("192.168.10.246", 3306, "TestDB", "root", "password");
-
             var store = new SQLiteDataStore("test.db");
 
             if (store.StoreExists)
@@ -47,37 +45,41 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
         [DeploymentItem("SQLite.Interop.dll")]
         public void BasicDynamicCRUDTest()
         {
+            var tableName = "TestChars";
+            var field0 = "ID";
+            var field1 = "first_name";
+            var field2 = "last.name";
+            var field3 = "middle_name";
 
             var fieldList = new List<FieldAttribute>();
             fieldList.Add(new FieldAttribute()
             {
-                FieldName = "ID",
+                FieldName = field0,
                 IsPrimaryKey = true,
                 DataType = System.Data.DbType.Int32
             });
 
             fieldList.Add(new FieldAttribute()
             {
-                FieldName = "FirstName",
+                FieldName = field1,
                 DataType = System.Data.DbType.String
             });
 
             fieldList.Add(new FieldAttribute()
             {
-                FieldName = "LastName",
+                FieldName = field2,
                 DataType = System.Data.DbType.String,
                 AllowsNulls = false
             });
 
-            var definition = new DynamicEntityDefinition("People", fieldList, KeyScheme.None);
+            var definition = new DynamicEntityDefinition(tableName, fieldList, KeyScheme.None);
 
             var store = GetTestStore();
 
             var exists = store.TableExists(definition.EntityName);
             if (exists)
             {
-                store.DiscoverDynamicEntity("People");
-                //                store.DropTable(definition.EntityName);
+                store.DropTable(definition.EntityName);
             }
             else
             {
@@ -86,59 +88,61 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
 
             Assert.IsTrue(store.TableExists(definition.EntityName));
 
-            var entity = new DynamicEntity("People");
-            entity.Fields["id"] = 1;
-            entity.Fields["FirstName"] = "John";
-            entity.Fields["LastName"] = "Doe";
+            var entity = new DynamicEntity(tableName);
+            entity.Fields[field0] = 1;
+            entity.Fields[field1] = "John";
+            entity.Fields[field2] = "Doe";
             store.Insert(entity);
 
-            entity = new DynamicEntity("People");
-            entity.Fields["id"] = 2;
-            entity.Fields["FirstName"] = "Jim";
-            entity.Fields["LastName"] = "Smith";
+            entity = new DynamicEntity(tableName);
+            entity.Fields[field0] = 2;
+            entity.Fields[field1] = "Jim";
+            entity.Fields[field2] = "Smith";
             store.Insert(entity);
 
-            entity = new DynamicEntity("People");
-            entity.Fields["id"] = 3;
-            entity.Fields["FirstName"] = "Sam";
-            entity.Fields["LastName"] = "Adams";
+            entity = new DynamicEntity(tableName);
+            entity.Fields[field0] = 3;
+            entity.Fields[field1] = "Sam";
+            entity.Fields[field2] = "Adams";
             store.Insert(entity);
 
-            var items = store.Select("People");
+            var items = store.Select(tableName);
             DumpData(items);
 
-            store.Delete("People", items.First().Fields["ID"]);
+            store.Delete(tableName, items.First().Fields[field0]);
 
-            items = store.Select("People");
+            items = store.Select(tableName);
             DumpData(items);
 
-            store.Delete("People", "LastName", "Smith");
+            store.Delete(tableName, field2, "Smith");
 
-            items = store.Select("People");
+            items = store.Select(tableName);
             DumpData(items);
 
             var person = items.First();
-            person.Fields["FirstName"] = "Joe";
-            person.Fields["LastName"] = "Satriani";
+            person.Fields[field1] = "Joe";
+            person.Fields[field2] = "Satriani";
             store.Update(person);
 
-            items = store.Select("People");
+            items = store.Select(tableName);
             DumpData(items);
 
             // now let's change the structure and see what happens
             fieldList.Add(new FieldAttribute()
             {
-                FieldName = "Middle_Name",
+                FieldName = field3,
                 DataType = System.Data.DbType.Double,
                 AllowsNulls = true // this has to be true to add a column
             });
 
-            var newDefinition = new DynamicEntityDefinition("People", fieldList, KeyScheme.Identity);
+            var newDefinition = new DynamicEntityDefinition(tableName, fieldList, KeyScheme.Identity);
             store.RegisterDynamicEntity(newDefinition, true);
 
-            items = store.Select("People");
+            items = store.Select(tableName);
 
             DumpData(items);
+
+            store.Dispose();
         }
 
         void DumpData(IEnumerable<DynamicEntity> items)

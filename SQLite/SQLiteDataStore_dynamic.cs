@@ -55,7 +55,7 @@ namespace OpenNETCF.ORM
                     command.Parameters.Add(CreateParameterObject(ParameterPrefix + "keyparam", keyValue));
                     command.Transaction = CurrentTransaction;
 
-                    var updateSQL = new StringBuilder(string.Format("UPDATE {0} SET ", entityName));
+                    var updateSQL = new StringBuilder(string.Format("UPDATE [{0}] SET ", entityName));
 
                     using (var updateCommand = GetNewCommandObject())
                     {
@@ -87,11 +87,11 @@ namespace OpenNETCF.ORM
 
                                     if (value == null)
                                     {
-                                        updateSQL.AppendFormat("{0}=NULL, ", field.Name);
+                                        updateSQL.AppendFormat("[{0}]=NULL, ", field.Name);
                                     }
                                     else
                                     {
-                                        updateSQL.AppendFormat("{0}=?, ", field.Name);
+                                        updateSQL.AppendFormat("[{0}]=?, ", field.Name);
                                         updateCommand.Parameters.Add(CreateParameterObject(field.Name, value));
                                     }
                                 }
@@ -103,7 +103,7 @@ namespace OpenNETCF.ORM
                         {
                             // remove the trailing comma and append the filter
                             updateSQL.Length -= 2;
-                            updateSQL.AppendFormat(" WHERE {0} = ?", keyField);
+                            updateSQL.AppendFormat(" WHERE [{0}] = ?", keyField);
                             updateCommand.Parameters.Add(CreateParameterObject("keyparam", keyValue));
                             updateCommand.CommandText = updateSQL.ToString();
                             updateCommand.Connection = connection;
@@ -128,7 +128,7 @@ namespace OpenNETCF.ORM
                 {
                     command.Connection = connection;
                     command.Transaction = CurrentTransaction;
-                    command.CommandText = string.Format("DELETE FROM {0} WHERE {1} = ?", entityName, fieldName);
+                    command.CommandText = string.Format("DELETE FROM [{0}] WHERE [{1}] = ?", entityName, fieldName);
                     var param = CreateParameterObject(ParameterPrefix + "val", matchValue);
                     command.Parameters.Add(param);
                     command.ExecuteNonQuery();
@@ -151,7 +151,7 @@ namespace OpenNETCF.ORM
                 sb.Append(i == 0 ? " WHERE " : " AND ");
 
                 var filter = filters.ElementAt(i);
-                sb.Append(filter.FieldName);
+                sb.Append($"[{filter.FieldName}]");
 
                 switch (filters.ElementAt(i).Operator)
                 {
@@ -198,6 +198,11 @@ namespace OpenNETCF.ORM
             return sb.ToString();
         }
 
+        private string GenerateParameterName(string fieldName)
+        {
+            return $"{ParameterPrefix}{fieldName.Replace('.', '_')}";
+        }
+
         private void OnInsertDynamicEntity(DynamicEntity item, bool insertReferences)
         {
             var connection = GetConnection(false);
@@ -214,7 +219,7 @@ namespace OpenNETCF.ORM
                 {
                     // if it's an ID field, don't set it
                     if(field.Name == item.KeyField) continue;
-                    var paramName = ParameterPrefix + field.Name;
+                    var paramName = GenerateParameterName(field.Name);
 
                     if (!command.Parameters.Contains(paramName))
                     {
@@ -381,17 +386,17 @@ namespace OpenNETCF.ORM
                 }
             }
 
-            var sql = string.Format("SELECT * FROM {0}", entityName);
+            var sql = string.Format("SELECT * FROM [{0}]", entityName);
 
             if (!string.IsNullOrEmpty(sortField))
             {
-                sql += string.Format(" ORDER BY {0} {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                sql += string.Format(" ORDER BY [{0}] {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
             }
             else if (sortOrder != FieldSearchOrder.NotSearchable)
             {
                 if (Entities[entityName].Fields.KeyField != null)
                 {
-                    sql+= string.Format(" ORDER BY {0} {1}", Entities[entityName].Fields.KeyField.FieldName, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                    sql+= string.Format(" ORDER BY [{0}] {1}", Entities[entityName].Fields.KeyField.FieldName, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
                 }
             }
 
