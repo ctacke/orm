@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
         <id>opennetcf-orm-sqlite</id>
-        <version>1.0.19094.0</version>
+        <version>1.0.19109.0</version>
         <title>OpenNETCF ORM for SQLite</title>
         <authors>Chris Tacke</authors>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
