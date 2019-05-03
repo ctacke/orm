@@ -227,14 +227,25 @@ namespace OpenNETCF.ORM
 
                     if (field.Value is TimeSpan)
                     {
-                        @param.Value = ((TimeSpan)field.Value).Ticks;
+                        var ts = (TimeSpan)field.Value;
+                        var dt = new DateTime(1980, 1, 1, ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds);
+                        @param.Value = dt;
                     }
                     else
                     {
                         switch (@param.DbType)
                         {
                             case DbType.DateTime:
-                                @param.Value = Convert.ToDateTime(field.Value);
+                            case DbType.Date:
+                            case DbType.DateTime2:
+                                if (field.Value == null || field.Value.Equals(DBNull.Value))
+                                {
+                                    @param.Value = field.Value;
+                                }
+                                else
+                                {
+                                    @param.Value = Convert.ToDateTime(field.Value);
+                                }
                                 break;
                             default:
                                 @param.Value = field.Value;

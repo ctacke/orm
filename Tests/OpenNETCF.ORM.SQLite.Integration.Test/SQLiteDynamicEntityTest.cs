@@ -69,6 +69,20 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
                 AllowsNulls = false
             });
 
+            fieldList.Add(new FieldAttribute()
+            {
+                FieldName = "DOB",
+                DataType = System.Data.DbType.DateTime,
+                AllowsNulls = true
+            });
+
+            fieldList.Add(new FieldAttribute()
+            {
+                FieldName = "ShiftStart",
+                DataType = System.Data.DbType.Time,
+                AllowsNulls = true
+            });
+
             var definition = new DynamicEntityDefinition("People", fieldList, KeyScheme.None);
 
             var store = GetTestStore();
@@ -90,18 +104,24 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             entity.Fields["id"] = 1;
             entity.Fields["FirstName"] = "John";
             entity.Fields["LastName"] = "Doe";
+            entity.Fields["DOB"] = DBNull.Value;
+            entity.Fields["ShiftStart"] = null;
             store.Insert(entity);
 
             entity = new DynamicEntity("People");
             entity.Fields["id"] = 2;
             entity.Fields["FirstName"] = "Jim";
             entity.Fields["LastName"] = "Smith";
+            entity.Fields["DOB"] = null;
+            entity.Fields["ShiftStart"] = DBNull.Value;
             store.Insert(entity);
 
             entity = new DynamicEntity("People");
             entity.Fields["id"] = 3;
             entity.Fields["FirstName"] = "Sam";
             entity.Fields["LastName"] = "Adams";
+            entity.Fields["DOB"] = new DateTime(1776, 7, 4);
+            entity.Fields["ShiftStart"] = new TimeSpan(17, 30, 0);
             store.Insert(entity);
 
             var items = store.Select("People");

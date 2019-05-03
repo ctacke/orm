@@ -7,7 +7,7 @@ using System.Reflection;
 
 [assembly: AssemblyCompany("Tacke Consulting, LLC")]
 [assembly: AssemblyProduct("OpenNETCF.ORM")]
-[assembly: AssemblyCopyright("Copyright © Chris Tacke 2010-2017")]
+[assembly: AssemblyCopyright("Copyright © Chris Tacke 2010-2019")]
 
-[assembly: AssemblyVersion("1.0.18141.0")]
-[assembly: AssemblyFileVersion("1.0.18141.0")]
+[assembly: AssemblyVersion("1.0.19109.0")]
+[assembly: AssemblyFileVersion("1.0.19109.0")]

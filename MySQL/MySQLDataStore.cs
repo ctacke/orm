@@ -187,6 +187,8 @@ namespace OpenNETCF.ORM
                     return MySqlDbType.Bit;
                 case DbType.Byte:
                     return MySqlDbType.Byte;
+                case DbType.Time:
+                    return MySqlDbType.Time;
                 default:
                     throw new NotSupportedException(string.Format("Cannot translate DbType '{0}' to OracleDbType", type.ToString()));
             }
@@ -314,8 +316,7 @@ namespace OpenNETCF.ORM
                         }
                         else
                         {
-                            var timespanTicks = ((TimeSpan)value).Ticks;
-                            command.Parameters[ParameterPrefix + field.FieldName].Value = timespanTicks;
+                            command.Parameters[ParameterPrefix + field.FieldName].Value = value;
                         }
                     }
                     else if (field.DataType == DbType.Guid)
@@ -563,11 +564,6 @@ namespace OpenNETCF.ORM
                                                 field.PropertyInfo.SetValue(item, @object, null);
                                             }
                                         }
-                                        else if (field.IsTimespan)
-                                        {
-                                            var valueAsTimeSpan = new TimeSpan((long)value);
-                                            field.PropertyInfo.SetValue(item, valueAsTimeSpan, null);
-                                        }
                                         else if (field.DataType == DbType.Guid)
                                         {
                                             if (value != null)
@@ -621,7 +617,11 @@ namespace OpenNETCF.ORM
                 }
 
                 FlushReferenceTableCache();
-                DoneWithConnection(connection, false);
+
+                if (CurrentTransaction == null)
+                {
+                    DoneWithConnection(connection, false);
+                }
             }
         }
 
@@ -857,7 +857,10 @@ namespace OpenNETCF.ORM
             finally
             {
                 insertCommand.Dispose();
-                DoneWithConnection(connection, false);
+                if (CurrentTransaction == null)
+                {
+                    DoneWithConnection(connection, false);
+                }
             }
 
             if (cascadeUpdates)
@@ -954,6 +957,12 @@ namespace OpenNETCF.ORM
                     }
                 case DbType.Single:
                     return "float";
+                case DbType.Time:
+                    return "TIME";
+                case DbType.DateTime:
+                case DbType.Date:
+                case DbType.DateTime2:
+                    return "DATETIME";
                 default:
                     return base.GetFieldDataTypeString(entityName, field);
             }

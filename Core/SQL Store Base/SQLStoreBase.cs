@@ -1582,6 +1582,10 @@ namespace OpenNETCF.ORM
                         // We need to read the local FK, so we can go to the reference table and pull the one row with that PK value
                         keyValue = m_entities[entityName].Fields[reference.LocalReferenceField].PropertyInfo.GetValue(instance, null);
                     }
+                    else
+                    {
+                        keyValue = m_entities[entityName].Fields.KeyField.PropertyInfo.GetValue(instance, null);
+                    }
 
                     // get the lookup values - until we support filtered selects, this may be very expensive memory-wise
                     if (!referenceItems.ContainsKey(reference))
@@ -2097,9 +2101,6 @@ namespace OpenNETCF.ORM
                 m_transactionConnection.Close();
                 m_transactionConnection.Dispose();
                 m_transactionConnection = null;
-
-                // revert connection behavior if we escalated
-//                ConnectionBehavior = m_nonTransactionConnectionBehavior;
             }
         }
 
@@ -2119,8 +2120,6 @@ namespace OpenNETCF.ORM
                 m_transactionConnection.Close();
                 m_transactionConnection.Dispose();
                 m_transactionConnection = null;
-                // revert connection behavior if we escalated
-//                ConnectionBehavior = m_nonTransactionConnectionBehavior;
             }
         }
 
