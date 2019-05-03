@@ -240,19 +240,25 @@ namespace OpenNETCF.ORM
             }
         }
 
-        public IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
+        public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
             // yes, this is very limited in scope capability, but it's purpose-built for a specific use-case (and better than no functionality at all)
 
-            if (firstRowOffset > 0) throw new NotSupportedException("non-zero rowOffset not currently supported with this version of Fetch");
             if (fillReferences) throw new NotSupportedException("References not currently supported with this version of Fetch.");
             if (filter != null) throw new NotSupportedException("Filters not currently supported with this version of Fetch.  Try post-filtering with LINQ");
 
-            var sql = string.Format("SELECT TOP {0} * FROM {1} ", fetchCount, entityName);
+            var sql = $"SELECT * FROM {entityName} ";
 
             if (!string.IsNullOrEmpty(sortField))
             {
-                sql += string.Format("ORDER BY {0} {1}", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+                sql += string.Format("ORDER BY {0} {1} ", sortField, sortOrder == FieldSearchOrder.Descending ? "DESC" : "ASC");
+            }
+
+            sql += $"LIMIT {fetchCount} ";
+
+            if (firstRowOffset > 0)
+            {
+                sql += $"OFFSET {firstRowOffset} ";
             }
 
             var connection = GetConnection(false);
@@ -290,7 +296,7 @@ namespace OpenNETCF.ORM
 
         public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount)
         {
-            throw new NotSupportedException("Dynamic entities are not currently supported with this Provider.");
+            return Fetch(entityName, fetchCount, 0, null, FieldSearchOrder.NotSearchable, null, false);
         }
     }
 }

@@ -97,6 +97,14 @@ namespace OpenNETCF.ORM.MySQLOracle.Integration.Test
             var items = store.Select("People");
             DumpData(items);
 
+            // can we retrieve via Fetch from the start?
+            items = store.Fetch("People", 1);
+            DumpData(items);
+
+            // can we retrieve via Fetch from an offset?
+            items = store.Fetch("People", 1, 1, null, FieldSearchOrder.NotSearchable, null, false);
+            DumpData(items);
+
             store.Delete("People", items.First().Fields["ID"]);
 
             items = store.Select("People");
