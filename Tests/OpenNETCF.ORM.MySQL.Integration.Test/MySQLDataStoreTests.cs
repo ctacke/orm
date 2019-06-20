@@ -11,7 +11,7 @@ namespace OpenNETCF.ORM.MySQL.Integration.Test
     {
         private MySQLDataStore GetTestStore(bool verifyExists = true)
         {
-            var info = new MySQLConnectionInfo("173.10.132.188", 3306, "ORMTest", "SolutionEngine", "rtx64");
+            var info = new MySQLConnectionInfo("173.10.132.188", 3306, "CropPerformance", "SolutionEngine", "rtx64");
 
 //            var info = new MySQLConnectionInfo("192.168.10.246", 3306, "TestDB", "root", "password");
 
@@ -162,10 +162,8 @@ namespace OpenNETCF.ORM.MySQL.Integration.Test
 
             // DELETE
             store.Delete(itemA);
-            /*
             Assert.IsTrue(beforeDelete, "BeforeDelete never fired");
             Assert.IsTrue(afterDelete, "AfterDelete never fired");
-            */
             item = store.Select<TestItem>("Name", itemA.Name).FirstOrDefault();
             Assert.IsNull(item);
 
