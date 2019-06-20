@@ -201,8 +201,8 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
 
             var Order = new Order()
             {
-                 Number = "1234",
-                 Driver = driver
+                Number = "1234",
+                Driver = driver
             };
 
             var store = new SQLiteDataStore("test.sqlite");
@@ -249,5 +249,52 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
             Assert.AreEqual(2, items.Length);
         }
 
+        [TestMethod()]
+        [DeploymentItem("SQLite.Interop.dll")]
+        [ExpectedException(typeof(ArgumentException))]
+        public void SimpleGuidIDEntityTest()
+        {
+            var store = new SQLiteDataStore("test.db");
+            store.AddType<GuidItem>();
+            store.CreateStore();
+
+            var item = new GuidItem();
+            store.Insert(item);
+
+            var existing = store.Select<GuidItem>(item.ID);
+            Assert.IsNotNull(existing);
+            Assert.AreEqual(item.ID, existing.ID);
+
+            store.Delete<GuidItem>(item.ID);
+            existing = store.Select<GuidItem>(item.ID);
+            Assert.IsNull(existing);
+        }
+
+        [TestMethod()]
+        [DeploymentItem("SQLite.Interop.dll")]
+        [ExpectedException(typeof(ArgumentException))]
+        public void PrimaryKeyWrongTypeTest1()
+        {
+            var store = new SQLiteDataStore("test.db");
+            store.AddType<BadKeyTypeAItem>();
+        }
+
+        [TestMethod()]
+        [DeploymentItem("SQLite.Interop.dll")]
+        [ExpectedException(typeof(ArgumentException))]
+        public void PrimaryKeyWrongTypeTest2()
+        {
+            var store = new SQLiteDataStore("test.db");
+            store.AddType<BadKeyTypeBItem>();
+        }
+
+        [TestMethod()]
+        [DeploymentItem("SQLite.Interop.dll")]
+        [ExpectedException(typeof(ArgumentException))]
+        public void NoPrimaryKeyTest()
+        {
+            var store = new SQLiteDataStore("test.db");
+            store.AddType<NoPKGuidItem>();
+        }
     }
 }

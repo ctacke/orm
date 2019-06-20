@@ -117,7 +117,7 @@ namespace OpenNETCF.ORM.MySQLOracle.Integration.Test
 
             // now let's change the structure and see what happens
             fieldList.Add(new FieldAttribute()
-            {
+             {
                 FieldName = "Middle_Name",
                 DataType = System.Data.DbType.Double,
                 AllowsNulls = true // this has to be true to add a column

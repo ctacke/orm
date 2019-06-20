@@ -184,4 +184,48 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
         [Field]
         public string Model { get; set; }
     }
+
+    [Entity(KeyScheme = KeyScheme.GUID)]
+    public class GuidItem
+    {
+        [Field(IsPrimaryKey = true)]
+        public Guid ID { get; set; } = Guid.NewGuid();
+        [Field]
+        public int SomeIntVal { get; set; }
+        [Field]
+        public string SomeStringVal { get; set; }
+    }
+
+    [Entity(KeyScheme = KeyScheme.GUID)]
+    public class NoPKGuidItem
+    {
+        [Field]
+        public Guid ID { get; set; } = Guid.NewGuid();
+        [Field]
+        public int SomeIntVal { get; set; }
+        [Field]
+        public string SomeStringVal { get; set; }
+    }
+
+    [Entity(KeyScheme = KeyScheme.GUID)]
+    public class BadKeyTypeAItem
+    {
+        [Field(IsPrimaryKey = true)]
+        public int ID { get; set; }
+        [Field]
+        public int SomeIntVal { get; set; }
+        [Field]
+        public string SomeStringVal { get; set; }
+    }
+
+    [Entity(KeyScheme = KeyScheme.Identity)]
+    public class BadKeyTypeBItem
+    {
+        [Field(IsPrimaryKey = true)]
+        public Guid ID { get; set; } = Guid.NewGuid();
+        [Field]
+        public int SomeIntVal { get; set; }
+        [Field]
+        public string SomeStringVal { get; set; }
+    }
 }

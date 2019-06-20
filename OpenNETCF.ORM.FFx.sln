@@ -47,6 +47,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.SqlServer.Int
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenNETCF.ORM.MySQL.Integration.Test", "Tests\OpenNETCF.ORM.MySQL.Integration.Test\OpenNETCF.ORM.MySQL.Integration.Test.csproj", "{5801398D-DB55-4308-8150-ABA0B08500C6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "nuspec", "nuspec", "{DDA5155E-9DC5-4209-8B9D-ECC031296934}"
+	ProjectSection(SolutionItems) = preProject
+		nuspec\opennetcf-orm-core.nuspec = nuspec\opennetcf-orm-core.nuspec
+		nuspec\opennetcf-orm-mysql.nuspec = nuspec\opennetcf-orm-mysql.nuspec
+		nuspec\opennetcf-orm-sqlcompact.nuspec = nuspec\opennetcf-orm-sqlcompact.nuspec
+		nuspec\opennetcf-orm-sqlite.nuspec = nuspec\opennetcf-orm-sqlite.nuspec
+		nuspec\opennetcf-orm-sqlserver.nuspec = nuspec\opennetcf-orm-sqlserver.nuspec
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

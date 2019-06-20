@@ -410,6 +410,40 @@ namespace OpenNETCF.ORM
                 }                
             }
 
+            var allprops = entityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy);
+
+            // if it's defined with a key scheme, ensure a PK has been attributed
+            if (attr.KeyScheme != KeyScheme.None)
+            {
+                var keyProp = allprops.FirstOrDefault(p => p.GetCustomAttributes(true)
+                    .Where(a =>
+                        (a.GetType().Equals(typeof(FieldAttribute)))
+                        && (a as FieldAttribute).IsPrimaryKey
+                        ).FirstOrDefault() as FieldAttribute != null);
+
+                if (keyProp == null)
+                {
+                    throw new ArgumentException(
+                        $"Type '{entityType}' is defined as KeyScheme {attr.KeyScheme.ToString()} but has no field marked as PrimaryKey");
+                }
+                if (attr.KeyScheme == KeyScheme.GUID)
+                {
+                    if (keyProp.PropertyType != typeof(Guid))
+                    {
+                        throw new ArgumentException(
+                            $"Type '{entityType}' is defined as KeyScheme.{attr.KeyScheme.ToString()} but PrimaryKey field '{keyProp.Name}' is defined as {keyProp.PropertyType.Name}");
+                    }
+                }
+                else if (attr.KeyScheme == KeyScheme.Identity)
+                {
+                    if (keyProp.PropertyType != typeof(int) && keyProp.PropertyType != typeof(long))
+                    {
+                        throw new ArgumentException(
+                            $"Type '{entityType}' is defined as KeyScheme.{attr.KeyScheme.ToString()} but PrimaryKey field '{keyProp.Name}' is defined as {keyProp.PropertyType.Name}");
+                    }
+                }
+            }
+
             var map = new TEntityInfo();
 
             // store the NameInStore if  not explicitly set
@@ -424,7 +458,7 @@ namespace OpenNETCF.ORM
 
             // see if we have any entity 
             // get all field definitions
-            foreach (var prop in entityType.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.FlattenHierarchy))
+            foreach (var prop in allprops)
             {
                 var attribute = prop.GetCustomAttributes(true)
                     .Where(a => 
