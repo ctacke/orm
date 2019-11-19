@@ -1,0 +1,54 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29509.3
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenNETCF.Extensions.Core", "..\Extensions\OpenNETCF.Extensions.Core.csproj", "{7DC0A68D-B4F2-492B-8966-9E38A1DB2B29}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenNETCF.ORM.Core", "Core\OpenNETCF.ORM.Core.csproj", "{D885387C-8FB7-47EA-91CF-14E4EF5D21B0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ORM Core", "ORM Core", "{41693F3B-9B94-442B-B27A-71EC72C73A82}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SQLite", "SQLite", "{3816A05F-6C3C-409C-936B-B03962747F9E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenNETCF.ORM.SQLite.Core", "SQLite\OpenNETCF.ORM.SQLite.Core.csproj", "{34441ABC-09E6-4995-8600-0A37E31257C2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{7458F955-092C-4C42-A879-05D497F56F36}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenNETCF.ORM.SQLite.Core.Integration.Test", "Tests\OpenNETCF.ORM.SQLite.Integration.Test\OpenNETCF.ORM.SQLite.Core.Integration.Test.csproj", "{87EB40A8-A800-4697-A4A0-653AAFAFDB63}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7DC0A68D-B4F2-492B-8966-9E38A1DB2B29}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7DC0A68D-B4F2-492B-8966-9E38A1DB2B29}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7DC0A68D-B4F2-492B-8966-9E38A1DB2B29}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7DC0A68D-B4F2-492B-8966-9E38A1DB2B29}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D885387C-8FB7-47EA-91CF-14E4EF5D21B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D885387C-8FB7-47EA-91CF-14E4EF5D21B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D885387C-8FB7-47EA-91CF-14E4EF5D21B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D885387C-8FB7-47EA-91CF-14E4EF5D21B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{34441ABC-09E6-4995-8600-0A37E31257C2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{34441ABC-09E6-4995-8600-0A37E31257C2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{34441ABC-09E6-4995-8600-0A37E31257C2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{34441ABC-09E6-4995-8600-0A37E31257C2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{87EB40A8-A800-4697-A4A0-653AAFAFDB63}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{87EB40A8-A800-4697-A4A0-653AAFAFDB63}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{87EB40A8-A800-4697-A4A0-653AAFAFDB63}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{87EB40A8-A800-4697-A4A0-653AAFAFDB63}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D885387C-8FB7-47EA-91CF-14E4EF5D21B0} = {41693F3B-9B94-442B-B27A-71EC72C73A82}
+		{34441ABC-09E6-4995-8600-0A37E31257C2} = {3816A05F-6C3C-409C-936B-B03962747F9E}
+		{87EB40A8-A800-4697-A4A0-653AAFAFDB63} = {7458F955-092C-4C42-A879-05D497F56F36}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {65BB07C4-8273-46C1-AE1F-2A065F25178F}
+	EndGlobalSection
+EndGlobal

@@ -11,6 +11,7 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
     public class SQLiteDataStoreTest
     {
         public TestContext TestContext { get; set; }
+        const string TestResultsDirectory = "D:\\Repos";
 
         [TestMethod()]
         [DeploymentItem("SQLite.Interop.dll")]
@@ -18,7 +19,7 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
         {
             try
             {
-                var path = Path.Combine(TestContext.TestResultsDirectory, "test.sqlite");
+                var path = Path.Combine(TestResultsDirectory, "test.sqlite");
                 var store = new SQLiteDataStore(path);
                 store.CreateStore();
                 store.Dispose();
