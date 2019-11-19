@@ -11,7 +11,7 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
     public class SQLiteDataStoreTest
     {
         public TestContext TestContext { get; set; }
-        const string TestResultsDirectory = "D:\\Repos";
+        const string TestResultsDirectory = "c:\\temp";
 
         [TestMethod()]
         [DeploymentItem("SQLite.Interop.dll")]
@@ -35,68 +35,72 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
         [DeploymentItem("SQLite.Interop.dll")]
         public void SimpleCRUDTest()
         {
-            var store = new SQLiteDataStore("test.db");
-            store.AddType<TestItem>();
-            store.CreateStore();
+            File.Delete("test.db");
 
-            var itemA = new TestItem("ItemA");
-            itemA.UUID = Guid.NewGuid();
-            itemA.ITest = 5;
-            itemA.FTest = 3.14F;
-            itemA.DBTest = 1.4D;
-            itemA.DETest = 2.678M;
+            using (var store = new SQLiteDataStore("test.db"))
+            {
+                store.AddType<TestItem>();
+                store.CreateStore();
 
-            var itemB = new TestItem("ItemB");
-            var itemC = new TestItem("ItemC");
+                var itemA = new TestItem("ItemA");
+                itemA.UUID = Guid.NewGuid();
+                itemA.ITest = 5;
+                itemA.FTest = 3.14F;
+                itemA.DBTest = 1.4D;
+                itemA.DETest = 2.678M;
 
-            // INSERT
-            store.Insert(itemA);
-            store.Insert(itemB);
-            store.Insert(itemC);
+                var itemB = new TestItem("ItemB");
+                var itemC = new TestItem("ItemC");
 
-            // COUNT
-            var count = store.Count<TestItem>();
-            Assert.AreEqual(3, count);
+                // INSERT
+                store.Insert(itemA);
+                store.Insert(itemB);
+                store.Insert(itemC);
 
-            // SELECT
-            var items = store.Select<TestItem>();
-            Assert.AreEqual(3, items.Count());
+                // COUNT
+                var count = store.Count<TestItem>();
+                Assert.AreEqual(3, count);
 
-            var item = store.Select<TestItem>("Name", itemB.Name).FirstOrDefault();
-            Assert.IsTrue(item.Equals(itemB));
+                // SELECT
+                var items = store.Select<TestItem>();
+                Assert.AreEqual(3, items.Count());
 
-            item = store.Select<TestItem>(3);
-            Assert.IsTrue(item.Equals(itemC));
+                var item = store.Select<TestItem>("Name", itemB.Name).FirstOrDefault();
+                Assert.IsTrue(item.Equals(itemB));
 
-            // FETCH
+                item = store.Select<TestItem>(3);
+                Assert.IsTrue(item.Equals(itemC));
 
-            // UPDATE
-            itemC.Name = "NewItem";
-            itemC.Address = "Changed Address";
-            itemC.TS = new TimeSpan(8, 23, 30);
-            store.Update(itemC);
+                // FETCH
 
-            item = store.Select<TestItem>("Name", "ItemC").FirstOrDefault();
-            Assert.IsNull(item);
-            item = store.Select<TestItem>("Name", itemC.Name).FirstOrDefault();
-            Assert.IsTrue(item.Equals(itemC));
+                // UPDATE
+                itemC.Name = "NewItem";
+                itemC.Address = "Changed Address";
+                itemC.TS = new TimeSpan(8, 23, 30);
+                store.Update(itemC);
 
-            // CONTAINS
-            var exists = store.Contains(itemA);
-            Assert.IsTrue(exists);
+                item = store.Select<TestItem>("Name", "ItemC").FirstOrDefault();
+                Assert.IsNull(item);
+                item = store.Select<TestItem>("Name", itemC.Name).FirstOrDefault();
+                Assert.IsTrue(item.Equals(itemC));
 
-            // DELETE
-            store.Delete(itemA);
-            item = store.Select<TestItem>("Name", itemA.Name).FirstOrDefault();
-            Assert.IsNull(item);
+                // CONTAINS
+                var exists = store.Contains(itemA);
+                Assert.IsTrue(exists);
 
-            // CONTAINS
-            exists = store.Contains(itemA);
-            Assert.IsFalse(exists);
+                // DELETE
+                store.Delete(itemA);
+                item = store.Select<TestItem>("Name", itemA.Name).FirstOrDefault();
+                Assert.IsNull(item);
 
-            // COUNT
-            count = store.Count<TestItem>();
-            Assert.AreEqual(2, count);
+                // CONTAINS
+                exists = store.Contains(itemA);
+                Assert.IsFalse(exists);
+
+                // COUNT
+                count = store.Count<TestItem>();
+                Assert.AreEqual(2, count);
+            }
         }
 
         [TestMethod()]
@@ -255,20 +259,24 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
         [ExpectedException(typeof(ArgumentException))]
         public void SimpleGuidIDEntityTest()
         {
-            var store = new SQLiteDataStore("test.db");
-            store.AddType<GuidItem>();
-            store.CreateStore();
+            File.Delete("test.db");
 
-            var item = new GuidItem();
-            store.Insert(item);
+            using (var store = new SQLiteDataStore("test.db"))
+            {
+                store.AddType<GuidItem>();
+                store.CreateStore();
 
-            var existing = store.Select<GuidItem>(item.ID);
-            Assert.IsNotNull(existing);
-            Assert.AreEqual(item.ID, existing.ID);
+                var item = new GuidItem();
+                store.Insert(item);
 
-            store.Delete<GuidItem>(item.ID);
-            existing = store.Select<GuidItem>(item.ID);
-            Assert.IsNull(existing);
+                var existing = store.Select<GuidItem>(item.ID);
+                Assert.IsNotNull(existing);
+                Assert.AreEqual(item.ID, existing.ID);
+
+                store.Delete<GuidItem>(item.ID);
+                existing = store.Select<GuidItem>(item.ID);
+                Assert.IsNull(existing);
+            }
         }
 
         [TestMethod()]
@@ -276,8 +284,12 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
         [ExpectedException(typeof(ArgumentException))]
         public void PrimaryKeyWrongTypeTest1()
         {
-            var store = new SQLiteDataStore("test.db");
-            store.AddType<BadKeyTypeAItem>();
+            File.Delete("test.db");
+
+            using (var store = new SQLiteDataStore("test.db"))
+            {
+                store.AddType<BadKeyTypeAItem>();
+            }
         }
 
         [TestMethod()]
@@ -285,8 +297,12 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
         [ExpectedException(typeof(ArgumentException))]
         public void PrimaryKeyWrongTypeTest2()
         {
-            var store = new SQLiteDataStore("test.db");
-            store.AddType<BadKeyTypeBItem>();
+            File.Delete("test.db");
+
+            using (var store = new SQLiteDataStore("test.db"))
+            {
+                store.AddType<BadKeyTypeBItem>();
+            }
         }
 
         [TestMethod()]
@@ -294,8 +310,12 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
         [ExpectedException(typeof(ArgumentException))]
         public void NoPrimaryKeyTest()
         {
-            var store = new SQLiteDataStore("test.db");
-            store.AddType<NoPKGuidItem>();
+            File.Delete("test.db");
+
+            using (var store = new SQLiteDataStore("test.db"))
+            {
+                store.AddType<NoPKGuidItem>();
+            }
         }
     }
 }

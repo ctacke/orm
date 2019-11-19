@@ -111,7 +111,7 @@ namespace OpenNETCF.ORM
         {
             if (StoreExists)
             {
-                throw new StoreAlreadyExistsException();
+                return;
             }
 
 #if(!WINDOWS_PHONE)

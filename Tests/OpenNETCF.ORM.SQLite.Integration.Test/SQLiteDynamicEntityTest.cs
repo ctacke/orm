@@ -20,11 +20,6 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
 
             var store = new SQLiteDataStore("test.db");
 
-            if (store.StoreExists)
-            {
-                store.DeleteStore();
-            }
-
             if (!store.StoreExists)
             {
                 store.CreateStore();
