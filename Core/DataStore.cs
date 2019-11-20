@@ -135,6 +135,11 @@ namespace OpenNETCF.ORM
 
         public void Delete(object item)
         {
+            Validate
+                .Begin()
+                .IsNotNull(item)
+                .Check();
+
             string name;
 
             if (item is DynamicEntity)
@@ -207,6 +212,11 @@ namespace OpenNETCF.ORM
 
         public void Update(object item, bool cascadeUpdates, string fieldName)
         {
+            Validate
+                .Begin()
+                .IsNotNull(item)
+                .Check();
+
             string name;
 
             if (item is DynamicEntity)
@@ -251,7 +261,10 @@ namespace OpenNETCF.ORM
         {
             string name;
 
-            if (item == null) throw new ArgumentNullException("item");
+            Validate
+                .Begin()
+                .IsNotNull(item)
+                .Check();
 
             if (item is DynamicEntity)
             {

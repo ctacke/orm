@@ -80,80 +80,82 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
 
             var definition = new DynamicEntityDefinition("People", fieldList, KeyScheme.None);
 
-            var store = GetTestStore();
-
-            var exists = store.TableExists(definition.EntityName);
-            if (exists)
+            using (var store = GetTestStore())
             {
-                store.DiscoverDynamicEntity("People");
-                //                store.DropTable(definition.EntityName);
+
+                var exists = store.TableExists(definition.EntityName);
+                if (exists)
+                {
+                    store.DiscoverDynamicEntity("People");
+                    //                store.DropTable(definition.EntityName);
+                }
+                else
+                {
+                    store.RegisterDynamicEntity(definition);
+                }
+
+                Assert.IsTrue(store.TableExists(definition.EntityName));
+
+                var entity = new DynamicEntity("People");
+                entity.Fields["id"] = 1;
+                entity.Fields["FirstName"] = "John";
+                entity.Fields["LastName"] = "Doe";
+                entity.Fields["DOB"] = DBNull.Value;
+                entity.Fields["ShiftStart"] = null;
+                store.Insert(entity);
+
+                entity = new DynamicEntity("People");
+                entity.Fields["id"] = 2;
+                entity.Fields["FirstName"] = "Jim";
+                entity.Fields["LastName"] = "Smith";
+                entity.Fields["DOB"] = null;
+                entity.Fields["ShiftStart"] = DBNull.Value;
+                store.Insert(entity);
+
+                entity = new DynamicEntity("People");
+                entity.Fields["id"] = 3;
+                entity.Fields["FirstName"] = "Sam";
+                entity.Fields["LastName"] = "Adams";
+                entity.Fields["DOB"] = new DateTime(1776, 7, 4);
+                entity.Fields["ShiftStart"] = new TimeSpan(17, 30, 0);
+                store.Insert(entity);
+
+                var items = store.Select("People");
+                DumpData(items);
+
+                store.Delete("People", items.First().Fields["ID"]);
+
+                items = store.Select("People");
+                DumpData(items);
+
+                store.Delete("People", "LastName", "Smith");
+
+                items = store.Select("People");
+                DumpData(items);
+
+                var person = items.First();
+                person.Fields["FirstName"] = "Joe";
+                person.Fields["LastName"] = "Satriani";
+                store.Update(person);
+
+                items = store.Select("People");
+                DumpData(items);
+
+                // now let's change the structure and see what happens
+                fieldList.Add(new FieldAttribute()
+                {
+                    FieldName = "Middle_Name",
+                    DataType = System.Data.DbType.Double,
+                    AllowsNulls = true // this has to be true to add a column
+                });
+
+                var newDefinition = new DynamicEntityDefinition("People", fieldList, KeyScheme.Identity);
+                store.RegisterDynamicEntity(newDefinition, true);
+
+                items = store.Select("People");
+
+                DumpData(items);
             }
-            else
-            {
-                store.RegisterDynamicEntity(definition);
-            }
-
-            Assert.IsTrue(store.TableExists(definition.EntityName));
-
-            var entity = new DynamicEntity("People");
-            entity.Fields["id"] = 1;
-            entity.Fields["FirstName"] = "John";
-            entity.Fields["LastName"] = "Doe";
-            entity.Fields["DOB"] = DBNull.Value;
-            entity.Fields["ShiftStart"] = null;
-            store.Insert(entity);
-
-            entity = new DynamicEntity("People");
-            entity.Fields["id"] = 2;
-            entity.Fields["FirstName"] = "Jim";
-            entity.Fields["LastName"] = "Smith";
-            entity.Fields["DOB"] = null;
-            entity.Fields["ShiftStart"] = DBNull.Value;
-            store.Insert(entity);
-
-            entity = new DynamicEntity("People");
-            entity.Fields["id"] = 3;
-            entity.Fields["FirstName"] = "Sam";
-            entity.Fields["LastName"] = "Adams";
-            entity.Fields["DOB"] = new DateTime(1776, 7, 4);
-            entity.Fields["ShiftStart"] = new TimeSpan(17, 30, 0);
-            store.Insert(entity);
-
-            var items = store.Select("People");
-            DumpData(items);
-
-            store.Delete("People", items.First().Fields["ID"]);
-
-            items = store.Select("People");
-            DumpData(items);
-
-            store.Delete("People", "LastName", "Smith");
-
-            items = store.Select("People");
-            DumpData(items);
-
-            var person = items.First();
-            person.Fields["FirstName"] = "Joe";
-            person.Fields["LastName"] = "Satriani";
-            store.Update(person);
-
-            items = store.Select("People");
-            DumpData(items);
-
-            // now let's change the structure and see what happens
-            fieldList.Add(new FieldAttribute()
-            {
-                FieldName = "Middle_Name",
-                DataType = System.Data.DbType.Double,
-                AllowsNulls = true // this has to be true to add a column
-            });
-
-            var newDefinition = new DynamicEntityDefinition("People", fieldList, KeyScheme.Identity);
-            store.RegisterDynamicEntity(newDefinition, true);
-
-            items = store.Select("People");
-
-            DumpData(items);
         }
 
         void DumpData(IEnumerable<DynamicEntity> items)

@@ -176,10 +176,15 @@ namespace OpenNETCF.ORM.SQLite.Integration.Test
         [DeploymentItem("SQLite.Interop.dll")]
         public void BitTest()
         {
-            var store = new SQLiteDataStore(@"E:\d\shared\TFS01\orm\Tests\OpenNETCF.ORM.SQLite.Integration.Test\testdb.sqlite");
-            store.AddType<OSATestSettings>();
+            File.Delete("test.db");
 
-            var settings = store.Select<OSATestSettings>().ToArray();
+            using (var store = new SQLiteDataStore("test.db"))
+            {
+                store.AddType<OSATestSettings>();
+                store.CreateOrUpdateStore();
+
+                var settings = store.Select<OSATestSettings>().ToArray();
+            }
         }
 
         [TestMethod()]
