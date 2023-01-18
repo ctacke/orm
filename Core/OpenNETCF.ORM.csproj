@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net7</TargetFramework>
     <AssemblyName>OpenNETCF.ORM</AssemblyName>
     <RootNamespace>OpenNETCF.ORM</RootNamespace>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
@@ -18,22 +18,17 @@
   <ItemGroup>
     <Compile Remove="Compatability\**" />
     <Compile Remove="Phone Compatibility\**" />
+    <Compile Remove="Properties\**" />
     <EmbeddedResource Remove="Compatability\**" />
     <EmbeddedResource Remove="Phone Compatibility\**" />
+    <EmbeddedResource Remove="Properties\**" />
     <None Remove="Compatability\**" />
     <None Remove="Phone Compatibility\**" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="Properties\AssemblyInfo.cs" />
+    <None Remove="Properties\**" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="packages.config" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Properties\" />
   </ItemGroup>
 
   <ItemGroup>

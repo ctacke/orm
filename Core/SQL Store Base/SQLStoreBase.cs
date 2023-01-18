@@ -1,13 +1,13 @@
 ﻿using System;
-using System.Linq;
+using System.Collections;
 using System.Collections.Generic;
-using System.Text;
-using System.Diagnostics;
 using System.Data;
 using System.Data.Common;
+using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
+using System.Text;
 using System.Threading;
-using System.Collections;
 
 namespace OpenNETCF.ORM
 {
@@ -182,7 +182,7 @@ namespace OpenNETCF.ORM
 
         private IDbConnection GetPoolConnection()
         {
-            lock(m_connectionPool)
+            lock (m_connectionPool)
             {
                 IDbConnection connection = null;
 
@@ -405,7 +405,7 @@ namespace OpenNETCF.ORM
                     return command.ExecuteNonQuery();
                 }
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 if (throwExceptions) throw;
 
@@ -500,8 +500,8 @@ namespace OpenNETCF.ORM
             "CONVERT" ,"INSERT" ,"SHUTDOWN" ,"COUNT" ,"INTERSECT" ,"SOME" ,"CREATE" ,"INTO" ,"STATISTICS" ,"CROSS" ,"IS" ,"SUM" ,"CURRENT" ,"JOIN" ,"SYSTEM_USER" ,"CURRENT_DATE" ,"KEY" ,"TABLE" ,"CURRENT_TIME" ,"KILL",
             "TEXTSIZE" ,"CURRENT_TIMESTAMP" ,"LEFT" ,"THEN" ,"CURRENT_USER" ,"LIKE" ,"TO" ,"CURSOR" ,"LINENO" ,"TOP" ,"DATABASE" ,"LOAD" ,"TRAN" ,"DATABASEPASSWORD" ,"MAX" ,"TRANSACTION" ,"DATEADD" ,"MIN" ,"TRIGGER",
             "DATEDIFF" ,"NATIONAL" ,"TRUNCATE" ,"DATENAME" ,"NOCHECK" ,"TSEQUAL" ,"DATEPART" ,"NONCLUSTERED" ,"UNION" ,"DBCC" ,"NOT" ,"UNIQUE" ,"DEALLOCATE", "NULL", "UPDATE", "DECLARE", "NULLIF", "UPDATETEXT",
-            "DEFAULT", "OF", "USE", "DELETE", "OFF", "USER", "DENY", "OFFSETS", "VALUES", "DESC", "ON", "VARYING", "DISK", "OPEN", "VIEW", "DISTINCT", "OPENDATASOURCE", "WAITFOR", "DISTRIBUTED", "OPENQUERY", "WHEN", 
-            "DOUBLE", "OPENROWSET", "WHERE", "DROP", "OPENXML", "WHILE", "DUMP", "OPTION", "WITH", "ELSE", "OR", "WRITETEXT" 
+            "DEFAULT", "OF", "USE", "DELETE", "OFF", "USER", "DENY", "OFFSETS", "VALUES", "DESC", "ON", "VARYING", "DISK", "OPEN", "VIEW", "DISTINCT", "OPENDATASOURCE", "WAITFOR", "DISTRIBUTED", "OPENQUERY", "WHEN",
+            "DOUBLE", "OPENROWSET", "WHERE", "DROP", "OPENXML", "WHILE", "DUMP", "OPTION", "WITH", "ELSE", "OR", "WRITETEXT"
         };
 
         protected virtual void CreateTable(IDbConnection connection, IEntityInfo entity)
@@ -541,7 +541,7 @@ namespace OpenNETCF.ORM
             sql.Append(")");
 
             Debug.WriteLine(sql);
-            
+
             using (var command = GetNewCommandObject())
             {
                 command.CommandText = sql.ToString();
@@ -747,7 +747,7 @@ namespace OpenNETCF.ORM
                     }
                     else
                     {
-                        sb.AppendFormat("DEFAULT {0} ", DefaultDateGenerator);                    
+                        sb.AppendFormat("DEFAULT {0} ", DefaultDateGenerator);
                     }
                 }
                 else
@@ -769,7 +769,7 @@ namespace OpenNETCF.ORM
 
                 if (attribute.KeyScheme == KeyScheme.Identity)
                 {
-                    switch(field.DataType)
+                    switch (field.DataType)
                     {
                         case DbType.Int32:
                         case DbType.UInt32:
@@ -802,7 +802,7 @@ namespace OpenNETCF.ORM
 
         protected virtual MethodInfo GetSerializer(Type itemType)
         {
-            if(itemType.Equals(typeof(DynamicEntity)))
+            if (itemType.Equals(typeof(DynamicEntity)))
             {
                 throw new NotSupportedException("Object Field serialization not supported for DynamicEntities");
             }
@@ -1034,7 +1034,7 @@ namespace OpenNETCF.ORM
                 CommandCache.Clear();
             }
         }
-        
+
         public override IEnumerable<DynamicEntity> Select(string entityName, IEnumerable<FilterCondition> filters)
         {
             throw new NotSupportedException();
@@ -1114,6 +1114,7 @@ namespace OpenNETCF.ORM
                     field.Ordinal = ordinal;
                     ordinal++;
                     sb.Append(field.FieldName);
+
                     if (--count > 0) sb.Append(", ");
                 }
                 sb.Append(string.Format(" FROM {0}", entityName));
@@ -1126,6 +1127,7 @@ namespace OpenNETCF.ORM
                     sb.Append(i == 0 ? " WHERE " : " AND ");
 
                     var filter = filters.ElementAt(i);
+
                     sb.Append(filter.FieldName);
 
                     switch (filters.ElementAt(i).Operator)
@@ -1347,7 +1349,7 @@ namespace OpenNETCF.ORM
                 }
 
                 if (filter.Value is string)
-                {                    
+                {
                     sb.Append("'" + filter.Value + "'");
                 }
                 else
@@ -1386,7 +1388,7 @@ namespace OpenNETCF.ORM
             try
             {
                 using (var command = GetNewCommandObject())
-                { 
+                {
                     command.Connection = connection;
 
                     // only bring back the structure, not any data (for improved speed)
@@ -1464,7 +1466,7 @@ namespace OpenNETCF.ORM
                             // set the item key
                             // we already inserted, so we have to do an update
                             // TODO: in the future, we should move this up and do reference inserts first, then back=propagate references
-                            if(!Entities[entityName].Fields.ContainsField(reference.ForeignReferenceField))
+                            if (!Entities[entityName].Fields.ContainsField(reference.ForeignReferenceField))
                             {
                                 throw new FieldNotFoundException(string.Format("The reference field {0} is missing from the {1} Entity",
                                     reference.ForeignReferenceField,
@@ -2190,9 +2192,9 @@ namespace OpenNETCF.ORM
                     command.CommandText = sql;
                     command.Connection = connection;
                     command.Transaction = CurrentTransaction;
-                    if(parameters != null)
+                    if (parameters != null)
                     {
-                        foreach(var p in parameters)
+                        foreach (var p in parameters)
                         {
                             command.Parameters.Add(p);
                         }
@@ -2220,8 +2222,8 @@ namespace OpenNETCF.ORM
 
         public override IEnumerable<DynamicEntity> Fetch(string entityName, int fetchCount, int firstRowOffset, string sortField, FieldSearchOrder sortOrder, FilterCondition filter, bool fillReferences)
         {
-            if(fillReferences) throw new NotSupportedException("References not supported with this version of Fetch on this Provider");
-            if(filter != null) throw new NotSupportedException("Filter is not supported with this version of Fetch on this Provider.  Try post-filtering with LINQ or implement filtering in the derived DataStore.");
+            if (fillReferences) throw new NotSupportedException("References not supported with this version of Fetch on this Provider");
+            if (filter != null) throw new NotSupportedException("Filter is not supported with this version of Fetch on this Provider.  Try post-filtering with LINQ or implement filtering in the derived DataStore.");
 
             // This is SQL Server syntax
             //var sql = new StringBuilder();
@@ -2265,20 +2267,20 @@ namespace OpenNETCF.ORM
             var connection = GetConnection(false);
             try
             {
-                using(var command = GetNewCommandObject())
+                using (var command = GetNewCommandObject())
                 {
                     command.Connection = connection;
                     command.CommandText = sql.ToString();
 
-                    using(var reader = command.ExecuteReader())
+                    using (var reader = command.ExecuteReader())
                     {
-                        while(reader.Read())
+                        while (reader.Read())
                         {
                             var entity = new DynamicEntity();
                             entity.EntityName = entityName;
 
                             // TODO: caching the ordinals would be faster
-                            for(int i = 0 ; i < reader.FieldCount; i++)
+                            for (int i = 0; i < reader.FieldCount; i++)
                             {
                                 entity.Fields.Add(reader.GetName(i), reader.GetValue(i));
                             }
