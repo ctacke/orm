@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Net;
 using System.IO;
 using System.Diagnostics;
 using System.Text;
 using System.Linq;
 using System.Data;
-using System.Data.Common;
 using System.Collections.Generic;
 using System.Threading;
 using System.Reflection;
@@ -36,7 +34,7 @@ namespace OpenNETCF.ORM
 
         private string Password { get; set; }
         public string FileName { get; protected set; }
-        
+
         protected SQLiteDataStore()
             : base()
         {
@@ -155,9 +153,9 @@ namespace OpenNETCF.ORM
             //       simply use a dictionary keyed by entityname
             var keyScheme = Entities[entityName].EntityAttribute.KeyScheme;
             var insertCommand = new SQLiteCommand();
-            
+
             var sbFields = new StringBuilder(string.Format("INSERT INTO {0} (", entityName));
-            var sbParams = new StringBuilder( " VALUES (");
+            var sbParams = new StringBuilder(" VALUES (");
 
             foreach (var field in Entities[entityName].Fields)
             {
@@ -180,7 +178,7 @@ namespace OpenNETCF.ORM
 
             return insertCommand;
         }
-        
+
         /// <summary>
         /// Inserts the provided entity instance into the underlying data store.
         /// </summary>
@@ -436,7 +434,7 @@ namespace OpenNETCF.ORM
             {
                 using (var command = GetNewCommandObject())
                 {
-                    if(this.CurrentTransaction != null)
+                    if (this.CurrentTransaction != null)
                     {
                         command.Transaction = this.CurrentTransaction;
                     }
@@ -493,7 +491,7 @@ namespace OpenNETCF.ORM
                 return;
             }
 
-            var fieldData = new List< object[]>();
+            var fieldData = new List<object[]>();
 
             using (var command = new SQLiteCommand())
             {
@@ -510,7 +508,7 @@ namespace OpenNETCF.ORM
                 }
             }
 
-            foreach(var field in entity.Fields)
+            foreach (var field in entity.Fields)
             {
                 // 0 = cid (column id)
                 // 1 = name
@@ -636,7 +634,7 @@ namespace OpenNETCF.ORM
 
             if (!Entities.Contains(entityName))
             {
-                if(DiscoverDynamicEntity(entityName) == null) yield return null;
+                if (DiscoverDynamicEntity(entityName) == null) yield return null;
             }
 
             UpdateIndexCacheForType(entityName);
@@ -654,13 +652,13 @@ namespace OpenNETCF.ORM
                 command.Transaction = CurrentTransaction as SQLiteTransaction;
 
                 int searchOrdinal = -1;
-            //    ResultSetOptions options = ResultSetOptions.Scrollable;
+                //    ResultSetOptions options = ResultSetOptions.Scrollable;
 
                 object matchValue = null;
                 string matchField = null;
 
-            // TODO: we need to ensure that the search value does not exceed the length of the indexed
-            // field, else we'll get an exception on the Seek call below (see the SQL CE implementation)
+                // TODO: we need to ensure that the search value does not exceed the length of the indexed
+                // field, else we'll get an exception on the Seek call below (see the SQL CE implementation)
 
                 using (var results = command.ExecuteReader(CommandBehavior.SingleResult))
                 {
@@ -704,7 +702,7 @@ namespace OpenNETCF.ORM
 
                             object rowPK = null;
 
-                            if(!fieldsSet)
+                            if (!fieldsSet)
                             {
                                 foreach (var field in Entities[entityName].Fields)
                                 {
@@ -863,7 +861,7 @@ namespace OpenNETCF.ORM
 
             Debug.WriteLineIf(TracingEnabled, "-Select");
         }
-        
+
         public override void OnUpdate(object item, bool cascadeUpdates, string fieldName)
         {
             if (item is DynamicEntity)
@@ -1069,7 +1067,7 @@ namespace OpenNETCF.ORM
                 using (var command = BuildFilterCommand<SQLiteCommand, SQLiteParameter>(entityName, filters, true))
                 {
                     command.Connection = connection as SQLiteConnection;
-                    return (int)command.ExecuteScalar();
+                    return Convert.ToInt32(command.ExecuteScalar());
                 }
             }
             finally
@@ -1081,7 +1079,7 @@ namespace OpenNETCF.ORM
         protected override string GetFieldDataTypeString(string entityName, FieldAttribute field)
         {
             // a SQLite Int64 auto-increment key requires being called "INTEGER", not "BIGINT"
-            if(field.IsPrimaryKey && (field.DataType == DbType.Int64))
+            if (field.IsPrimaryKey && (field.DataType == DbType.Int64))
             {
                 if (GetEntityInfo(entityName).EntityAttribute.KeyScheme == KeyScheme.Identity)
                 {
