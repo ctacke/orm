@@ -2,6 +2,17 @@
 
   <PropertyGroup>
     <TargetFramework>net7</TargetFramework>
+	  <AssemblyVersion>1.0.23048</AssemblyVersion>
+	  <FileVersion>1.0.23048</FileVersion>
+	  <PackageLicenseExpression>MIT-0</PackageLicenseExpression>
+	  <PackageProjectUrl>https://github.com/ctacke/orm</PackageProjectUrl>
+	  <Description>OpenNETCF's ORM Framework with the SQLite Implementation</Description>
+	  <Copyright>2016-2023</Copyright>
+	  <RepositoryUrl>https://github.com/ctacke/orm</RepositoryUrl>
+	  <PackageTags>ORM; OpenNETCF</PackageTags>
+	  <PackageId>opennetcf-orm-sqlite</PackageId>
+	  <Title>OpenNETCF ORM Core</Title>
+	  <Version>1.0.23048.1</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -20,11 +31,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="opennetcf-orm-core" Version="1.0.23048" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.112" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Core\OpenNETCF.ORM.csproj" />
   </ItemGroup>
 
 </Project>

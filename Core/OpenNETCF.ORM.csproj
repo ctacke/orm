@@ -5,6 +5,17 @@
     <AssemblyName>OpenNETCF.ORM</AssemblyName>
     <RootNamespace>OpenNETCF.ORM</RootNamespace>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+	  <AssemblyVersion>1.0.23048</AssemblyVersion>
+	  <FileVersion>1.0.23048</FileVersion>
+	  <PackageLicenseExpression>MIT-0</PackageLicenseExpression>
+	  <PackageProjectUrl>https://github.com/ctacke/orm</PackageProjectUrl>
+	  <Description>The core bits OpenNETCF's ORM Framework with no storage implementation</Description>
+	  <Copyright>2016-2023</Copyright>
+	  <RepositoryUrl>https://github.com/ctacke/orm</RepositoryUrl>
+	  <PackageTags>ORM; OpenNETCF</PackageTags>
+	  <PackageId>opennetcf-orm-core</PackageId>
+	  <Title>OpenNETCF ORM Core</Title>
+	  <Version>1.0.23048</Version>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
