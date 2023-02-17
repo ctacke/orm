@@ -275,7 +275,12 @@ namespace OpenNETCF.ORM
                         }
                         else
                         {
+#if ANDROID
+                            command.Parameters[ParameterPrefix + field.FieldName].DbType = DbType.Int64;
                             var storeTime = new DateTime(1980, 1, 1) + (TimeSpan)value;
+#else
+                            var storeTime = ((TimeSpan)value).Ticks;
+#endif
                             command.Parameters[ParameterPrefix + field.FieldName].Value = storeTime;
                         }
                     }
@@ -748,8 +753,13 @@ namespace OpenNETCF.ORM
                                         {
                                             // SQLite doesn't support "timespan" - and date/time must be stored as text, real or 64-bit integer (see the SQLite docs for more details)
                                             // here we'll pull TimeSpans (since they can be negative) as an offset from a base date
+#if ANDROID
+                                            var ticks = Int64.Parse((string)value);
+                                            var storeTime = new TimeSpan(ticks);
+#else
                                             var storeDate = (DateTime)value;
                                             var storeTime = storeDate - new DateTime(1980, 1, 1);
+#endif
                                             field.PropertyInfo.SetValue(item, storeTime, null);
                                         }
                                         else if (field.DataType == DbType.DateTime)
@@ -959,7 +969,11 @@ namespace OpenNETCF.ORM
                                     insertCommand.Parameters.Add(new SQLiteParameter(ParameterPrefix + field.FieldName, value));
                                 }
                             }
-                            else if (field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
+                            else if (
+#if ANDROID
+                                field.IsTimespan &&
+#endif
+                                field.PropertyInfo.PropertyType.UnderlyingTypeIs<TimeSpan>())
                             {
                                 changeDetected = true;
                                 // SQL Compact doesn't support Time, so we're convert to ticks in both directions
@@ -1086,6 +1100,12 @@ namespace OpenNETCF.ORM
                     return "INTEGER";
                 }
             }
+#if ANDROID
+            if(field.IsTimespan && (field.DataType == DbType.Time))
+            {
+                return "varchar(200)";
+            }
+#endif
 
             return base.GetFieldDataTypeString(entityName, field);
         }

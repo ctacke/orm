@@ -7,7 +7,6 @@ using Android.Runtime;
 using Android.Views;
 using Android.Widget;
 using Android.OS;
-using OpenNETCF.ORM.SQLite;
 using System.IO;
 using System.Diagnostics;
 
@@ -56,6 +55,9 @@ namespace OpenNETCF.ORM.TestHarness.Android
         public void SimpleCRUDTest()
         {
             var path = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Personal), "test.db");
+            // clean up first
+            if (System.IO.File.Exists(path))
+                System.IO.File.Delete(path);
             var store = new SQLiteDataStore(path);
             store.AddType<TestItem>();
 
